@@ -1,0 +1,2 @@
+# Keep public-source checksum verification byte-stable across platforms.
+* text eol=lf

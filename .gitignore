@@ -1,0 +1,28 @@
+# Generated simulator and implementation outputs
+build/
+reports/
+work/
+.config
+modelsim/work/
+modelsim/transcript
+modelsim/modelsim.ini
+flows/local/
+__pycache__/
+*.wlf
+*.vcd
+*.fsdb
+*.jou
+*.log
+.Xil/
+
+# Tool, technology, and credential payloads
+*.lib
+*.db
+*.lef
+*.gds
+*.oas
+*.key
+*.pem
+*.token
+*.secret
+credentials*

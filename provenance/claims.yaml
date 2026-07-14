@@ -1,0 +1,63 @@
+kind: claims
+schema_version: 1.0.0
+claims:
+  - id: slvc_dma_v1_selected_rtl_regression
+    profile: slvc_dma_v1_512
+    statement: The selected SLVC DMA directed regression passed at the frozen release source commit.
+    metric: directed_regression
+    value: pass
+    unit: result
+    benchmark: "ten ModelSim directed tests covering TX/RX control, parser, frame pool, descriptor, CQ credit, and write prefetch behavior"
+    configuration: 512-bit SLVC full architecture with the release feature defines
+    source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
+    tool: ModelSim SE-64 2020.4
+    evidence:
+      - slvc_dma_v1_regression_summary
+    status: verified
+    caveat: "This is a directed regression set, not coverage closure or formal verification."
+    public: true
+  - id: slvc_dma_v1_fpga_ooc_200m
+    profile: slvc_dma_v1_512
+    statement: The complete 512-bit frame_dma_wrapper met routed 200 MHz setup and hold timing with three Vivado implementation strategies.
+    metric: fpga_ooc_timing
+    value: 0.162
+    unit: ns minimum WNS
+    benchmark: "Vivado OOC synth, opt, place, phys-opt, and route"
+    configuration: "xc7z100ffg900-2, 5.000 ns aclk and tx_axis_aclk, Explore/Performance_Explore/ExtraNetDelay_high"
+    source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
+    tool: Vivado 2018.3
+    evidence:
+      - slvc_dma_v1_ooc_200m_summary
+    status: verified
+    caveat: OOC timing is not a board-level timing or 10G line-rate claim; preferred WNS +0.300 ns was not reached.
+    public: true
+  - id: slvc_dma_v1_fpga_ooc_resources
+    profile: slvc_dma_v1_512
+    statement: "Routed 200 MHz OOC resource use was 38,074-38,088 LUTs, 40,785-40,787 registers, 44 RAMB36, 3 RAMB18, and 0 DSPs across the three strategies."
+    metric: fpga_resources
+    value: 38088
+    unit: LUT maximum
+    benchmark: Vivado routed utilization reports
+    configuration: "xc7z100ffg900-2, 512-bit full SLVC architecture, 5.000 ns clock"
+    source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
+    tool: Vivado 2018.3
+    evidence:
+      - slvc_dma_v1_ooc_200m_summary
+    status: verified
+    caveat: Values are OOC implementation results and can vary slightly by Vivado placement strategy.
+    public: true
+  - id: slvc_dma_v1_steady_state_writer_throughput
+    profile: slvc_dma_v1_512
+    statement: The directed writer-prefetch smoke observed contiguous AXI W runs up to 48 beats under no W-channel backpressure.
+    metric: stream_throughput
+    value: 48
+    unit: contiguous 512-bit AXI W beats
+    benchmark: E20A23 W prefetch FIFO directed test
+    configuration: "512-bit writer, long multi-burst payload case"
+    source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
+    tool: ModelSim SE-64 2020.4
+    evidence:
+      - slvc_dma_v1_regression_summary
+    status: verified
+    caveat: This measures one writer data stage under the test conditions; it is not end-to-end 10G lossless throughput.
+    public: true

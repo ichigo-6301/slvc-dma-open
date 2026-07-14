@@ -1,0 +1,28 @@
+kind: regression_summary
+schema_version: 1.0.0
+profile: slvc_dma_v1_512
+source_commit: 35835370ef2fd733844f507292f09f9dcbcffd01
+generated_at: 2026-07-15
+tool: ModelSim SE-64 2020.4
+status: verified
+tests:
+  - modelsim/run_rtl_v33c_tx_channel_table.do
+  - modelsim/run_rtl_v33e20a23_full_arch_throughput.do
+  - modelsim/run_rtl_v33e20a_hybrid_rx_ingress_minimal.do
+  - modelsim/run_rtl_v33e19_shared_frame_pool.do
+  - modelsim/run_rtl_v13_parser_pipeline.do
+  - modelsim/run_rtl_v15_axil_read_pipeline.do
+  - modelsim/run_rtl_v33e20a10_tx_cq_space_check_pipeline.do
+  - modelsim/run_rtl_v28_tx_descriptor_queue.do
+  - modelsim/run_rtl_v31_tx_desc_status_pipeline.do
+  - modelsim/run_rtl_v33e20a23_w_prefetch_fifo.do
+markers:
+  - 'PASS: v33c TX channel table ownership split directed test'
+  - E20A22_FULL_ARCH_THROUGHPUT_PASS
+  - 'PASS tb_rtl_v33e20a10_tx_cq_space_check_pipeline'
+  - 'SUMMARY: v31 TX descriptor status pipeline PASS'
+  - 'OK: dma RTL v33e20a23 W prefetch FIFO test passed.'
+writer_prefetch:
+  long_multi_burst_w_count: 128
+  long_multi_burst_max_w_run: 48
+  caveat: Maximum contiguous W beat run from the directed test; not an end-to-end link throughput claim.

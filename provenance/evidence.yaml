@@ -1,0 +1,23 @@
+kind: evidence_manifest
+schema_version: 1.0.0
+evidence:
+  - id: slvc_dma_v1_ooc_200m_summary
+    path: evidence/slvc_dma_v1_ooc_200m_summary.yaml
+    type: vivado_ooc_timing_and_utilization_summary
+    source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
+    tool: Vivado 2018.3
+    claims:
+      - slvc_dma_v1_fpga_ooc_200m
+      - slvc_dma_v1_fpga_ooc_resources
+    sha256: null
+    public: true
+  - id: slvc_dma_v1_regression_summary
+    path: evidence/slvc_dma_v1_regression_summary.yaml
+    type: modelsim_directed_regression_summary
+    source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
+    tool: ModelSim SE-64 2020.4
+    claims:
+      - slvc_dma_v1_selected_rtl_regression
+      - slvc_dma_v1_steady_state_writer_throughput
+    sha256: null
+    public: true

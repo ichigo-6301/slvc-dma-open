@@ -1,0 +1,33 @@
+kind: nonclaims
+schema_version: 1.0.0
+nonclaims:
+  - id: slvc_dma_v1_board_current_commit
+    profile: slvc_dma_v1_512
+    statement: Board validation of the exact v0.1.0-rc1 release commit is not claimed.
+    reason: Historical U5 loopback evidence predates the final 200 MHz timing edits and was not rerun for this release source commit.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_v1_standard_128_profile
+    profile: slvc_dma_v1_512
+    statement: A parameterized 128-bit standard RTL implementation is not claimed.
+    reason: This release freezes the validated 512-bit Aurora-compatible SLVC configuration; width parameterization remains future work.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_v1_asic_signoff
+    profile: slvc_dma_v1_512
+    statement: "ASIC synthesis, SRAM macro binding, DFT, physical design, and signoff STA are not claimed."
+    reason: "The current release contains no frozen ASIC library, SRAM macro, or physical implementation evidence."
+    status: not_claimed
+    public: true
+  - id: slvc_dma_v1_cdc_signoff
+    profile: slvc_dma_v1_512
+    statement: Full CDC/RDC signoff is not claimed.
+    reason: "Directed carrier CDC verification exists, but no release-bound signoff run or reviewed waivers are available."
+    status: not_claimed
+    public: true
+  - id: slvc_dma_v1_ten_gig_lossless
+    profile: slvc_dma_v1_512
+    statement: 10G Ethernet line-rate lossless operation is not claimed.
+    reason: "This release is a generic SLVC DMA OOC and RTL package, not a completed board-level 10G production validation."
+    status: not_claimed
+    public: true

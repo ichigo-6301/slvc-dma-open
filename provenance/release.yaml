@@ -1,0 +1,9 @@
+kind: public_ip_release
+schema_version: 1.0.0
+repository_name: slvc-dma-open
+profile: slvc_dma_v1_512
+release_version: v0.1.0-rc1
+source_commit: 35835370ef2fd733844f507292f09f9dcbcffd01
+delivery_commit: 45e22a3c4e3528aaffe0093f35ba10e35ddd71fe
+license: MIT
+bundle_type: public-ip

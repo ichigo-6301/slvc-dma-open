@@ -1,0 +1,54 @@
+kind: fpga_ooc_summary
+schema_version: 1.0.0
+profile: slvc_dma_v1_512
+source_commit: 35835370ef2fd733844f507292f09f9dcbcffd01
+rtl_equivalent_commit: 2da34e0
+tool: Vivado 2018.3
+part: xc7z100ffg900-2
+top: frame_dma_wrapper
+clock_period_ns: 5.000
+status: verified
+runs:
+  - strategy: Explore
+    wns_ns: 0.226
+    tns_ns: 0.000
+    whs_ns: 0.045
+    ths_ns: 0.000
+    lut: 38074
+    ff: 40787
+    ramb36: 44
+    ramb18: 3
+    dsp: 0
+    timing_report_sha256: 8f331daf409563a2b9f04107d2f9e0d14f5c4a697ed4fd84211cf1fa8b8ea2e1
+    utilization_report_sha256: 980f03b765748a892e4de0aab0a44716cfa9a598f3e13cc732342b2117c10d0e
+    source_report: reports/vivado_ooc_2018_3/phase32_tx_counter_local_soft_reset_explore
+  - strategy: Performance_Explore
+    wns_ns: 0.173
+    tns_ns: 0.000
+    whs_ns: 0.046
+    ths_ns: 0.000
+    lut: 38087
+    ff: 40787
+    ramb36: 44
+    ramb18: 3
+    dsp: 0
+    timing_report_sha256: 59fe780c03ffad345135ec9e440fee63c77f7ce5f75cb8a6a12dbe0215e63641
+    utilization_report_sha256: 6a0bd6ef95c82c5729d10ed55fe81eba03046c3d4acfa4b97e70a24e9efe9905
+    source_report: reports/vivado_ooc_2018_3/final_phase32_performance_explore_retry
+  - strategy: ExtraNetDelay_high
+    wns_ns: 0.162
+    tns_ns: 0.000
+    whs_ns: 0.054
+    ths_ns: 0.000
+    lut: 38088
+    ff: 40785
+    ramb36: 44
+    ramb18: 3
+    dsp: 0
+    timing_report_sha256: a31958d441d46ed5606b66cdf18403ea745b6edcf6524e4d605dfb59a91b0817
+    utilization_report_sha256: 44e1eda73e3d560c44f10c8346c30ff927cb0ed4f63f8bdee7565e61ca59a743
+    source_report: reports/vivado_ooc_2018_3/final_phase32_extra_net_delay_high_retry
+caveats:
+  - Reports are intentionally summarized because raw Vivado reports contain private absolute paths.
+  - Commit 3583537 changes only the timing-status document; the measured RTL is identical to 2da34e0.
+  - The preferred WNS margin of 0.300 ns was not met.

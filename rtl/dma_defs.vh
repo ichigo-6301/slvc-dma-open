@@ -1,0 +1,432 @@
+`ifndef DMA_DEFS_VH
+`define DMA_DEFS_VH
+
+`define DMA_FRAME_MAGIC       32'h414D4446
+`define DMA_CQE_MAGIC         32'h45514346
+`define DMA_IP_ID             32'hFAD00700
+`define DMA_VERSION           32'h00000010
+
+`define DMA_HEADER_BYTES      64
+`define DMA_CQE_BYTES         64
+`define DMA_ALIGN_BYTES       64
+`define DMA_MAX_BURST_LEN     16
+`ifndef DMA_TX_RD_MAX_OUTSTANDING
+`define DMA_TX_RD_MAX_OUTSTANDING 4
+`endif
+`ifndef DMA_RX_WR_MAX_OUTSTANDING
+`define DMA_RX_WR_MAX_OUTSTANDING 4
+`endif
+`ifndef DMA_MAX_CH
+`define DMA_MAX_CH            16
+`endif
+`ifndef DMA_RX_CH_NUM
+`define DMA_RX_CH_NUM         13
+`endif
+`ifndef DMA_TX_CH_NUM
+`define DMA_TX_CH_NUM         13
+`endif
+`ifndef DMA_ENABLE_PER_CH_COUNTERS
+`define DMA_ENABLE_PER_CH_COUNTERS 1
+`endif
+`ifndef DMA_ENABLE_USER_REGS
+`define DMA_ENABLE_USER_REGS 1
+`endif
+`ifndef DMA_ENABLE_DEBUG_STATUS
+`define DMA_ENABLE_DEBUG_STATUS 1
+`endif
+`ifndef DMA_RX_FC_INGRESS_PAYLOAD_WORDS
+`define DMA_RX_FC_INGRESS_PAYLOAD_WORDS 1024
+`endif
+`ifndef DMA_RX_FC_INGRESS_PAYLOAD_AW
+`define DMA_RX_FC_INGRESS_PAYLOAD_AW 10
+`endif
+`ifndef DMA_RX_FC_INGRESS_META_DEPTH
+`define DMA_RX_FC_INGRESS_META_DEPTH 4
+`endif
+`ifndef DMA_RX_FC_INGRESS_META_AW
+`define DMA_RX_FC_INGRESS_META_AW 2
+`endif
+`ifndef DMA_ENABLE_FRAME_SHARED_POOL
+`define DMA_ENABLE_FRAME_SHARED_POOL 1
+`endif
+`ifndef DMA_ENABLE_CQ_CMD_CREDIT
+`define DMA_ENABLE_CQ_CMD_CREDIT 0
+`endif
+`ifndef DMA_ENABLE_RX_AXIS_SKID
+`define DMA_ENABLE_RX_AXIS_SKID 0
+`endif
+`ifndef DMA_ENABLE_CQ_SINGLE_WRITER
+`define DMA_ENABLE_CQ_SINGLE_WRITER 0
+`endif
+`ifndef DMA_ENABLE_TX_COUNTER_EVENT_LANES
+`define DMA_ENABLE_TX_COUNTER_EVENT_LANES 0
+`endif
+`ifndef DMA_ENABLE_RX_COUNTER_EVENT_LANES
+`define DMA_ENABLE_RX_COUNTER_EVENT_LANES 0
+`endif
+`ifndef DMA_ENABLE_RX_FC_ENQ_PIPELINE
+`define DMA_ENABLE_RX_FC_ENQ_PIPELINE 0
+`endif
+`ifndef DMA_ENABLE_TX_DESC_STATUS_EVENT_LANES
+`define DMA_ENABLE_TX_DESC_STATUS_EVENT_LANES 0
+`endif
+`ifndef DMA_ENABLE_RX_MATCH_PIPELINE
+`define DMA_ENABLE_RX_MATCH_PIPELINE 0
+`endif
+`ifndef DMA_ENABLE_AXI_WRITE_AW_PLAN_PIPELINE
+`define DMA_ENABLE_AXI_WRITE_AW_PLAN_PIPELINE 0
+`endif
+`ifndef DMA_ENABLE_AXI_WRITE_W_PREFETCH_FIFO
+`define DMA_ENABLE_AXI_WRITE_W_PREFETCH_FIFO 0
+`endif
+`ifndef DMA_ENABLE_FRAME_SHARED_RD_REQ_QUEUE
+`define DMA_ENABLE_FRAME_SHARED_RD_REQ_QUEUE 0
+`endif
+`ifndef DMA_ENABLE_FRAME_SHARED_POOL_DRAIN_PIPELINE
+`define DMA_ENABLE_FRAME_SHARED_POOL_DRAIN_PIPELINE 0
+`endif
+`ifndef DMA_ENABLE_FRAME_SHARED_SERIAL_INGRESS
+`define DMA_ENABLE_FRAME_SHARED_SERIAL_INGRESS 1
+`endif
+`ifndef DMA_ENABLE_AXIS_WIDTH_FRONTEND
+`define DMA_ENABLE_AXIS_WIDTH_FRONTEND 0
+`endif
+`ifndef DMA_EXT_AXIS_DATA_WIDTH
+`define DMA_EXT_AXIS_DATA_WIDTH 512
+`endif
+`ifndef DMA_FRAME_SHARED_CH_MASK
+`define DMA_FRAME_SHARED_CH_MASK 16'h0003
+`endif
+`ifndef DMA_FRAME_POOL_BLOCK_NUM
+`define DMA_FRAME_POOL_BLOCK_NUM 64
+`endif
+`ifndef DMA_FRAME_POOL_BLOCK_AW
+`define DMA_FRAME_POOL_BLOCK_AW 6
+`endif
+
+`define DMA_REG_IP_ID         12'h000
+`define DMA_REG_VERSION       12'h004
+`define DMA_REG_GLOBAL_CTRL   12'h008
+`define DMA_REG_GLOBAL_STATUS 12'h00c
+`define DMA_REG_IRQ_STATUS    12'h010
+`define DMA_REG_IRQ_MASK      12'h014
+`define DMA_REG_RX_CH_NUM     12'h018
+`define DMA_REG_TX_CH_NUM     12'h01c
+`define DMA_REG_CQ_BASE_L     12'h020
+`define DMA_REG_CQ_BASE_H     12'h024
+`define DMA_REG_CQ_SIZE       12'h028
+`define DMA_REG_CQ_WR_PTR     12'h02c
+`define DMA_REG_CQ_RD_PTR     12'h030
+`define DMA_REG_INTR_COAL_CNT 12'h034
+`define DMA_REG_INTR_COAL_TMR 12'h038
+`define DMA_REG_SOFT_RESET    12'h03c
+`define DMA_REG_DROP_CNT      12'h040
+`define DMA_REG_ERR_CNT       12'h044
+`define DMA_REG_DEBUG_STATE   12'h048
+`define DMA_REG_FEATURE       12'h04c
+`define DMA_REG_UFC_TX_CTRL   12'h050
+`define DMA_REG_UFC_TX_OPCODE 12'h054
+`define DMA_REG_UFC_TX_FLOWID 12'h058
+`define DMA_REG_UFC_TX_ARG0   12'h05c
+`define DMA_REG_UFC_TX_ARG1   12'h060
+`define DMA_REG_UFC_RX_STATUS 12'h064
+`define DMA_REG_UFC_RX_OPCODE 12'h068
+`define DMA_REG_UFC_RX_FLOWID 12'h06c
+`define DMA_REG_UFC_RX_ARG0   12'h070
+`define DMA_REG_UFC_RX_ARG1   12'h074
+
+`define DMA_TX_CH_BASE        12'h100
+`define DMA_RX_CH_BASE        12'h500
+`define DMA_TX_DESC_CH_BASE   12'h900
+`define DMA_CH_STRIDE         12'h040
+
+`define DMA_CH_CTRL           12'h000
+`define DMA_CH_CFG            12'h004
+`define DMA_CH_BASE_L         12'h008
+`define DMA_CH_BASE_H         12'h00c
+`define DMA_CH_SIZE           12'h010
+`define DMA_TX_CH_LEN         12'h010
+`define DMA_CH_MAX_LEN        12'h014
+`define DMA_RX_CH_WR_PTR      12'h018
+`define DMA_RX_CH_RD_PTR      12'h01c
+`define DMA_CH_USED           12'h020
+`define DMA_RX_CH_HIGH_WM     12'h024
+`define DMA_RX_CH_LOW_WM      12'h028
+`define DMA_CH_STATUS         12'h02c
+`define DMA_CH_FRAME_CNT      12'h030
+`define DMA_CH_DROP_CNT       12'h034
+`define DMA_CH_ERR_CNT        12'h038
+`define DMA_CH_USER           12'h03c
+
+`define DMA_TX_DESC_CTRL      12'h000
+`define DMA_TX_DESC_BASE_L    12'h004
+`define DMA_TX_DESC_BASE_H    12'h008
+`define DMA_TX_DESC_SIZE      12'h00c
+`define DMA_TX_DESC_RD_PTR    12'h010
+`define DMA_TX_DESC_WR_PTR    12'h014
+`define DMA_TX_DESC_STATUS    12'h018
+`define DMA_TX_DESC_ERR_CNT   12'h01c
+
+`define DMA_TX_DESC_CTRL_ENABLE 0
+`define DMA_TX_DESC_CTRL_START  1
+`define DMA_TX_DESC_CTRL_STOP   2
+`define DMA_TX_DESC_CTRL_RESET  3
+`define DMA_TX_DESC_CTRL_IRQ_EN 4
+
+`define DMA_TX_DESC_STATUS_IDLE        0
+`define DMA_TX_DESC_STATUS_BUSY        1
+`define DMA_TX_DESC_STATUS_EMPTY       2
+`define DMA_TX_DESC_STATUS_FETCH_ERR   3
+`define DMA_TX_DESC_STATUS_OWNER_ERR   4
+`define DMA_TX_DESC_STATUS_LEN_ERR     5
+`define DMA_TX_DESC_STATUS_ADDR_ERR    6
+`define DMA_TX_DESC_STATUS_RING_ERR    7
+`define DMA_TX_DESC_STATUS_PAYLOAD_READ_ERR 8
+`define DMA_TX_DESC_STATUS_STOPPED     9
+
+`define DMA_TX_DESC_BYTES      64
+`define DMA_TX_DESC_CTRL_OFF   0
+`define DMA_TX_DESC_FLAGS_OFF  4
+`define DMA_TX_DESC_CH_STREAM_OFF 8
+`define DMA_TX_DESC_LEN_OFF    12
+`define DMA_TX_DESC_ADDR_LO_OFF 16
+`define DMA_TX_DESC_ADDR_HI_OFF 20
+`define DMA_TX_DESC_SEQ_OFF    24
+`define DMA_TX_DESC_TS_LO_OFF  28
+`define DMA_TX_DESC_TS_HI_OFF  32
+`define DMA_TX_DESC_SAMPLE_OFF 36
+`define DMA_TX_DESC_USER0_OFF  40
+`define DMA_TX_DESC_USER1_OFF  44
+`define DMA_TX_DESC_OWNER_VALID 0
+`define DMA_TX_DESC_IRQ_ENABLE  1
+`define DMA_TX_DESC_GENERATE_SHDR 2
+
+`define DMA_GCTRL_GLOBAL_EN   0
+`define DMA_GCTRL_RX_EN       1
+`define DMA_GCTRL_TX_EN       2
+`define DMA_GCTRL_UFC_EN      3
+`define DMA_GCTRL_IRQ_EN      4
+`define DMA_GCTRL_SOFT_RESET  8
+`define DMA_GCTRL_CLR_STATUS  9
+
+`define DMA_GSTATUS_RESET_REJECTED 11
+`define DMA_GSTATUS_ILLEGAL_REG    12
+
+`define DMA_FEATURE_RX        0
+`define DMA_FEATURE_TX        1
+`define DMA_FEATURE_UFC       2
+`define DMA_FEATURE_ARB_CFG   3
+`define DMA_FEATURE_CREDIT    4
+`define DMA_FEATURE_RATE      5
+`define DMA_FEATURE_DESC_Q    6
+`define DMA_FEATURE_MULTI_OUT 7
+`define DMA_FEATURE_PAY_CRC   8
+`define DMA_FEATURE_REASM     9
+`define DMA_FEATURE_PER_CH_FIFO 10
+`define DMA_FEATURE_FC_PER_CH_INGRESS 11
+`define DMA_FEATURE_FC_DDR_RING 12
+`define DMA_FEATURE_SPLIT_FRAME_WRITE 13
+
+`define DMA_IRQ_RX_COMPLETION 0
+`define DMA_IRQ_TX_COMPLETION 1
+`define DMA_IRQ_CQ_THRESHOLD  2
+`define DMA_IRQ_CQ_FULL       3
+`define DMA_IRQ_RX_OVERFLOW   4
+`define DMA_IRQ_CONT_GAP      6
+`define DMA_IRQ_FC_PAUSE      7
+`define DMA_IRQ_UFC_RX        8
+`define DMA_IRQ_AUX_TRIGGER   9
+`define DMA_IRQ_HEADER_ERROR  10
+`define DMA_IRQ_POLICY_REJECT 11
+`define DMA_IRQ_AXI_ERROR     12
+`define DMA_IRQ_UFC_TX_DONE   14
+`define DMA_IRQ_FATAL_ERROR   15
+
+`define DMA_UFC_TX_START      0
+`define DMA_UFC_TX_BUSY       1
+`define DMA_UFC_TX_DONE       2
+`define DMA_UFC_TX_BUSY_REJ   3
+
+`define DMA_UFC_RX_PENDING    0
+`define DMA_UFC_RX_OVERRUN    1
+
+`define DMA_UFC_OP_PAUSE      8'h01
+`define DMA_UFC_OP_RESUME     8'h02
+`define DMA_UFC_OP_CREDIT     8'h03
+`define DMA_UFC_OP_STOP_CAP   8'h04
+`define DMA_UFC_OP_START_CAP  8'h05
+`define DMA_UFC_OP_SET_RATE   8'h06
+`define DMA_UFC_OP_FLOW_STAT  8'h07
+`define DMA_UFC_OP_PAUSE_ACK  8'h08
+`define DMA_UFC_OP_RESUME_ACK 8'h09
+`define DMA_UFC_OP_CREDIT_ACK 8'h0a
+`define DMA_UFC_OP_USER       8'h80
+
+`define DMA_UFC_PAUSE_DDR_HIGH 0
+`define DMA_UFC_PAUSE_DDR_FULL 1
+`define DMA_UFC_PAUSE_ING_AFULL 2
+`define DMA_UFC_PAUSE_CQ_FULL 3
+`define DMA_UFC_PAUSE_SW      4
+`define DMA_UFC_PAUSE_EMERG   5
+
+`define DMA_UFC_RESUME_DDR_LOW 0
+`define DMA_UFC_RESUME_ING_SPACE 1
+`define DMA_UFC_RESUME_SW     2
+
+`define DMA_UFC_MSG_MAGIC     8'hD5
+`define DMA_UFC_MSG_VERSION   8'h01
+
+`define DMA_UFC_ADP_DROP_MAGIC   0
+`define DMA_UFC_ADP_DROP_VERSION 1
+`define DMA_UFC_ADP_DROP_TLAST   2
+`define DMA_UFC_ADP_DROP_BUSY    3
+
+`define DMA_RX_CTRL_ENABLE    0
+`define DMA_RX_CTRL_SOFT_RST  1
+`define DMA_RX_CTRL_CPL_EN    2
+`define DMA_RX_CTRL_IRQ_EN    3
+`define DMA_RX_CTRL_FC_EN     4
+`define DMA_RX_CTRL_CLR_STAT  5
+`define DMA_RX_CTRL_ARM       6
+`define DMA_RX_CTRL_GAP_EN    11
+`define DMA_RX_CTRL_CH_RESET  31
+
+`define DMA_TX_CTRL_ENABLE    0
+`define DMA_TX_CTRL_START     1
+`define DMA_TX_CTRL_STOP      2
+`define DMA_TX_CTRL_CPL_EN    3
+`define DMA_TX_CTRL_IRQ_EN    4
+`define DMA_TX_CTRL_CLR_STAT  5
+
+`define DMA_TX_STATUS_IDLE       0
+`define DMA_TX_STATUS_BUSY       1
+`define DMA_TX_STATUS_ENABLED    2
+`define DMA_TX_STATUS_DONE       3
+`define DMA_TX_STATUS_UNDERFLOW  4
+`define DMA_TX_STATUS_READ_ERR   5
+`define DMA_TX_STATUS_ABORTED    6
+`define DMA_TX_STATUS_CQ_BLOCKED 7
+
+`define DMA_RX_STATUS_IDLE        0
+`define DMA_RX_STATUS_BUSY        1
+`define DMA_RX_STATUS_ENABLED     2
+`define DMA_RX_STATUS_ARMED       3
+`define DMA_RX_STATUS_ING_FULL    4
+`define DMA_RX_STATUS_ING_AFULL   5
+`define DMA_RX_STATUS_DDR_FULL    6
+`define DMA_RX_STATUS_DDR_AFULL   7
+`define DMA_RX_STATUS_LOW         8
+`define DMA_RX_STATUS_PAUSE       9
+`define DMA_RX_STATUS_PAUSE_VIOL  10
+`define DMA_RX_STATUS_OVF         11
+`define DMA_RX_STATUS_DROP        12
+`define DMA_RX_STATUS_GAP         13
+`define DMA_RX_STATUS_POLICY      14
+`define DMA_RX_STATUS_CQ          15
+
+`define DMA_TC_CONT           4'h0
+`define DMA_TC_FC             4'h1
+`define DMA_TC_AUX            4'h2
+
+`define DMA_RX_POL_DISABLE_DROP   4'h0
+`define DMA_RX_POL_LINEAR_CAPTURE 4'h1
+`define DMA_RX_POL_RING_BUFFER    4'h2
+`define DMA_RX_POL_LATEST_N_SLOT  4'h3
+`define DMA_RX_POL_QUEUE_DROP_NEW 4'h4
+`define DMA_RX_POL_QUEUE_WITH_FC  4'h5
+`define DMA_RX_POL_QUEUE_LOSSLESS 4'h6
+`define DMA_RX_POL_MAILBOX        4'h7
+`define DMA_RX_POL_AUX_FIFO       4'h8
+
+`define DMA_TX_POL_SINGLE_SHOT    4'h1
+
+`define DMA_ST_OK             8'h00
+`define DMA_ST_FRAME_DONE     8'h01
+`define DMA_ST_CAPTURE_DONE   8'h02
+`define DMA_ST_HEADER_ERR     8'h10
+`define DMA_ST_CRC_ERR        8'h11
+`define DMA_ST_UNSUP_CLASS    8'h12
+`define DMA_ST_UNSUP_POLICY   8'h13
+`define DMA_ST_INGRESS_FULL   8'h18
+`define DMA_ST_INGRESS_META_FULL 8'h19
+`define DMA_ST_DDR_QUEUE_FULL 8'h1a
+`define DMA_ST_FLOW_PAUSED    8'h1b
+`define DMA_ST_PAUSE_VIOL     8'h1c
+`define DMA_ST_POLICY_REJECT  8'h20
+`define DMA_ST_FRAME_TOO_BIG  8'h21
+`define DMA_ST_BUFFER_FULL    8'h22
+`define DMA_ST_CQ_FULL        8'h23
+`define DMA_ST_OVERFLOW       8'h24
+`define DMA_ST_DROP           8'h25
+`define DMA_ST_DROP_NEW       8'h26
+`define DMA_ST_DROP_CQ_FULL   8'h27
+`define DMA_ST_GAP            8'h30
+`define DMA_ST_CONT_BROKEN    8'h31
+`define DMA_ST_AXI_ERR        8'h40
+`define DMA_ST_TX_DONE        8'h44
+`define DMA_ST_AXI_READ_ERR   8'h45
+`define DMA_ST_TX_UNDERFLOW   8'h46
+`define DMA_ST_TX_STOPPED     8'h47
+`define DMA_ST_TX_CQ_BLOCKED  8'h48
+`define DMA_ST_TX_DESC_OWNER_ERR 8'h49
+`define DMA_ST_TX_DESC_LEN_ERR   8'h4a
+`define DMA_ST_TX_DESC_ADDR_ERR  8'h4b
+`define DMA_ST_TX_DESC_FETCH_ERR 8'h4c
+`define DMA_ST_TX_DESC_RING_ERR  8'h4d
+`define DMA_ST_ADDR_ALIGN     8'h41
+`define DMA_ST_RD_PTR_ERR     8'h42
+`define DMA_ST_WRAP_NOT_ALLOWED 8'h43
+`define DMA_ST_LOSSLESS_OVF   8'h50
+`define DMA_ST_CFG_PROTECT_ERR 8'he0
+`define DMA_ST_ILLEGAL_REG_WRITE 8'he1
+`define DMA_ST_UNSUPPORTED_FEATURE 8'he2
+`define DMA_ST_ILLEGAL_PARAM  8'he3
+`define DMA_ST_FATAL          8'hff
+
+`define DMA_FC_MODE_NONE      4'h0
+`define DMA_FC_MODE_PR        4'h1
+`define DMA_FC_MODE_CREDIT    4'h2
+`define DMA_FC_MODE_PR_CREDIT 4'h3
+
+`define DMA_FC_FULL_DROP_NEW  4'h0
+`define DMA_FC_FULL_PR_DROP   4'h1
+`define DMA_FC_FULL_BP_TO     4'h2
+`define DMA_FC_FULL_OVF_ONLY  4'h3
+
+`define DMA_CQE_MAGIC_OFF     0
+`define DMA_CQE_DESC_LEN_OFF  4
+`define DMA_CQE_STATUS_OFF    6
+`define DMA_CQE_TC_OFF        8
+`define DMA_CQE_POLICY_OFF    9
+`define DMA_CQE_FLAGS_OFF     10
+`define DMA_CQE_CHANNEL_ID_OFF 12
+`define DMA_CQE_DIRECTION_OFF 13
+`define DMA_CQE_RESERVED0_OFF 14
+`define DMA_CQE_ADDR_OFF      16
+`define DMA_CQE_LENGTH_OFF    24
+`define DMA_CQE_ALEN_OFF      28
+`define DMA_CQE_TS_OFF        32
+`define DMA_CQE_FRAME_SEQ_OFF 40
+`define DMA_CQE_FLOW_ID_OFF   44
+`define DMA_CQE_MSG_ID_OFF    46
+`define DMA_CQE_SAMPLE_CNT_L_OFF 48
+`define DMA_CQE_SAMPLE_CNT_H_OFF 52
+`define DMA_CQE_SAMPLE_CNT_OFF 48
+`define DMA_CQE_DROP_CNT_OFF  56
+`define DMA_CQE_OVF_CNT_OFF   58
+`define DMA_CQE_OWNER_OFF     60
+
+`define DMA_CQE_FLAG_WRAP_BEFORE   0
+`define DMA_CQE_FLAG_DROP          1
+`define DMA_CQE_FLAG_OVERFLOW      2
+`define DMA_CQE_FLAG_GAP           3
+`define DMA_CQE_FLAG_PAUSE_VIOL    4
+`define DMA_CQE_FLAG_CQ_BLOCKED    5
+`define DMA_CQE_FLAG_AXI_ERROR     6
+`define DMA_CQE_FLAG_POLICY_REJECT 7
+`define DMA_CQE_FLAG_FRAGMENT      8
+
+`define DMA_CQE_DIR_RX        8'h00
+`define DMA_CQE_DIR_TX        8'h01
+
+`endif

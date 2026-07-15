@@ -150,6 +150,7 @@ axi64_slave_model u_mem (
 dma_tx_engine u_dut (
     .clk(clk),
     .rstn(rstn),
+    .soft_reset(1'b0),
     .global_enable(global_enable),
     .tx_enable(tx_enable),
     .tx_ctrl_flat(tx_ctrl_flat),

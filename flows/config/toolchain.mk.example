@@ -1,4 +1,4 @@
 # Copy this file to flows/local/toolchain.mk for local overrides. Do not commit it.
-PYTHON ?= python
+PYTHON ?= python3
 VSIM ?= vsim
 VIVADO ?= vivado

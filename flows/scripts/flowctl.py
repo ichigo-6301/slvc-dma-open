@@ -9,17 +9,19 @@ import sys
 from pathlib import Path
 
 
-SIM_SCRIPTS = [
-    "run_rtl_v33c_tx_channel_table.do",
-    "run_rtl_v33e20a23_full_arch_throughput.do",
-    "run_rtl_v33e20a_hybrid_rx_ingress_minimal.do",
-    "run_rtl_v33e19_shared_frame_pool.do",
-    "run_rtl_v13_parser_pipeline.do",
-    "run_rtl_v15_axil_read_pipeline.do",
-    "run_rtl_v33e20a10_tx_cq_space_check_pipeline.do",
-    "run_rtl_v28_tx_descriptor_queue.do",
-    "run_rtl_v31_tx_desc_status_pipeline.do",
-    "run_rtl_v33e20a23_w_prefetch_fifo.do",
+MIN_PYTHON = (3, 6)
+
+SIM_CASES = [
+    ("run_rtl_v33c_tx_channel_table.do", "PASS: v33c TX channel table ownership split directed test"),
+    ("run_rtl_v33e20a23_full_arch_throughput.do", "E20A22_FULL_ARCH_THROUGHPUT_PASS"),
+    ("run_rtl_v33e20a_hybrid_rx_ingress_minimal.do", "OK: dma RTL v33e20a hybrid RX ingress minimal directed test passed."),
+    ("run_rtl_v33e19_shared_frame_pool.do", "OK: dma RTL v33e19 shared frame pool test passed."),
+    ("run_rtl_v13_parser_pipeline.do", "PASS tb_rtl_v13_parser_pipeline"),
+    ("run_rtl_v15_axil_read_pipeline.do", "OK: dma RTL v15 AXI-Lite read pipeline test passed."),
+    ("run_rtl_v33e20a10_tx_cq_space_check_pipeline.do", "PASS tb_rtl_v33e20a10_tx_cq_space_check_pipeline"),
+    ("run_rtl_v28_tx_descriptor_queue.do", "OK: dma RTL v28 TX descriptor queue test passed."),
+    ("run_rtl_v31_tx_desc_status_pipeline.do", "SUMMARY: v31 TX descriptor status pipeline PASS"),
+    ("run_rtl_v33e20a23_w_prefetch_fifo.do", "OK: dma RTL v33e20a23 W prefetch FIFO test passed."),
 ]
 
 
@@ -48,25 +50,26 @@ def show_config(config):
 
 
 def run_sim(root, dry_run):
-    commands = [["vsim", "-c", "-do", script] for script in SIM_SCRIPTS]
-    for command in commands:
+    commands = [(["vsim", "-c", "-do", script], marker) for script, marker in SIM_CASES]
+    for command, _ in commands:
         print("command: " + " ".join(command))
     if dry_run:
         return
     require_tool("vsim")
-    for command in commands:
+    for command, marker in commands:
         completed = subprocess.run(
             command,
             cwd=str(root / "modelsim"),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True,
+            universal_newlines=True,
         )
-        print(completed.stdout, end="")
+        sys.stdout.write(completed.stdout)
         failed = completed.returncode != 0
         failed = failed or "** Error:" in completed.stdout
         failed = failed or "Error in macro" in completed.stdout
         failed = failed or "# Errors: 0" not in completed.stdout
+        failed = failed or marker not in completed.stdout
         if failed:
             raise RuntimeError("ModelSim regression failed: {}".format(command[-1]))
 
@@ -89,10 +92,13 @@ def run_ooc(root, dry_run):
 
 
 def main():
+    if sys.version_info < MIN_PYTHON:
+        sys.stderr.write("flowctl: error: Python 3.6 or newer is required\n")
+        return 2
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=Path(__file__).resolve().parents[2])
     parser.add_argument("--config", default=".config")
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command")
     defconfig = sub.add_parser("defconfig")
     defconfig.add_argument("--source", required=True)
     sub.add_parser("show-config")
@@ -101,6 +107,9 @@ def main():
     sub.add_parser("fpga-ooc")
     sub.add_parser("fpga-ooc-dry-run")
     args = parser.parse_args()
+    if args.command is None:
+        parser.print_help()
+        return 2
     root = Path(args.root).resolve()
     config_path = Path(args.config)
     if not config_path.is_absolute():

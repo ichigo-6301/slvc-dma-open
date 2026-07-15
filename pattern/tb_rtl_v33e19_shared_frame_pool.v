@@ -59,6 +59,7 @@ module tb;
     ) u_dut (
         .clk(clk),
         .rstn(rstn),
+        .soft_reset(1'b0),
         .s_valid(s_valid),
         .s_ready(s_ready),
         .s_ch_id(s_ch_id),

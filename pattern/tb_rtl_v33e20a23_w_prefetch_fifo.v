@@ -42,6 +42,7 @@ dma_axi_write_engine #(
 ) u_dut (
     .clk(clk),
     .rstn(rstn),
+    .soft_reset(1'b0),
     .cmd_valid(cmd_valid),
     .cmd_ready(cmd_ready),
     .cmd_addr(cmd_addr),

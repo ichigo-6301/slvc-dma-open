@@ -26,12 +26,14 @@ DDR ring，并通过 CQ 向软件发布完成事件。
 ## 快速开始
 
 ```text
-python flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
-python flows/scripts/flowctl.py show-config
-python flows/scripts/flowctl.py sim-dry-run
-python flows/scripts/flowctl.py fpga-ooc-dry-run
+python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
+python3 flows/scripts/flowctl.py show-config
+python3 flows/scripts/flowctl.py sim-dry-run
+python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 ```
 
-`sim` 需要 ModelSim/Questa；`fpga-ooc` 需要 Vivado 2018.3。工具路径与本地
-环境变量仅放在 ignored `flows/local/`。发布前验证步骤见
+公开 runner 要求 Python 3.6 或更高版本。`sim` 需要 ModelSim/Questa；
+`fpga-ooc` 需要 Vivado 2018.3。工具路径与本地环境变量仅放在 ignored
+`flows/local/`。Windows 若只有 `python.exe`，可将上述 `python3` 替换为
+`python`。发布前验证步骤见
 [FRESH_CLONE_VALIDATION.md](FRESH_CLONE_VALIDATION.md)。

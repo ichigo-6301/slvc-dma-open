@@ -1,10 +1,17 @@
 kind: regression_summary
 schema_version: 1.0.0
 profile: slvc_dma_v1_512
-source_commit: 35835370ef2fd733844f507292f09f9dcbcffd01
+source_commit: 31e1d77f480d12af1e8ee436034c6c4a646b409c
 generated_at: 2026-07-15
-tool: ModelSim SE-64 2020.4
+tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
 status: verified
+validation_runs:
+  - platform: Windows
+    tool: ModelSim SE-64 2020.4
+    status: verified
+  - platform: IC_EDA Linux
+    tool: Questa Sim-64 10.7c
+    status: verified
 tests:
   - modelsim/run_rtl_v33c_tx_channel_table.do
   - modelsim/run_rtl_v33e20a23_full_arch_throughput.do
@@ -19,7 +26,12 @@ tests:
 markers:
   - 'PASS: v33c TX channel table ownership split directed test'
   - E20A22_FULL_ARCH_THROUGHPUT_PASS
+  - 'OK: dma RTL v33e20a hybrid RX ingress minimal directed test passed.'
+  - 'OK: dma RTL v33e19 shared frame pool test passed.'
+  - 'PASS tb_rtl_v13_parser_pipeline'
+  - 'OK: dma RTL v15 AXI-Lite read pipeline test passed.'
   - 'PASS tb_rtl_v33e20a10_tx_cq_space_check_pipeline'
+  - 'OK: dma RTL v28 TX descriptor queue test passed.'
   - 'SUMMARY: v31 TX descriptor status pipeline PASS'
   - 'OK: dma RTL v33e20a23 W prefetch FIFO test passed.'
 writer_prefetch:

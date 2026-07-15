@@ -1,5 +1,5 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
-PYTHON ?= python
+PYTHON ?= python3
 FLOWCTL := $(PYTHON) flows/scripts/flowctl.py --root "$(ROOT)" --config "$(ROOT)/.config"
 
 .RECIPEPREFIX := >

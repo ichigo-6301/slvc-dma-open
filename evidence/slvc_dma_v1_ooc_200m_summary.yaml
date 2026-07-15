@@ -51,4 +51,5 @@ runs:
 caveats:
   - Reports are intentionally summarized because raw Vivado reports contain private absolute paths.
   - Commit 3583537 changes only the timing-status document; the measured RTL is identical to 2da34e0.
+  - Release source 31e1d77 changes only simulation tests and is RTL-byte-identical to commit 3583537 for the OOC allowlist.
   - The preferred WNS margin of 0.300 ns was not met.

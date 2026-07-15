@@ -319,10 +319,13 @@ initial begin
     check_slice_stall();
 
     repeat (5) @(posedge clk);
-    if (errors == 0)
+    if (errors == 0) begin
         $display("Errors: 0, Warnings: 0");
-    else
+        $display("PASS tb_rtl_v13_parser_pipeline");
+    end else begin
         $display("Errors: %0d, Warnings: 0", errors);
+        $fatal(1, "tb_rtl_v13_parser_pipeline failed");
+    end
     $finish;
 end
 

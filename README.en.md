@@ -24,3 +24,18 @@ board-level lossless 10G operation, or ASIC signoff.
 
 See [results](docs/en/results.md), [verification](docs/en/verification.md),
 and [limitations](docs/en/limitations.md) for measurements and caveats.
+
+## Quick Start
+
+```text
+python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
+python3 flows/scripts/flowctl.py show-config
+python3 flows/scripts/flowctl.py sim-dry-run
+python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+```
+
+The public runner requires Python 3.6 or newer. `sim` requires ModelSim or
+Questa; `fpga-ooc` requires Vivado 2018.3. Keep local tool paths and environment
+overrides under ignored `flows/local/`. On Windows, replace `python3` with
+`python` when that command resolves to Python 3.6 or newer. See
+[FRESH_CLONE_VALIDATION.md](FRESH_CLONE_VALIDATION.md) for release validation.

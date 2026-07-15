@@ -9,8 +9,8 @@ claims:
     unit: result
     benchmark: "ten ModelSim directed tests covering TX/RX control, parser, frame pool, descriptor, CQ credit, and write prefetch behavior"
     configuration: 512-bit SLVC full architecture with the release feature defines
-    source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
-    tool: ModelSim SE-64 2020.4
+    source_ref: 31e1d77f480d12af1e8ee436034c6c4a646b409c
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_v1_regression_summary
     status: verified
@@ -29,7 +29,7 @@ claims:
     evidence:
       - slvc_dma_v1_ooc_200m_summary
     status: verified
-    caveat: OOC timing is not a board-level timing or 10G line-rate claim; preferred WNS +0.300 ns was not reached.
+    caveat: OOC timing is not a board-level timing or 10G line-rate claim; preferred WNS +0.300 ns was not reached. Release source 31e1d77 changes only tests and is RTL-byte-identical to this evidence source.
     public: true
   - id: slvc_dma_v1_fpga_ooc_resources
     profile: slvc_dma_v1_512
@@ -44,7 +44,7 @@ claims:
     evidence:
       - slvc_dma_v1_ooc_200m_summary
     status: verified
-    caveat: Values are OOC implementation results and can vary slightly by Vivado placement strategy.
+    caveat: Values are OOC implementation results and can vary slightly by Vivado placement strategy. Release source 31e1d77 changes only tests and is RTL-byte-identical to this evidence source.
     public: true
   - id: slvc_dma_v1_steady_state_writer_throughput
     profile: slvc_dma_v1_512
@@ -54,8 +54,8 @@ claims:
     unit: contiguous 512-bit AXI W beats
     benchmark: E20A23 W prefetch FIFO directed test
     configuration: "512-bit writer, long multi-burst payload case"
-    source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
-    tool: ModelSim SE-64 2020.4
+    source_ref: 31e1d77f480d12af1e8ee436034c6c4a646b409c
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_v1_regression_summary
     status: verified

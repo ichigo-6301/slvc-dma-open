@@ -18,3 +18,8 @@ with `PYTHON=python` when that command resolves to Python 3.6 or newer.
 The selected simulation runner validates the tool exit status, native error
 summary, and one exact completion marker per test. It has no dependency on
 `rg`, `grep`, or another external source-search utility.
+
+`python3 flows/scripts/public_hygiene.py --root .` verifies the tracked public
+release checksum manifest and local Markdown links without invoking an EDA
+tool. `make public-hygiene` is its Make wrapper and is the same check used by
+the public GitHub Actions workflow.

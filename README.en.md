@@ -1,5 +1,7 @@
 # SLVC DMA
 
+[![Public Integrity](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml/badge.svg?branch=main)](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml)
+
 [中文](README.md)
 
 SLVC DMA is a 512-bit virtual-channel DMA IP for a shared high-speed link.
@@ -14,6 +16,22 @@ completion queue.
 carrier adapter, and the MCF companion. It freezes the 512-bit
 Aurora-compatible profile together with its ModelSim/Questa regression and
 Vivado 2018.3 OOC implementation entrypoint.
+
+`v0.1.0-rc1` is a frozen tag. `main` may contain documentation, delivery, and
+public-integrity updates that do not change the frozen tag target. See
+[Release Notes](docs/en/release_notes.md).
+
+## Stage Status
+
+| Stage | Status | Public boundary |
+| --- | --- | --- |
+| Directed RTL regression | [verified](docs/en/verification_matrix.md) | Windows ModelSim and IC_EDA Questa completed the ten release-bound tests. |
+| FPGA OOC implementation | [verified](docs/en/results.md) | Three Vivado 2018.3 strategies met 200 MHz OOC setup and hold. |
+| Carrier CDC | [partial](docs/en/delivery_status.md) | Directed behavior is verified; complete CDC/RDC signoff is absent. |
+| ASIC frontend | [planned](docs/en/delivery_status.md) | Requires a separate library-bound profile and evidence. |
+| Physical implementation | [blocked](docs/en/delivery_status.md) | Awaiting validated standard-cell and SRAM macro physical views. |
+| Board validation | [not claimed](docs/en/delivery_status.md) | The exact public release commit has no board-level claim. |
+| Lossless 10G operation | [not claimed](docs/en/delivery_status.md) | This release is not a board-level 10G production validation. |
 
 ## Features
 
@@ -86,11 +104,24 @@ caveats.
 
 ## Quick Start
 
+### 1. Configuration And Public Integrity
+
 ```text
 python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
 python3 flows/scripts/flowctl.py show-config
+python3 flows/scripts/public_hygiene.py --root .
+```
+
+### 2. Simulator Regression
+
+```text
 python3 flows/scripts/flowctl.py sim-dry-run
 python3 flows/scripts/flowctl.py sim
+```
+
+### 3. Vivado OOC Entrypoint
+
+```text
 python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 ```
 
@@ -117,13 +148,19 @@ set.
 
 - [Architecture](docs/en/architecture.md)
 - [Interfaces](docs/en/interfaces.md)
+- [Integration Guide](docs/en/integration.md)
+- [Module Catalog](docs/en/module_catalog.md)
 - [Verification](docs/en/verification.md)
+- [Verification Matrix](docs/en/verification_matrix.md)
 - [Verified Results](docs/en/results.md)
 - [FPGA Implementation](docs/en/fpga_implementation.md)
+- [Delivery Status](docs/en/delivery_status.md)
+- [Release Notes](docs/en/release_notes.md)
 - [Limitations](docs/en/limitations.md)
 - [Roadmap](docs/en/roadmap.md)
 - [Public Scope](PUBLIC_SCOPE.md)
 - [Fresh-Clone Validation](FRESH_CLONE_VALIDATION.md)
+- [Contributing](CONTRIBUTING.md), [Support Boundary](SUPPORT.md), and [Security](SECURITY.md)
 
 ## Current Limitations
 

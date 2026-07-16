@@ -1,0 +1,40 @@
+name: Public Integrity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        uses: actions/checkout@v4
+      -
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.8"
+      -
+        name: Verify provenance and local documentation links
+        run: python3 flows/scripts/public_hygiene.py --root .
+      -
+        name: Generate public defconfig
+        run: python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
+      -
+        name: Show public configuration
+        run: python3 flows/scripts/flowctl.py show-config
+      -
+        name: Inspect simulator dry-run
+        run: python3 flows/scripts/flowctl.py sim-dry-run
+      -
+        name: Inspect OOC dry-run
+        run: python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+      -
+        name: Confirm tracked worktree hygiene
+        run: test -z "$(git status --porcelain)"

@@ -4,6 +4,6 @@ repository_name: slvc-dma-open
 profile: slvc_dma_v1_512
 release_version: v0.1.0-rc1
 source_commit: 31e1d77f480d12af1e8ee436034c6c4a646b409c
-delivery_commit: ca06198b853a6dfa8f49c2a494e720613e28e7eb
+delivery_commit: b474a874cbf483a11b3e007a1ee97d86c24cb77e
 license: MIT
 bundle_type: public-ip

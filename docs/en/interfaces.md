@@ -15,4 +15,5 @@ profile is fixed as follows:
 AXI4-Lite manages channels, descriptors, ring pointers, CQ, and status. The
 memory master performs RX payload writes and TX payload reads. RTL ports are
 the authoritative interface definition; this version does not promise a
-parameterized 128-bit profile.
+parameterized 128-bit profile. See the [Integration Guide](integration.md) for
+clock/reset ownership and the minimum configuration sequence.

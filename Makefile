@@ -4,16 +4,19 @@ FLOWCTL := $(PYTHON) flows/scripts/flowctl.py --root "$(ROOT)" --config "$(ROOT)
 
 .RECIPEPREFIX := >
 .DEFAULT_GOAL := help
-.PHONY: help defconfig slvc_dma_512_defconfig showconfig sim sim-dry-run fpga-ooc fpga-ooc-dry-run
+.PHONY: help defconfig slvc_dma_512_defconfig showconfig public-hygiene sim sim-dry-run fpga-ooc fpga-ooc-dry-run
 
 help:
-> @printf '%s\n' 'SLVC DMA v0.1.0-rc1 public flow' '' '  make slvc_dma_512_defconfig' '  make showconfig' '  make sim[-dry-run]' '  make fpga-ooc[-dry-run]'
+> @printf '%s\n' 'SLVC DMA v0.1.0-rc1 public flow' '' '  make slvc_dma_512_defconfig' '  make showconfig' '  make public-hygiene' '  make sim[-dry-run]' '  make fpga-ooc[-dry-run]'
 
 defconfig slvc_dma_512_defconfig:
 > @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_defconfig"
 
 showconfig:
 > @$(FLOWCTL) show-config
+
+public-hygiene:
+> @$(PYTHON) flows/scripts/public_hygiene.py --root "$(ROOT)"
 
 sim:
 > @$(FLOWCTL) sim

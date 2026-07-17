@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// AXI4-Lite 控制面：按 global、TX channel、RX channel 和 descriptor region 解码 CSR。
+// 读请求先采样地址/区域再抓取状态，写请求先完成保护与 ring-pointer 检查；硬件
+// event 和 soft reset 以本地控制状态输出，避免 AXI-Lite valid 与数据面直接耦合。
 module dma_axil_regs #(
     parameter integer TX_RD_MAX_OUTSTANDING = `DMA_TX_RD_MAX_OUTSTANDING,
     parameter integer RX_WR_MAX_OUTSTANDING = `DMA_RX_WR_MAX_OUTSTANDING
@@ -179,6 +182,7 @@ module dma_axil_regs #(
     output             irq
 );
 
+// 读写各自拥有阶段化 FSM，响应保持到 AXI-Lite ready，允许软件侧增加若干周期。
 localparam RD_IDLE   = 3'd0;
 localparam RD_DECODE = 3'd1;
 localparam RD_SAMPLE = 3'd2;

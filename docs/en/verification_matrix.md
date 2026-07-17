@@ -15,6 +15,14 @@ marker per test.
 | `run_rtl_v28_tx_descriptor_queue.do` | TX descriptor queue ordering | `OK: dma RTL v28 TX descriptor queue test passed.` |
 | `run_rtl_v31_tx_desc_status_pipeline.do` | TX descriptor status readback | `SUMMARY: v31 TX descriptor status pipeline PASS` |
 | `run_rtl_v33e20a23_w_prefetch_fifo.do` | Payload W prefetch and backpressure | `OK: dma RTL v33e20a23 W prefetch FIFO test passed.` |
+| `run_rtl_v33e20a104_udp_to_shdr_directed.do` | UDP adapter boundaries through 4096 bytes and parser compatibility | `PASS tb_rtl_v33e20a104_udp_to_shdr_directed cases=18 parser_checks=18` |
+| `run_rtl_v33e20a105_udp_to_shdr_random.do` | Four-seed random packet, gap, and stall scoreboard | `PASS tb_rtl_v33e20a105_udp_to_shdr_random seeds=13579bdf,2468ace1,51a7c0de,6d2b79f5 packets_per_seed=100 total=400` |
+| `run_rtl_v33e20a106_udp_to_shdr_error_matrix.do` | Fixed-profile rejects including payload overflow, reset recovery, and stall stability; 17 explicit invalid-packet drops | `PASS tb_rtl_v33e20a106_udp_to_shdr_error_matrix cases=23 drops=17 accepts=23` |
+| `run_rtl_v33e20a107_udp_to_dma_smoke.do` | UDP-port flow mapping through two DMA channels and CQEs | `PASS tb_rtl_v33e20a107_udp_to_dma_smoke packets=2 channels=2 cqes=2 ch0_full_then_ch1=1` |
 
-The matrix is directed verification, not coverage closure, formal proof, or
-CDC/RDC signoff.
+The first ten rows are the frozen core regression and are always required. The
+final four belong to the optional adapter P0 profile and are required only when
+`CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y`; the default adapter-enabled defconfig
+therefore schedules fourteen markers, while the core-only defconfig schedules
+ten. The matrix is directed verification, not coverage closure, formal proof,
+or CDC/RDC signoff.

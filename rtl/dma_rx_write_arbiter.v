@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// RX AXI 写仲裁器在 payload burst 与 CQE 写入之间分配唯一 AXI master。
+// AW stage 和 credit 计数把 command 发出与 W/B 完成分开，避免下游 backpressure
+// 使当前 grant 被提前撤销或让两类写请求同时占用总线。
 module dma_rx_write_arbiter(
     input             clk,
     input             rstn,
@@ -50,6 +53,7 @@ module dma_rx_write_arbiter(
     output            m_axi_bready
 );
 
+// grant 在一个 AXI 操作完成前保持稳定；只有明确的 fire/完成事件才改变它。
 localparam [1:0] GRANT_NONE    = 2'd0;
 localparam [1:0] GRANT_PAYLOAD = 2'd1;
 localparam [1:0] GRANT_CQE     = 2'd2;

@@ -1,6 +1,14 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// -----------------------------------------------------------------------------
+// 模块功能：SLVC DMA 的推荐系统集成包装层，统一暴露共享链路、AXI4、AXI4-Lite
+// 和控制消息接口，并把这些边界连接到完整的 frame DMA Core。
+// 数据路径：Shared-link RX -> frame_dma_wrapper -> Shared-link TX；RX/TX 数据面
+// 之外，AXI4-Lite 负责配置，AXI4 负责帧和完成队列存取，UFC 负责控制消息。
+// 当前约束：SL_DATA_WIDTH 参数保留在接口上，但 native Core 当前只启用 512 bit。
+// 时钟与复位：RX/控制使用 sl_rx_aclk 域，TX stream 可使用独立的 sl_tx_aclk 域。
+// -----------------------------------------------------------------------------
 module slvc_dma_wrapper #(
     parameter integer SL_DATA_WIDTH = 512,
     parameter integer TX_RD_MAX_OUTSTANDING = `DMA_TX_RD_MAX_OUTSTANDING,

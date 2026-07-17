@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// Descriptor TX channel 表，保存 descriptor ring 的 base/size、RD/WR pointer、
+// ownership/status 和错误计数。它只维护 descriptor context；实际 descriptor fetch、
+// payload read 和 SHDR 生成由 TX engine 及 read prefetch 完成。
 module dma_tx_desc_channel_table #(
     parameter integer CH_W = 4
 ) (
@@ -59,6 +62,7 @@ module dma_tx_desc_channel_table #(
     input                    tx_desc_evt_set_busy
 );
 
+// descriptor control 写入先经过保护/环形指针检查，再提交到硬件维护状态。
 localparam HAS_PER_CH_COUNTERS = (`DMA_ENABLE_PER_CH_COUNTERS != 0);
 localparam HAS_DESC_STATUS_EVENT_LANES = (`DMA_ENABLE_TX_DESC_STATUS_EVENT_LANES != 0);
 localparam CSR_WR_RSP_NONE    = 2'd0;

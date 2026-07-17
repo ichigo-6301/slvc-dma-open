@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// TX 主状态机，支持 single-shot 与 descriptor-driven 两类发送入口。
+// 它先锁存 channel/descriptor context，再检查 CQ 空间，输出 SHDR64 后消费预取
+// payload；AXI 读错误、下游 backpressure 和 CQ 提交都必须经过显式状态才能结束一帧。
 module dma_tx_engine #(
     parameter integer TX_RD_MAX_OUTSTANDING = `DMA_TX_RD_MAX_OUTSTANDING
 )(
@@ -82,6 +85,8 @@ module dma_tx_engine #(
     input              tx_axis_tready
 );
 
+// descriptor fetch/parse/context capture 与普通 payload replay 共用后半段状态，
+// 但 descriptor ownership 只有在提交边界才推进。
 localparam ST_IDLE        = 4'd0;
 localparam ST_DESC_SETUP  = 4'd1;
 localparam ST_START_SETUP = 4'd2;

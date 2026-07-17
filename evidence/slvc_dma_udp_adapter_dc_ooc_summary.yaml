@@ -1,0 +1,43 @@
+kind: asic_ooc_summary
+schema_version: 1.0.0
+profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+source_commit: abe35e682f44d2f89e381f7d93b917567dad6afa
+generated_at: 2026-07-17
+tool: Design Compiler O-2018.06-SP1
+target: 55 nm TT standard-cell library
+top: dma_udp_ipv4_to_shdr64_adapter
+status: verified
+constraints:
+  clock_period_ns: 5.000
+  setup_uncertainty_ns: 0.200
+  hold_uncertainty_ns: 0.050
+  input_output_delay_ns: 0.500
+timing:
+  wns_ns: 0.39
+  tns_ns: 0.00
+  setup_violating_paths: 0
+  hold_violating_paths: 0
+  worst_path_start: crc_chunk_q_reg[1]
+  worst_path_end: m_axis_tdata_reg[407]
+area:
+  leaf_cells: 3746
+  combinational_cells: 2837
+  sequential_cells: 909
+  latches: 0
+  combinational_area: 5737.48
+  sequential_area: 6006.84
+  total_cell_area: 11744.32
+power:
+  estimated_dynamic_mw: 2.2396
+  estimated_leakage_nw: 674.05
+checks:
+  setup: pass
+  hold: pass
+  max_transition: pass
+  max_capacitance: pass
+  max_fanout: pass
+caveats:
+  - Adapter-only frontend synthesis; not full-DMA ASIC area or timing.
+  - Area units and pre-layout power are library-specific and are not portable signoff metrics.
+  - No leakage power budget was defined; the tool default required value of zero is not treated as an electrical or timing failure.
+  - Standard-cell libraries, generated reports, mapped netlists, and private paths are not distributed.

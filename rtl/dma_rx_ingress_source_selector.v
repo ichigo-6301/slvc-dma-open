@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// 在普通 stream ingress 与 shared-frame ingress 之间选择一个包级 source。
+// 一旦当前 metadata 被锁定，source 在整个 payload/commit 生命周期内保持不变，
+// 防止另一条路径突然变为 valid 时切换数据来源。
 module dma_rx_ingress_source_selector #(
     parameter integer PAYLOAD_AW = 10
 )(
@@ -76,6 +79,7 @@ module dma_rx_ingress_source_selector #(
     output            active_is_frame
 );
 
+// frame source 优先用于避免 shared pool metadata 长时间等待；active_q 锁住选择。
 localparam SRC_STREAM = 1'b0;
 localparam SRC_FRAME  = 1'b1;
 

@@ -1,33 +1,33 @@
 kind: nonclaims
 schema_version: 1.0.0
 nonclaims:
-  - id: slvc_dma_v1_board_current_commit
-    profile: slvc_dma_v1_512
-    statement: Board validation of the exact v0.1.0-rc1 release commit is not claimed.
-    reason: Historical U5 loopback evidence predates the final 200 MHz timing edits and was not rerun for this release source commit.
+  - id: slvc_dma_udp_adapter_board_integration
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: "Board-level MAC, PHY, Aurora, or 10G integration of the UDP adapter is not claimed."
+    reason: The evidence is RTL simulation and adapter-only frontend synthesis; no release-bound board implementation was executed.
     status: not_claimed
     public: true
-  - id: slvc_dma_v1_standard_128_profile
-    profile: slvc_dma_v1_512
-    statement: A parameterized 128-bit standard RTL implementation is not claimed.
-    reason: This release freezes the validated 512-bit Aurora-compatible SLVC configuration; width parameterization remains future work.
+  - id: slvc_dma_udp_adapter_full_ethernet_stack
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: "A complete Ethernet, IPv4, or UDP protocol stack is not claimed."
+    reason: "The adapter supports a fixed Ethernet II, IPv4 IHL 5, unfragmented UDP receive profile and excludes VLAN, IPv6, options, reassembly, checksum validation, and FCS handling."
     status: not_claimed
     public: true
-  - id: slvc_dma_v1_asic_signoff
-    profile: slvc_dma_v1_512
-    statement: "ASIC synthesis, SRAM macro binding, DFT, physical design, and signoff STA are not claimed."
-    reason: "The current release contains no frozen ASIC library, SRAM macro, or physical implementation evidence."
+  - id: slvc_dma_udp_adapter_udp_lossless
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: Lossless UDP or network end-to-end flow control is not claimed.
+    reason: Local AXI4-Stream backpressure and DMA PAUSE/RESUME do not provide end-to-end UDP flow control across a network.
     status: not_claimed
     public: true
-  - id: slvc_dma_v1_cdc_signoff
-    profile: slvc_dma_v1_512
-    statement: Full CDC/RDC signoff is not claimed.
-    reason: "Directed carrier CDC verification exists, but no release-bound signoff run or reviewed waivers are available."
+  - id: slvc_dma_udp_adapter_asic_signoff
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: "Full-DMA ASIC synthesis, physical design, extracted STA, DFT, and signoff are not claimed."
+    reason: The measured ASIC evidence is an adapter-only Design Compiler OOC run with an externally supplied standard-cell library.
     status: not_claimed
     public: true
-  - id: slvc_dma_v1_ten_gig_lossless
-    profile: slvc_dma_v1_512
-    statement: 10G Ethernet line-rate lossless operation is not claimed.
-    reason: "This release is a generic SLVC DMA OOC and RTL package, not a completed board-level 10G production validation."
+  - id: slvc_dma_udp_adapter_core_release_change
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: A change to the frozen v0.1.0-rc1 DMA core or software-visible ABI is not claimed.
+    reason: "The adapter is an optional upstream compatibility layer and does not alter the core channel table, CQE layout, register map, or release tag."
     status: not_claimed
     public: true

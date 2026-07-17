@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// 旧式 per-channel payload 缓冲，按 64-bit word 组织并由上层提供读索引。
+// 它保留用于兼容路径；共享 frame pool 开启时，主数据路径由 pool/adapter 承担。
 module dma_rx_payload_buffer(
     input             clk,
     input             rstn,

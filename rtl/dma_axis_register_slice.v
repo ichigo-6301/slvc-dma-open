@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+// 单级 AXI4-Stream register slice。valid/data 在 stall 期间由寄存器保持，
+// ready 只表示本级可接收新 beat，用于把上下游组合控制拆成两个时序边界。
 module dma_axis_register_slice #(
     parameter DATA_WIDTH = 512
 )(

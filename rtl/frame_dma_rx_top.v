@@ -1,6 +1,14 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// -----------------------------------------------------------------------------
+// 模块功能：SLVC DMA 的 Core 集成顶层，协调 RX admission/写入、TX 调度/读取、
+// CQ 发布、AXI-Lite 寄存器和共享 AXI Master 仲裁。
+// RX 路径：SHDR64 parser -> channel match/context -> admission -> payload write/CQE；
+// TX 路径：channel/descriptor context -> read prefetch -> SHDR64 header/payload。
+// 控制边界：各子路径先形成已注册 event，再由寄存器/CQ 侧消费，避免数据面状态
+// 直接扩散到控制计数。RX、控制和 AXI 主时钟在 aclk 域，TX stream 可独立复位。
+// -----------------------------------------------------------------------------
 module frame_dma_rx_top #(
     parameter integer TX_RD_MAX_OUTSTANDING = `DMA_TX_RD_MAX_OUTSTANDING,
     parameter integer RX_WR_MAX_OUTSTANDING = `DMA_RX_WR_MAX_OUTSTANDING
@@ -72,6 +80,8 @@ module frame_dma_rx_top #(
     output             irq
 );
 
+// RX 状态机把 header 解析、channel context、资源检查、提交和异常恢复分开，
+// 这样 admission 只在所有必要资源已确认后改变软件可见状态。
 localparam RX_IDLE         = 4'd0;
 localparam RX_PARSE_WAIT   = 4'd1;
 localparam RX_LOOKUP       = 4'd2;
@@ -89,6 +99,7 @@ localparam RX_LOOKUP_PIPE  = 4'd13;
 localparam RX_RELEASE_CALC = 4'd14;
 localparam RX_REJECT_EVAL  = 4'd15;
 
+// 写路径状态机先发 payload command，再等待写响应，最后单独发布 CQE 并回收 frame。
 localparam WR_IDLE     = 3'd0;
 localparam WR_PAY_CMD  = 3'd1;
 localparam WR_PAY_WAIT = 3'd2;
@@ -145,6 +156,8 @@ reg        active_ring;
 reg        active_wrap_before;
 reg [31:0] active_cq_next;
 
+// event_* 是 RX/TX 完成结果到控制面的一拍事件；先锁存事件，再更新 channel
+// counter、IRQ 和 CQ 状态，避免同周期多个来源直接覆盖计数器。
 reg event_valid;
 reg event_ch_valid;
 reg [3:0] event_ch;

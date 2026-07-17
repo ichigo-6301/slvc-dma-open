@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// RX ingress 队列把 payload RAM 与包级 metadata FIFO 绑定起来。
+// payload 以 64-bit word 存储，metadata 记录包的 channel、长度、目标指针和
+// reservation 信息；只有完整 metadata 入队后，下游才可把对应 payload 当作包消费。
 module dma_rx_ingress_queue #(
     parameter PAYLOAD_WORDS = 2048,
     parameter PAYLOAD_AW    = 11,

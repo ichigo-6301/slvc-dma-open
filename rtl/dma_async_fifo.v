@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+// 通用双时钟 FIFO：写域和读域分别维护 binary/Gray pointer，并通过两级同步器
+// 交换对端 Gray pointer。full/empty 只依据同步后的指针判断，数据 RAM 不清零。
 module dma_async_fifo #(
     parameter integer DATA_WIDTH = 8,
     parameter integer DEPTH_LOG2 = 4,
@@ -18,6 +20,7 @@ module dma_async_fifo #(
     input                       m_ready
 );
 
+// PTR_W 多出一位用于区分环回后的 full 与 empty。
 localparam integer DEPTH = (1 << DEPTH_LOG2);
 localparam integer PTR_W = DEPTH_LOG2 + 1;
 

@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// RX 入口的组合 SHDR64 解析器：从单个 512-bit header beat 提取 metadata，
+// 同时计算固定格式 header 的 CRC 和静态合法性。它只处理 Header，不消费 payload；
+// 下游 channel match/admission 使用输出 metadata 决定是否接收本帧。
 module dma_rx_parser(
     input      [511:0] header_beat,
     output             header_ok,

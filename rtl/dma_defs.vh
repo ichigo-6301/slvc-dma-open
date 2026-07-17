@@ -1,6 +1,10 @@
 `ifndef DMA_DEFS_VH
 `define DMA_DEFS_VH
 
+// SLVC DMA 的共享定义集中在这里，供 RTL、仿真和公开配置共同使用。
+// 这些值同时描述协议常量、资源深度、功能开关和 AXI-Lite 寄存器布局。
+// 当前发布的 Core profile 固定为 512-bit 数据通路；部分参数是为后续 profile 预留的。
+
 `define DMA_FRAME_MAGIC       32'h414D4446
 `define DMA_CQE_MAGIC         32'h45514346
 `define DMA_IP_ID             32'hFAD00700

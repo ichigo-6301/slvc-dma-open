@@ -1,9 +1,9 @@
 kind: public_ip_release
 schema_version: 1.0.0
 repository_name: slvc-dma-open
-profile: slvc_dma_v1_512
+profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
 release_version: v0.1.0-rc1
-source_commit: 31e1d77f480d12af1e8ee436034c6c4a646b409c
-delivery_commit: b474a874cbf483a11b3e007a1ee97d86c24cb77e
+source_commit: 709e1c102af3cc8a195bae5dc126bd2c3cf23eb7
+delivery_commit: 40e5b0f52d28320820cd7d20868976c0d72573c4
 license: MIT
 bundle_type: public-ip

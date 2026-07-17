@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// 带弹性边界的 RX parser。输入 header 先锁存，再分拍完成 CRC、校验和输出，
+// 因而 parser 的计算延迟不会把上游 ready 直接连到后级状态。out_valid 保持到
+// out_ready 握手，等待期间 metadata 与结果必须稳定。
 module dma_rx_parser_pipe(
     input              clk,
     input              rstn,
@@ -32,6 +35,7 @@ initial begin
 end
 `endif
 
+// CRC、静态字段检查和结果发布分开，便于在 header 校验失败时统一回到空闲态。
 localparam ST_IDLE     = 2'd0;
 localparam ST_CRC      = 2'd1;
 localparam ST_VALIDATE = 2'd2;

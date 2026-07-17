@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// UFC 控制消息 mailbox：接收侧只在本地 pending 未占用时接收一条消息，发送侧
+// 通过 core_tx_ready 与链路 ready 解耦。它承载控制消息，不承担 payload 数据流控。
 module dma_ufc_mailbox(
     input             clk,
     input             rstn,

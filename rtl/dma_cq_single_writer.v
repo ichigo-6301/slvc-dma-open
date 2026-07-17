@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// RX/TX CQ 请求的共享串行 writer。它先在本地 shadow pointer 上检查 ring 空间，
+// 再一次只接受一个来源，最后把完成后的 pointer/commit 事件返回 Core；因此多个
+// producer 不会同时发布同一个 CQ slot。
 module dma_cq_single_writer(
     input             clk,
     input             rstn,
@@ -66,6 +69,7 @@ module dma_cq_single_writer(
     output            busy
 );
 
+// 请求选择、空间检查、启动和等待分阶段进行，避免 AXI backpressure 改写 shadow state。
 localparam ST_IDLE  = 3'd0;
 localparam ST_NEXT  = 3'd1;
 localparam ST_CHECK = 3'd2;

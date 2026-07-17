@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// 外部 AXI-Stream 宽度到固定 512-bit Core beat 的聚合器。它只改变 beat 宽度，
+// 不重新解释 SHDR64 metadata；无 TLAST 时由固定 segment/header 规则确定边界，
+// partial aggregate 在 reset 或协议不完整时按本模块的 valid/ready 契约丢弃。
 module dma_axis_width_pack_512 #(
     parameter integer EXT_AXIS_DATA_WIDTH = 512,
     parameter integer CORE_AXIS_DATA_WIDTH = 512
@@ -39,6 +42,7 @@ function [CORE_AXIS_DATA_WIDTH-1:0] insert_segment;
     end
 endfunction
 
+// 一个 Core beat 由若干外部 beat 拼成，pack_count 记录当前聚合位置。
 localparam integer BEATS_PER_CORE = CORE_AXIS_DATA_WIDTH / EXT_AXIS_DATA_WIDTH;
 localparam integer PACK_COUNT_W = (BEATS_PER_CORE <= 1) ? 1 : clog2(BEATS_PER_CORE + 1);
 

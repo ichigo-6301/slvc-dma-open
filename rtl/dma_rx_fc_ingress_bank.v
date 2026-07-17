@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// FC ingress bank 为多通道提供统一的 payload/metadata 存储窗口。
+// 地址由 channel 与队列索引拼接得到，数据 RAM 和 metadata RAM 分离，便于按包
+// 进行 admission、回收和 pause/resume 控制，而不把每个通道复制成独立大 FIFO。
 module dma_rx_fc_ingress_bank #(
     parameter CHANNELS      = `DMA_MAX_CH,
     parameter PAYLOAD_WORDS = `DMA_RX_FC_INGRESS_PAYLOAD_WORDS,

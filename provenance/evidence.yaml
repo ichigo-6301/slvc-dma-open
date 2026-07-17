@@ -1,6 +1,34 @@
 kind: evidence_manifest
 schema_version: 1.0.0
 evidence:
+  - id: slvc_dma_rtl_comment_only_equivalence
+    path: evidence/slvc_dma_rtl_comment_only_equivalence.yaml
+    type: comments_only_token_equivalence
+    source_ref: 709e1c102af3cc8a195bae5dc126bd2c3cf23eb7
+    tool: Python 3 lexer checker
+    claims:
+      - slvc_dma_rtl_comment_only_equivalence
+    sha256: null
+    public: true
+  - id: slvc_dma_udp_adapter_dc_ooc_summary
+    path: evidence/slvc_dma_udp_adapter_dc_ooc_summary.yaml
+    type: design_compiler_adapter_ooc_timing_area_power_summary
+    source_ref: abe35e682f44d2f89e381f7d93b917567dad6afa
+    tool: Design Compiler O-2018.06-SP1
+    claims:
+      - slvc_dma_udp_adapter_dc_ooc_200m
+      - slvc_dma_udp_adapter_dc_area
+    sha256: null
+    public: true
+  - id: slvc_dma_udp_adapter_regression_summary
+    path: evidence/slvc_dma_udp_adapter_regression_summary.yaml
+    type: modelsim_questa_adapter_regression_summary
+    source_ref: 709e1c102af3cc8a195bae5dc126bd2c3cf23eb7
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
+    claims:
+      - slvc_dma_udp_adapter_directed_regression
+    sha256: null
+    public: true
   - id: slvc_dma_v1_ooc_200m_summary
     path: evidence/slvc_dma_v1_ooc_200m_summary.yaml
     type: vivado_ooc_timing_and_utilization_summary

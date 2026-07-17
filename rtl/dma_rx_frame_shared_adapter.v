@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// 将 RX ingress metadata/payload 适配到共享 frame pool 的 context 接口。
+// adapter 负责 context reservation、pool block 申请/提交和读回请求的握手；
+// RDQ/本地 FIFO 选项用于切断 pool ready 与上层 RX admission 的长组合路径。
 module dma_rx_frame_shared_adapter #(
     parameter integer CH_NUM = `DMA_MAX_CH,
     parameter integer CH_ID_W = 4,

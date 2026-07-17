@@ -1,6 +1,13 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// -----------------------------------------------------------------------------
+// 模块功能：完整 FPGA OOC 入口，把可综合的 DMA Core 边界整理成单一顶层。
+// 该层不实现具体收发状态机；它负责固定 512-bit Core 契约、AXI4-Lite 控制、
+// AXI4 内存、RX/TX AXI-Stream 以及 UFC 控制消息与 frame_dma_rx_top 的连接。
+// SHDR64 在当前 profile 占一个 512-bit beat，segment 长度由 header metadata
+// 决定而不是依赖 AXI4-Stream TLAST。参数化接口为后续 profile 预留，但本版有硬约束。
+// -----------------------------------------------------------------------------
 module frame_dma_wrapper #(
     parameter integer SL_DATA_WIDTH = 512,
     parameter integer TX_RD_MAX_OUTSTANDING = `DMA_TX_RD_MAX_OUTSTANDING,

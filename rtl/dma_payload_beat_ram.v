@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+// 按 512-bit beat 读写的 payload RAM 叶节点。存储阵列不承担 packet valid/ownership
+// 语义，帧是否可见由上层 queue 或 frame pool metadata 控制。
 module dma_payload_beat_ram #(
     parameter DATA_WIDTH = 512,
     parameter DEPTH      = 128,

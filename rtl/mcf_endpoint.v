@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// MCF companion endpoint：在多个输入 source 间做轮询仲裁并发送 SHDR64 风格的
+// control/data message。它属于可选 carrier/兼容层，独立于主 DMA 的 RX/TX engine。
 module mcf_endpoint #(
     parameter integer NUM_SRC = 4,
     parameter integer SL_DATA_WIDTH = 512,
@@ -55,6 +57,7 @@ initial begin
 end
 `endif
 
+// 先锁定 source/header context，再逐 beat 发送 payload；rr_ptr 只在完成边界推进。
 localparam ST_IDLE         = 3'd0;
 localparam ST_HEADER       = 3'd1;
 localparam ST_PAYLOAD_LOAD = 3'd2;

@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// 将 parser 产生的 flow/channel metadata 与通道寄存器快照匹配。
+// 本模块只做 combinational 选择和合法性判断，不拥有 channel 表；表的更新由
+// dma_rx_channel_table 完成，match 结果随后进入 RX admission pipeline。
 module dma_rx_channel_match(
     input      [3:0]   traffic_class,
     input      [15:0]  flow_id,

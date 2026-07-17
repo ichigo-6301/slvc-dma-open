@@ -24,6 +24,13 @@ SIM_CASES = [
     ("run_rtl_v33e20a23_w_prefetch_fifo.do", "OK: dma RTL v33e20a23 W prefetch FIFO test passed."),
 ]
 
+ADAPTER_SIM_CASES = [
+    ("run_rtl_v33e20a104_udp_to_shdr_directed.do", "PASS tb_rtl_v33e20a104_udp_to_shdr_directed cases=18 parser_checks=18"),
+    ("run_rtl_v33e20a105_udp_to_shdr_random.do", "PASS tb_rtl_v33e20a105_udp_to_shdr_random seeds=13579bdf,2468ace1,51a7c0de,6d2b79f5 packets_per_seed=100 total=400"),
+    ("run_rtl_v33e20a106_udp_to_shdr_error_matrix.do", "PASS tb_rtl_v33e20a106_udp_to_shdr_error_matrix cases=23 drops=17 accepts=23"),
+    ("run_rtl_v33e20a107_udp_to_dma_smoke.do", "PASS tb_rtl_v33e20a107_udp_to_dma_smoke packets=2 channels=2 cqes=2 ch0_full_then_ch1=1"),
+]
+
 
 def parse_config(path):
     values = {}
@@ -43,14 +50,36 @@ def require_tool(name):
     return tool
 
 
+def simulation_profile(config):
+    adapter_enabled = config.get("CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER") == "y"
+    adapter_count = len(ADAPTER_SIM_CASES) if adapter_enabled else 0
+    return adapter_enabled, len(SIM_CASES), adapter_count, len(SIM_CASES) + adapter_count
+
+
 def show_config(config):
     print("top: {}".format(config.get("CONFIG_SLVC_DMA_TOP", "frame_dma_wrapper")))
     print("clock_period_ns: {}".format(config.get("CONFIG_SLVC_DMA_CLOCK_PERIOD_NS", "5.000")))
-    print("profile: slvc_dma_v1_512")
+    print("profile: slvc_dma_v1_512_udp_ipv4_adapter_p0")
+    adapter_enabled, core_count, adapter_count, total_count = simulation_profile(config)
+    print("udp_ipv4_adapter: {}".format("y" if adapter_enabled else "n"))
+    print("simulation_profile: {}".format(
+        "frozen_core_plus_udp_adapter" if adapter_enabled else "frozen_core"))
+    print("required_core_markers: {}".format(core_count))
+    print("required_adapter_markers: {}".format(adapter_count))
+    print("required_total_markers: {}".format(total_count))
 
 
-def run_sim(root, dry_run):
-    commands = [(["vsim", "-c", "-do", script], marker) for script, marker in SIM_CASES]
+def run_sim(root, config, dry_run):
+    cases = list(SIM_CASES)
+    adapter_enabled, core_count, adapter_count, total_count = simulation_profile(config)
+    print("simulation_profile: {}".format(
+        "frozen_core_plus_udp_adapter" if adapter_enabled else "frozen_core"))
+    print("required_core_markers: {}".format(core_count))
+    print("required_adapter_markers: {}".format(adapter_count))
+    print("required_total_markers: {}".format(total_count))
+    if adapter_enabled:
+        cases.extend(ADAPTER_SIM_CASES)
+    commands = [(["vsim", "-c", "-do", script], marker) for script, marker in cases]
     for command, _ in commands:
         print("command: " + " ".join(command))
     if dry_run:
@@ -91,6 +120,20 @@ def run_ooc(root, dry_run):
     subprocess.run(command, cwd=str(root), env=environment, check=True)
 
 
+def run_adapter_dc_ooc(root, dry_run):
+    tool_name = os.environ.get("DC_SHELL", "dc_shell")
+    tool = shutil.which(tool_name) or tool_name
+    command = [tool, "-f", "run_udp_to_shdr_ooc.tcl"]
+    print("command: " + " ".join(command))
+    if dry_run:
+        return
+    if not os.environ.get("DMA_DC_TARGET_LIBRARY"):
+        raise RuntimeError("DMA_DC_TARGET_LIBRARY must name a local standard-cell .db library")
+    if not shutil.which(tool_name) and not Path(tool_name).is_file():
+        raise RuntimeError("tool not found on PATH: {}".format(tool_name))
+    subprocess.run(command, cwd=str(root / "asic" / "dc"), check=True)
+
+
 def main():
     if sys.version_info < MIN_PYTHON:
         sys.stderr.write("flowctl: error: Python 3.6 or newer is required\n")
@@ -106,6 +149,8 @@ def main():
     sub.add_parser("sim-dry-run")
     sub.add_parser("fpga-ooc")
     sub.add_parser("fpga-ooc-dry-run")
+    sub.add_parser("adapter-dc-ooc")
+    sub.add_parser("adapter-dc-ooc-dry-run")
     args = parser.parse_args()
     if args.command is None:
         parser.print_help()
@@ -124,9 +169,11 @@ def main():
         if args.command == "show-config":
             show_config(config)
         elif args.command.startswith("sim"):
-            run_sim(root, args.command.endswith("dry-run"))
-        else:
+            run_sim(root, config, args.command.endswith("dry-run"))
+        elif args.command.startswith("fpga-ooc"):
             run_ooc(root, args.command.endswith("dry-run"))
+        else:
+            run_adapter_dc_ooc(root, args.command.endswith("dry-run"))
         return 0
     except RuntimeError as error:
         print("flowctl: error: {}".format(error), file=sys.stderr)

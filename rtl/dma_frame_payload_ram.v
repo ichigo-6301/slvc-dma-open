@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// Shared frame payload 的 RAM 叶节点，提供按 block/word 地址访问的同步存储。
+// RAM 内容不承担 reset 语义；所有帧是否可见由 pool metadata、valid 和 free list
+// 控制，避免为清空大容量数据阵列引入额外复位扇出。
 module dma_frame_payload_ram #(
     parameter integer BLOCK_NUM = 64,
     parameter integer BLOCK_AW = 6,

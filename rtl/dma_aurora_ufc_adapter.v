@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// Aurora UFC 适配器把 Core 的消息 entry 拆成 carrier 所需的 128-bit UFC beat，
+// 并在接收侧按 beat 重新拼回完整消息。tx/rx index 只描述一条消息内部的位置，
+// 不替代 AXI4-Stream payload 的流控。
 module dma_aurora_ufc_adapter #(
     parameter integer UFC_AXIS_DATA_W = 64
 )(

@@ -1,0 +1,49 @@
+kind: regression_summary
+schema_version: 1.0.0
+profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+source_commit: 709e1c102af3cc8a195bae5dc126bd2c3cf23eb7
+generated_at: 2026-07-17
+tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
+status: verified
+validation_runs:
+  - platform: Windows
+    tool: ModelSim SE-64 2020.4
+    status: verified
+  - platform: IC_EDA Linux
+    tool: Questa Sim-64 10.7c
+    status: verified
+tests:
+  - modelsim/run_rtl_v33e20a104_udp_to_shdr_directed.do
+  - modelsim/run_rtl_v33e20a105_udp_to_shdr_random.do
+  - modelsim/run_rtl_v33e20a106_udp_to_shdr_error_matrix.do
+  - modelsim/run_rtl_v33e20a107_udp_to_dma_smoke.do
+markers:
+  - PASS tb_rtl_v33e20a104_udp_to_shdr_directed cases=18 parser_checks=18
+  - PASS tb_rtl_v33e20a105_udp_to_shdr_random seeds=13579bdf,2468ace1,51a7c0de,6d2b79f5 packets_per_seed=100 total=400
+  - PASS tb_rtl_v33e20a106_udp_to_shdr_error_matrix cases=23 drops=17 accepts=23
+  - PASS tb_rtl_v33e20a107_udp_to_dma_smoke packets=2 channels=2 cqes=2 ch0_full_then_ch1=1
+coverage:
+  directed_lengths_bytes: 0,1,21,22,23,31,63,64,65,127,128,255,256,511,512,1023,1472,4096
+  random_packets: 400
+  caveat: Directed and deterministic random verification; not coverage closure or formal proof.
+error_matrix:
+  expected_cases: 23
+  expected_drops: 17
+  expected_accepts: 23
+  drop_reason_counts:
+    ethertype: 3
+    ipv4_version: 1
+    ipv4_ihl: 1
+    ipv4_protocol: 1
+    ipv4_fragment: 2
+    ipv4_total_length: 1
+    udp_length_min: 1
+    udp_exceeds_ip_payload: 1
+    length_profile: 1
+    header_short: 1
+    nonlast_keep: 1
+    last_keep: 1
+    truncated: 1
+    payload_too_large: 1
+  diagnosis: The former eighteenth drop was caused by the testbench retracting tvalid before a real handshake during header stall; the corrected driver holds each beat until input handshake.
+provenance_note: The commented source is functionally token-identical to the prior verified adapter source; Windows ModelSim was rerun on this commit. The existing IC_EDA Questa result remains bound to its original verified source record.

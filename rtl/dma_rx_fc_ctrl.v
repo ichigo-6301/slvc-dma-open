@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// RX flow-control 控制器。它根据各通道 used/high/low watermark 产生 pause/resume
+// 事件，并把控制消息与 ingress enqueue 的时序解耦；pause 是链路侧策略事件，
+// 不是 AXI4-Stream tready 的端到端替代品。
 module dma_rx_fc_ctrl(
     input             clk,
     input             rstn,

@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+// Aurora 接入包装层：把 frame DMA 的 Core stream/UFC/AXI 边界连接到 carrier
+// 侧接口。它只负责组合子模块与时钟复位连接，不改变 RX/TX 数据路径语义。
 module frame_dma_rx_aurora_ufc_wrap #(
     parameter integer UFC_AXIS_DATA_W = 64
 )(

@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// 四 entry elastic/skid FIFO。指针和 occupancy 是控制状态，data_mem 不参与 reset；
+// 输出在 m_axis_tready 低时保持稳定，s_ready_q 使用已注册 credit，避免下游 ready
+// 组合回穿到 RX 入口。
 module dma_axis_skid_buffer #(
     parameter integer DATA_WIDTH = 512
 )(

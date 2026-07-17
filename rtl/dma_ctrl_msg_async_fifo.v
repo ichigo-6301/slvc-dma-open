@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+// UFC/control message 的双时钟 FIFO。opcode、channel_id 和两个参数先打包成单一
+// payload 再跨域，避免字段分别同步造成消息撕裂；消息边界由 FIFO entry 保证。
 module dma_ctrl_msg_async_fifo #(
     parameter integer DEPTH_LOG2 = 3
 )(

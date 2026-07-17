@@ -8,7 +8,11 @@
 | Memory and CQ | `dma_axi_write_engine`, `dma_axi_read_prefetch`, `dma_cq_writer`, `dma_cq_single_writer` | RX write、TX read/prefetch 和 owner-last completion publication。 |
 | TX path | `dma_tx_channel_table`, `dma_tx_desc_channel_table`, `dma_tx_engine`, `dma_tx_header_builder` | descriptor-controlled payload replay 和 SHDR64 reconstruction。 |
 | Control and boundaries | `dma_axil_regs`, `slvc_carrier_cdc_adapter`, `mcf_endpoint`, `dma_ufc_mailbox` | AXI4-Lite control、carrier CDC、source aggregation 和 control-message handling。 |
+| 可选 packet adapter | `dma_udp_ipv4_to_shdr64_adapter` | 将固定 profile 512-bit Ethernet II / IPv4 / UDP RX packet 转为 SHDR64。 |
 | 仿真支持 | `pattern/*`, `modelsim/*` | BFM、scoreboard、reference helper、testbench 和公开运行脚本。 |
 
-该目录描述已发布的 512-bit source set，不承诺每个模块都是独立产品，也不表示未列出的
+该目录描述 frozen 512-bit source set 与可选 adapter P0 source，不承诺每个模块都是独立产品，也不表示未列出的
 private module 位于公开 dependency graph 中。
+
+源码级阅读请从[中文 RTL 阅读指南](rtl_reading_guide.md)开始；其中标出了公开 top、可复用
+数据路径、边界适配器和仿真基础设施的推荐顺序。

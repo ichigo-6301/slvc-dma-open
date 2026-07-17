@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// 可选外部 RX 宽度 frontend：接受 64/128/256/512-bit AXIS，并聚合到固定 512-bit
+// Core。它是接口适配层，不代表 native DMA Core 已经完成对应宽度的独立验证。
 module frame_dma_rx_axis_width_frontend #(
     parameter integer EXT_AXIS_DATA_WIDTH = `DMA_EXT_AXIS_DATA_WIDTH,
     parameter integer CORE_AXIS_DATA_WIDTH = 512,

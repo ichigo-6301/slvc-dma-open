@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+// AXI4-Stream 双时钟 FIFO 包装层，把 data/valid/ready 的跨域交给 async FIFO，
+// 保持每个 beat 的顺序和 backpressure 语义，不让源域 ready 直接观察目的域逻辑。
 module dma_axis_async_fifo #(
     parameter integer DATA_WIDTH = 512,
     parameter integer DEPTH_LOG2 = 4,

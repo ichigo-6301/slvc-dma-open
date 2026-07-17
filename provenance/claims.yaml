@@ -1,24 +1,39 @@
 kind: claims
 schema_version: 1.0.0
 claims:
-  - id: slvc_dma_v1_selected_rtl_regression
-    profile: slvc_dma_v1_512
-    statement: The selected SLVC DMA directed regression passed at the frozen release source commit.
+  - id: slvc_dma_rtl_comment_only_equivalence
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: The Chinese-comment RTL source has zero functional Verilog token differences from the prior function baseline.
+    metric: functional_token_delta
+    value: 0
+    unit: tokens
+    benchmark: lexical comparison of all RTL sources after removing ordinary comments and whitespace
+    configuration: "base be71e166 to commented source 709e1c1, with the 40-file public RTL allowlist included"
+    source_ref: 709e1c102af3cc8a195bae5dc126bd2c3cf23eb7
+    tool: Python 3 Verilog lexer checker
+    evidence:
+      - slvc_dma_rtl_comment_only_equivalence
+    status: verified
+    caveat: "This proves comments-only source equivalence; it is not a new functional, performance, coverage, or signoff result."
+    public: true
+  - id: slvc_dma_udp_adapter_core_selected_rtl_regression
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: The frozen 512-bit SLVC DMA core selected regression remains verified and the adapter source commit does not modify the core RTL.
     metric: directed_regression
     value: pass
     unit: result
-    benchmark: "ten ModelSim directed tests covering TX/RX control, parser, frame pool, descriptor, CQ credit, and write prefetch behavior"
-    configuration: 512-bit SLVC full architecture with the release feature defines
+    benchmark: "ten core ModelSim directed tests covering TX/RX control, parser, frame pool, descriptor, CQ credit, and write prefetch behavior"
+    configuration: Frozen 512-bit SLVC core beneath the optional UDP IPv4 adapter
     source_ref: 31e1d77f480d12af1e8ee436034c6c4a646b409c
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_v1_regression_summary
     status: verified
-    caveat: "This is a directed regression set, not coverage closure or formal verification."
+    caveat: This is inherited fixed-commit core evidence; the four adapter tests are claimed separately and directed testing is not coverage closure.
     public: true
-  - id: slvc_dma_v1_fpga_ooc_200m
-    profile: slvc_dma_v1_512
-    statement: The complete 512-bit frame_dma_wrapper met routed 200 MHz setup and hold timing with three Vivado implementation strategies.
+  - id: slvc_dma_udp_adapter_core_fpga_ooc_200m
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: The unchanged complete 512-bit frame_dma_wrapper met routed 200 MHz setup and hold timing with three Vivado implementation strategies.
     metric: fpga_ooc_timing
     value: 0.162
     unit: ns minimum WNS
@@ -29,35 +44,80 @@ claims:
     evidence:
       - slvc_dma_v1_ooc_200m_summary
     status: verified
-    caveat: OOC timing is not a board-level timing or 10G line-rate claim; preferred WNS +0.300 ns was not reached. Release source 31e1d77 changes only tests and is RTL-byte-identical to this evidence source.
+    caveat: The optional adapter is outside frame_dma_wrapper and is not included in this FPGA result; OOC timing is not board-level timing.
     public: true
-  - id: slvc_dma_v1_fpga_ooc_resources
-    profile: slvc_dma_v1_512
-    statement: "Routed 200 MHz OOC resource use was 38,074-38,088 LUTs, 40,785-40,787 registers, 44 RAMB36, 3 RAMB18, and 0 DSPs across the three strategies."
+  - id: slvc_dma_udp_adapter_core_fpga_ooc_resources
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: "The unchanged core routed OOC resource use was 38,074-38,088 LUTs, 40,785-40,787 registers, 44 RAMB36, 3 RAMB18, and 0 DSPs."
     metric: fpga_resources
     value: 38088
     unit: LUT maximum
     benchmark: Vivado routed utilization reports
-    configuration: "xc7z100ffg900-2, 512-bit full SLVC architecture, 5.000 ns clock"
+    configuration: "xc7z100ffg900-2, frozen 512-bit frame_dma_wrapper, 5.000 ns clock"
     source_ref: 35835370ef2fd733844f507292f09f9dcbcffd01
     tool: Vivado 2018.3
     evidence:
       - slvc_dma_v1_ooc_200m_summary
     status: verified
-    caveat: Values are OOC implementation results and can vary slightly by Vivado placement strategy. Release source 31e1d77 changes only tests and is RTL-byte-identical to this evidence source.
+    caveat: The optional adapter is not included in these core FPGA resource values and has no release-bound FPGA implementation claim yet.
     public: true
-  - id: slvc_dma_v1_steady_state_writer_throughput
-    profile: slvc_dma_v1_512
-    statement: The directed writer-prefetch smoke observed contiguous AXI W runs up to 48 beats under no W-channel backpressure.
+  - id: slvc_dma_udp_adapter_core_writer_throughput
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: The unchanged core writer-prefetch smoke observed contiguous AXI W runs up to 48 beats without W-channel backpressure.
     metric: stream_throughput
     value: 48
     unit: contiguous 512-bit AXI W beats
     benchmark: E20A23 W prefetch FIFO directed test
-    configuration: "512-bit writer, long multi-burst payload case"
+    configuration: "Frozen 512-bit core writer, long multi-burst payload case"
     source_ref: 31e1d77f480d12af1e8ee436034c6c4a646b409c
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_v1_regression_summary
     status: verified
-    caveat: This measures one writer data stage under the test conditions; it is not end-to-end 10G lossless throughput.
+    caveat: "This is a core data-stage observation, not adapter-to-memory end-to-end or lossless UDP throughput."
+    public: true
+  - id: slvc_dma_udp_adapter_directed_regression
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: Four UDP IPv4 adapter directed regressions passed on Windows ModelSim and IC_EDA Questa at the adapter source commit.
+    metric: directed_regression
+    value: pass
+    unit: result
+    benchmark: "directed boundary/parser compatibility, deterministic random, error/reset/stall matrix, and two-channel adapter-to-DMA smoke"
+    configuration: "512-bit Ethernet II IPv4 UDP input, fixed IHL 5 profile, 512-bit SHDR64 output, maximum payload 4096 bytes"
+    source_ref: 709e1c102af3cc8a195bae5dc126bd2c3cf23eb7
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
+    evidence:
+      - slvc_dma_udp_adapter_regression_summary
+    status: verified
+    caveat: "The tests are directed and deterministic stress tests, not coverage closure, formal proof, or board-level Ethernet validation."
+    public: true
+  - id: slvc_dma_udp_adapter_dc_ooc_200m
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: The adapter-only Design Compiler run met a 5.000 ns clock with +0.39 ns WNS and zero setup TNS in a 55 nm TT standard-cell library.
+    metric: asic_ooc_timing
+    value: 0.39
+    unit: ns WNS
+    benchmark: Design Compiler compile_ultra adapter-only OOC
+    configuration: "5.000 ns clock, 0.200 ns setup uncertainty, 0.050 ns hold uncertainty, 0.500 ns I/O delays"
+    source_ref: abe35e682f44d2f89e381f7d93b917567dad6afa
+    tool: Design Compiler O-2018.06-SP1
+    evidence:
+      - slvc_dma_udp_adapter_dc_ooc_summary
+    status: verified
+    caveat: "This is frontend synthesis of the adapter alone, not full-DMA synthesis, physical design, extracted STA, or signoff."
+    public: true
+  - id: slvc_dma_udp_adapter_dc_area
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: "Adapter-only mapped area was 11744.32 library area units with 3746 leaf cells, 909 registers, and zero latches."
+    metric: asic_ooc_area
+    value: 11744.32
+    unit: library area units
+    benchmark: Design Compiler compile_ultra adapter-only OOC
+    configuration: "55 nm TT standard-cell library, packet memory absent, no SRAM macro"
+    source_ref: abe35e682f44d2f89e381f7d93b917567dad6afa
+    tool: Design Compiler O-2018.06-SP1
+    evidence:
+      - slvc_dma_udp_adapter_dc_ooc_summary
+    status: verified
+    caveat: Library area units are technology-specific and are not a full-DMA area estimate; power is likewise a pre-layout estimate.
     public: true

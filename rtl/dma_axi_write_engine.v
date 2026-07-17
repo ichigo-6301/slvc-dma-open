@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// RX payload/CQE 的 AXI4 写引擎。它把 frame word 流转换成受 4KB 边界和
+// outstanding 限制约束的 burst，并分别跟踪 AW、W、B 的进度；写错误通过
+// 完成事件返回上层，不能把已发出的事务静默丢掉。
 module dma_axi_write_engine #(
     parameter integer INDEX_WIDTH = 9,
     parameter integer MAX_OUTSTANDING = `DMA_RX_WR_MAX_OUTSTANDING
@@ -48,6 +51,7 @@ function integer clog2;
     end
 endfunction
 
+// burst queue 记录已发出但尚未完成的写事务，深度略大于配置上限以容纳边界拆分。
 localparam integer BURSTQ_USED_DEPTH = (MAX_OUTSTANDING < 2) ? 2 : (MAX_OUTSTANDING + 2);
 localparam integer BURSTQ_AW = clog2(BURSTQ_USED_DEPTH);
 localparam integer BURSTQ_DEPTH = (1 << BURSTQ_AW);

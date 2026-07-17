@@ -4,6 +4,10 @@
 
 [中文](README.md)
 
+For source reading, see the [Chinese RTL reading guide](docs/zh-CN/rtl_reading_guide.md).
+This refresh adds ordinary Chinese comments and reading documentation only; it does not
+change RTL functional tokens, interfaces, QoR, or the frozen release tag.
+
 SLVC DMA is a 512-bit virtual-channel DMA IP for a shared high-speed link.
 Multiple upstream sources can be multiplexed into an SHDR64-framed segment
 stream; the DMA moves payloads between the shared link and DDR rings according
@@ -21,14 +25,30 @@ Vivado 2018.3 OOC implementation entrypoint.
 public-integrity updates that do not change the frozen tag target. See
 [Release Notes](docs/en/release_notes.md).
 
+This delivery branch also stages an **optional P0 Ethernet II / IPv4 / UDP RX
+adapter**. It converts a fixed 512-bit packet AXI4-Stream profile into SHDR64
+without modifying the frozen DMA core, register map, CQE ABI, or RC1 tag. See
+the [UDP/IPv4 Adapter](docs/en/udp_ipv4_adapter.md) for the exact protocol and
+nonclaim boundary.
+
+The native path is `Aurora/native SHDR64 -> SLVC DMA`. The optional compatibility
+path is `Ethernet II / IPv4 / UDP -> UDP-to-SHDR64 Adapter -> SLVC DMA`. The
+adapter is controlled by `CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER`; it is not a complete
+Ethernet stack and does not provide UDP end-to-end flow control. The default
+defconfig enables it, so simulation requires ten frozen-core markers plus four
+adapter markers, fourteen total. Use
+`configs/slvc_dma_512_core_only_defconfig` to require only the ten core markers.
+
 ## Stage Status
 
 | Stage | Status | Public boundary |
 | --- | --- | --- |
 | Directed RTL regression | [verified](docs/en/verification_matrix.md) | Windows ModelSim and IC_EDA Questa completed the ten release-bound tests. |
+| Optional adapter regression | [verified](docs/en/verification_matrix.md) | Four adapter tests passed on both simulator hosts. |
 | FPGA OOC implementation | [verified](docs/en/results.md) | Three Vivado 2018.3 strategies met 200 MHz OOC setup and hold. |
+| Adapter ASIC frontend | [verified](docs/en/udp_ipv4_adapter.md) | Adapter-only DC OOC met 5.000 ns; no physical/signoff claim. |
 | Carrier CDC | [partial](docs/en/delivery_status.md) | Directed behavior is verified; complete CDC/RDC signoff is absent. |
-| ASIC frontend | [planned](docs/en/delivery_status.md) | Requires a separate library-bound profile and evidence. |
+| Full DMA ASIC frontend | [planned](docs/en/delivery_status.md) | Requires a separate library-bound profile and evidence. |
 | Physical implementation | [blocked](docs/en/delivery_status.md) | Awaiting validated standard-cell and SRAM macro physical views. |
 | Board validation | [not claimed](docs/en/delivery_status.md) | The exact public release commit has no board-level claim. |
 | Lossless 10G operation | [not claimed](docs/en/delivery_status.md) | This release is not a board-level 10G production validation. |
@@ -42,6 +62,7 @@ public-integrity updates that do not change the frozen tag target. See
 - CQ body-first and owner/valid-last publication to prevent partial software reads;
 - AXI/AXI-Stream backpressure, payload-writer prefetch, and local soft-reset control;
 - Optional carrier CDC adapter and MCF companion endpoint for multi-source aggregation.
+- Optional fixed-profile 512-bit Ethernet II / IPv4 / UDP RX-to-SHDR64 adapter.
 
 ## Architecture
 
@@ -67,6 +88,10 @@ flowchart LR
 `slvc_dma_wrapper` is the public system-integration top. `frame_dma_wrapper`
 is the complete FPGA OOC timing top. The carrier adapter and MCF endpoint sit
 at the DMA boundary and do not change DDR/CQ ownership semantics.
+
+`dma_udp_ipv4_to_shdr64_adapter` can be placed immediately before the
+shared-link RX input. It maps the UDP destination port to `SHDR64.flow_id` and
+uses the unchanged DMA channel table for channel and DDR-context selection.
 
 ## Release Profile
 
@@ -98,6 +123,14 @@ Questa Sim-64 10.7c. The writer-prefetch smoke observed 48 contiguous 512-bit
 AXI W beats in its specified long multi-burst case; this is not an end-to-end
 lossless 10G throughput claim.
 
+The optional adapter adds four tests on both simulator hosts: 18 directed
+boundary/parser cases through 4096 bytes, 400 deterministic-random packets, a
+23-case error/reset/stall matrix with 17 explicit invalid-packet drops and 23
+successful accepts, and a two-channel adapter-to-DMA smoke. Its separate
+Design Compiler OOC run met 5.000 ns with +0.39 ns WNS and 0 TNS; mapped
+adapter-only area was 11744.32 library area units. This result excludes the DMA
+core and is not physical-design or ASIC-signoff evidence.
+
 See [Results](docs/en/results.md), [Verification](docs/en/verification.md), and
 [`provenance/`](provenance/) for conditions, source commits, checksums, and
 caveats.
@@ -119,14 +152,29 @@ python3 flows/scripts/flowctl.py sim-dry-run
 python3 flows/scripts/flowctl.py sim
 ```
 
+To run the frozen core without the optional adapter:
+
+```text
+python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_core_only_defconfig
+python3 flows/scripts/flowctl.py show-config
+python3 flows/scripts/flowctl.py sim-dry-run
+```
+
 ### 3. Vivado OOC Entrypoint
 
 ```text
 python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 ```
 
+### 4. Optional Adapter-Only DC OOC Entrypoint
+
+```text
+python3 flows/scripts/flowctl.py adapter-dc-ooc-dry-run
+```
+
 The public runner requires Python 3.6 or newer. `sim` requires ModelSim or
-Questa; `fpga-ooc` requires Vivado 2018.3. GNU Make targets are convenience
+Questa; `fpga-ooc` requires Vivado 2018.3. `adapter-dc-ooc` requires Design
+Compiler and an untracked local standard-cell `.db`. GNU Make targets are convenience
 wrappers. On Windows, replace `python3` with `python` when that command resolves
 to Python 3.6 or newer. Keep tool paths and environment overrides under ignored
 `flows/local/`. See the [Flow README](flows/README.md) for the complete command
@@ -139,7 +187,9 @@ set.
 | `rtl/` | DMA, carrier-adapter, and MCF-companion RTL |
 | `rtl/slvc_dma_wrapper.v` | System-integration top |
 | `rtl/frame_dma_wrapper.v` | 200 MHz OOC timing top |
+| `rtl/dma_udp_ipv4_to_shdr64_adapter.v` | Optional fixed-profile Ethernet/IPv4/UDP RX adapter |
 | `pattern/`, `modelsim/` | Public directed testbenches and run scripts |
+| `asic/dc/` | Adapter-only Design Compiler OOC entrypoint; no library is distributed |
 | `fpga/xilinx/` | Vivado 2018.3 OOC Tcl entrypoint |
 | `flows/`, `configs/` | Portable runner, manifest, and defconfig |
 | `evidence/`, `provenance/` | Fixed-commit verification, PPA, and SHA-256 evidence |
@@ -149,6 +199,7 @@ set.
 - [Architecture](docs/en/architecture.md)
 - [Interfaces](docs/en/interfaces.md)
 - [Integration Guide](docs/en/integration.md)
+- [UDP/IPv4 Adapter](docs/en/udp_ipv4_adapter.md)
 - [Module Catalog](docs/en/module_catalog.md)
 - [Verification](docs/en/verification.md)
 - [Verification Matrix](docs/en/verification_matrix.md)
@@ -169,6 +220,8 @@ set.
 - Directed regression does not constitute coverage, formal, or CDC/RDC signoff;
 - The public release excludes the P0/U5 board design, generated Xilinx IP, SDK
   application, ASIC SRAM/library, DFT, P&R, and signoff STA.
+- The optional adapter is not a complete Ethernet/IP stack and has no
+  board-level or lossless UDP claim.
 
 See [Limitations](docs/en/limitations.md) and [Public Scope](PUBLIC_SCOPE.md) for
 the complete release boundary.

@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+// Carrier 层 CDC 适配器。AXI-Stream 数据和控制消息分别通过跨时钟边界的缓冲，
+// 将外部 carrier 时钟域与 SLVC Core 域隔离；它不改变 Core 内部 SHDR64 协议。
 module slvc_carrier_cdc_adapter #(
     parameter integer SL_DATA_WIDTH = 512,
     parameter integer AXIS_FIFO_DEPTH_LOG2 = 4,

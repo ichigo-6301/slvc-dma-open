@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// Legacy 单来源 CQ writer。它把 64-byte CQE 分成 body 和 owner/valid 字段两次 AXI
+// 写入，保证 software 看到 owner 之前，CQE body 已经完整落到内存。
 module dma_cq_writer(
     input             clk,
     input             rstn,
@@ -43,6 +45,7 @@ module dma_cq_writer(
     output            busy
 );
 
+// Body-first / owner-last 的状态顺序是 CQ 软件可见性契约，不应由 ready 提前打破。
 localparam ST_IDLE     = 3'd0;
 localparam ST_BODY_AW  = 3'd1;
 localparam ST_BODY_W   = 3'd2;

@@ -21,6 +21,19 @@ logic. `sl_tx_aclk` and `sl_tx_aresetn` clock the TX shared-link boundary.
 Carrier-clock crossing belongs in `slvc_carrier_cdc_adapter`, not in an
 unconstrained wrapper connection.
 
+## Optional Ethernet Packet Boundary
+
+Place `dma_udp_ipv4_to_shdr64_adapter` before `sl_rx_*` only when the upstream
+interface supplies 512-bit Ethernet II packet AXI4-Stream with `TKEEP` and
+`TLAST`. The MAC must remove preamble, SFD, and FCS. The adapter and DMA RX must
+share a clock/reset domain unless an explicit CDC boundary is inserted. Its
+output has no `TKEEP` or `TLAST`; SHDR64 `payload_len` carries the segment
+boundary expected by `slvc_dma_wrapper`.
+
+The UDP destination port becomes `SHDR64.flow_id`. Configure the existing DMA
+channel table for that flow ID before admitting packets. Treat `stat_drop` as
+diagnostic status; P0 does not provide packet rollback after late errors.
+
 ## Minimum Bring-Up Sequence
 
 1. Hold both wrapper resets active, then release the RX/control domain before

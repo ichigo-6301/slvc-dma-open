@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// TX 读预取器把 AXI4 R channel 的 64-bit words 聚合成上层 payload beat。
+// FIFO 与 reserved_beats 将 memory latency、多个 outstanding read 和 TX backpressure
+// 隔离；AXI 事务仍按 4KB 边界规划，RRESP 错误会使当前输出段进入 flush/error 路径。
 module dma_axi_read_prefetch #(
     parameter integer DATA_WIDTH = 64,
     parameter integer OUT_WIDTH = 512,
@@ -39,6 +42,7 @@ module dma_axi_read_prefetch #(
     output reg [7:0]            debug_fifo_level
 );
 
+// WORDS_PER_OUT 描述一个输出 beat 需要的 64-bit word 数，pack_lane 只表示聚合位置。
 localparam integer WORDS_PER_OUT = OUT_WIDTH / DATA_WIDTH;
 localparam integer BYTES_PER_OUT = OUT_WIDTH / 8;
 localparam integer FIFO_DEPTH = (1 << FIFO_DEPTH_LOG2);

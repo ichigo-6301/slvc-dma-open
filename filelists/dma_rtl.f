@@ -1,4 +1,5 @@
 rtl/dma_defs.vh
+rtl/dma_udp_ipv4_to_shdr64_adapter.v
 rtl/dma_axis_register_slice.v
 rtl/dma_axis_width_pack_512.v
 rtl/dma_axis_skid_buffer.v

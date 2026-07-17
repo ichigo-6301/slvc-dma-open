@@ -19,6 +19,18 @@
 `sl_tx_aclk` 与 `sl_tx_aresetn` 驱动 TX shared-link boundary。carrier 时钟跨域应由
 `slvc_carrier_cdc_adapter` 处理，不能直接把异步时钟连接到 wrapper。
 
+## 可选 Ethernet Packet Boundary
+
+只有上游提供带 `TKEEP`/`TLAST` 的 512-bit Ethernet II packet AXI4-Stream 时，
+才在 `sl_rx_*` 前放置 `dma_udp_ipv4_to_shdr64_adapter`。MAC 必须移除 preamble、
+SFD 和 FCS。除非显式插入 CDC boundary，否则 adapter 与 DMA RX 必须处于同一
+clock/reset domain。adapter 输出不带 `TKEEP`/`TLAST`；`slvc_dma_wrapper` 通过
+SHDR64 `payload_len` 获取 segment boundary。
+
+UDP destination port 会成为 `SHDR64.flow_id`。接收 packet 前应先为该 flow ID 配置
+现有 DMA channel table。`stat_drop` 是 diagnostic status；P0 不提供 late error 后的
+packet rollback。
+
 ## 最小 Bring-Up 顺序
 
 1. 保持两个 wrapper reset 有效，再先释放 RX/control domain 并开始设备配置。

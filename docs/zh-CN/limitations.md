@@ -7,3 +7,7 @@
 - 当前 release commit 未重新执行 U5 board validation；历史板级结果不作为当前
   commit 的 verified claim。
 - carrier CDC 有 directed verification，但无完整 signoff/waiver package。
+- 可选 UDP/IPv4 adapter 是固定 RX profile，不是完整 Ethernet/IP stack；不支持
+  VLAN、IPv6、options、fragment、UDP checksum 或 FCS handling。
+- adapter-only DC OOC 不等于完整 DMA ASIC synthesis、physical implementation、
+  signoff、board-level 10G 或 lossless UDP evidence。

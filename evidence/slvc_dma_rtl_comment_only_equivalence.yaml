@@ -1,0 +1,25 @@
+kind: source_equivalence_summary
+schema_version: 1.0.0
+profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+base_source_commit: be71e1660dc27c49af771132de086a7e3ad48b7f
+commented_source_commit: 709e1c102af3cc8a195bae5dc126bd2c3cf23eb7
+generated_at: 2026-07-17
+method: Verilog lexical token comparison after removing ordinary comments and whitespace
+tool: scripts/check_rtl_comment_only.py
+scope:
+  path: rtl
+  checked_files: 148
+  public_allowlisted_rtl_files: 40
+result:
+  status: verified
+  functional_token_delta: 0
+  special_tool_comments_changed: false
+encoding:
+  commented_public_rtl: UTF-8 without BOM, LF
+validation:
+  windows_modelsim_run_all: pass
+  windows_modelsim_udp_focused: pass
+  ic_eda_questa_comment_commit: not_run_host_unreachable
+  vivado_comment_commit: not_run
+  design_compiler_comment_commit: not_run
+caveat: Existing functional and QoR evidence remains bound to its measured source commits; this record proves source-token equivalence and does not create a new performance claim.

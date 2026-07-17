@@ -1,5 +1,8 @@
 `timescale 1ns/1ps
 
+// 共享 frame pool：多个 RX channel 通过 block free list 共用 payload 空间，
+// metadata context 保存帧的所有权、长度和释放信息。写入侧提交完整 metadata 后
+// 才允许读出；读出和 release 由独立状态机推进，避免 pool 空间提前复用。
 module dma_frame_shared_pool #(
     parameter integer CH_NUM = 16,
     parameter integer CH_ID_W = 4,
@@ -54,6 +57,7 @@ localparam [15:0] MAX_FRAME_BLOCKS_16 = MAX_FRAME_BLOCKS;
 localparam [META_AW:0] META_DEPTH_COUNT = META_DEPTH;
 localparam HAS_POOL_DRAIN_PIPELINE = (`DMA_ENABLE_FRAME_SHARED_POOL_DRAIN_PIPELINE != 0);
 
+// 读状态机先仲裁请求并读取 metadata，再逐 block 提供 payload，最后等待 release。
 localparam [2:0] RD_IDLE         = 3'd0;
 localparam [2:0] RD_SCHED_GRANT  = 3'd1;
 localparam [2:0] RD_LOAD_META    = 3'd2;

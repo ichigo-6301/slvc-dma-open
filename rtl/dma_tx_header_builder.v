@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// 根据 TX context 重新构造一个完整 SHDR64 header beat。
+// AUX traffic class 对 flow_id/msg_id 的字段使用不同映射；其余字段按固定 64-byte
+// header 布局填充，CRC 覆盖 header body 后再放入同一 beat。
 module dma_tx_header_builder(
     input      [3:0]  traffic_class,
     input      [15:0] tag_id,
@@ -36,6 +39,7 @@ function [31:0] header_crc32;
     end
 endfunction
 
+// AUX 帧的 tag 语义不同，因此在 builder 边界统一完成字段映射。
 wire [15:0] flow_id = (traffic_class == `DMA_TC_AUX) ? 16'h0 : tag_id;
 wire [15:0] msg_id  = (traffic_class == `DMA_TC_AUX) ? tag_id : 16'h0;
 wire [383:0] hdr0;

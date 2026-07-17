@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// TX channel 的 AXI-Lite 配置和运行时状态表。软件配置 source/base/length，
+// TX engine 读取已锁存的 channel context；完成、错误和 frame counter 通过 event
+// 写回，从而把 CSR 写路径与发送数据路径分开。
 module dma_tx_channel_table #(
     parameter integer CH_W = 4
 )(
@@ -46,6 +49,7 @@ module dma_tx_channel_table #(
     output     [`DMA_MAX_CH*32-1:0] tx_user_flat
 );
 
+// CSR 请求和硬件事件分别进入表内状态机，避免同一周期软件写与完成事件互相覆盖。
 localparam HAS_PER_CH_COUNTERS = (`DMA_ENABLE_PER_CH_COUNTERS != 0);
 localparam HAS_USER_REGS = (`DMA_ENABLE_USER_REGS != 0);
 localparam HAS_COUNTER_EVENT_LANES = (`DMA_ENABLE_TX_COUNTER_EVENT_LANES != 0);

@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 `include "dma_defs.vh"
 
+// RX channel 的 CSR、运行时指针和计数状态表。AXI-Lite 写入配置，RX event 更新
+// frame/drop/error 等硬件状态；读指针相关请求通过小状态机完成快照和响应，避免
+// 软件读回直接穿透到多通道寄存器阵列。
 module dma_rx_channel_table #(
     parameter integer CH_W = 4
 ) (
@@ -76,6 +79,7 @@ module dma_rx_channel_table #(
     output     [`DMA_MAX_CH*32-1:0] rx_user_flat
 );
 
+// 读请求阶段化后再提交响应，确保 protected register 和硬件维护指针拥有明确边界。
 localparam HAS_PER_CH_COUNTERS = (`DMA_ENABLE_PER_CH_COUNTERS != 0);
 localparam HAS_USER_REGS = (`DMA_ENABLE_USER_REGS != 0);
 localparam HAS_COUNTER_EVENT_LANES = (`DMA_ENABLE_RX_COUNTER_EVENT_LANES != 0);

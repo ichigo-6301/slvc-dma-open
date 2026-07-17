@@ -9,16 +9,16 @@ payload 为 4096 byte。外部宽度 frontend 可以把 64/128/256/512-bit AXI-S
 
 建议按以下顺序阅读，而不是从最大文件逐行向下看：
 
-1. `rtl/dma_defs.vh`：协议常量、寄存器偏移、状态码和功能开关。
-2. `rtl/slvc_dma_wrapper.v`：推荐系统接口和时钟域边界。
-3. `rtl/frame_dma_wrapper.v`：完整 FPGA OOC 顶层。
-4. `rtl/frame_dma_rx_top.v`：RX、TX、CQ、AXI-Lite 和 AXI master 的集成关系。
-5. `rtl/dma_rx_parser_pipe.v`：SHDR64 header 的分拍解析与发布。
-6. `rtl/dma_rx_channel_match.v`：header metadata 如何选择 RX channel。
-7. `rtl/dma_rx_frame_shared_adapter.v` 与 `rtl/dma_frame_shared_pool.v`：共享帧存储。
-8. `rtl/dma_axi_write_engine.v`：RX payload 如何写入 AXI4 memory。
-9. `rtl/dma_tx_engine.v` 与 `rtl/dma_axi_read_prefetch.v`：descriptor 驱动的 TX replay。
-10. `rtl/dma_cq_single_writer.v` 与 `rtl/dma_cq_writer.v`：CQE 的 owner-last 发布。
+1. `rtl/include/dma_defs.vh`：协议常量、寄存器偏移、状态码和功能开关。
+2. `rtl/integration/slvc_dma_wrapper.v`：推荐系统接口和时钟域边界。
+3. `rtl/integration/frame_dma_wrapper.v`：完整 FPGA OOC 顶层。
+4. `rtl/integration/frame_dma_rx_top.v`：RX、TX、CQ、AXI-Lite 和 AXI master 的集成关系。
+5. `rtl/rx/dma_rx_parser_pipe.v`：SHDR64 header 的分拍解析与发布。
+6. `rtl/rx/dma_rx_channel_match.v`：header metadata 如何选择 RX channel。
+7. `rtl/rx/dma_rx_frame_shared_adapter.v` 与 `rtl/rx/dma_frame_shared_pool.v`：共享帧存储。
+8. `rtl/rx/dma_axi_write_engine.v`：RX payload 如何写入 AXI4 memory。
+9. `rtl/tx/dma_tx_engine.v` 与 `rtl/tx/dma_axi_read_prefetch.v`：descriptor 驱动的 TX replay。
+10. `rtl/cq/dma_cq_single_writer.v` 与 `rtl/cq/dma_cq_writer.v`：CQE 的 owner-last 发布。
 
 读完这十个文件后，再根据关注方向进入 channel table、AXI-Lite、CDC 或 Adapter。
 

@@ -173,10 +173,15 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 
 | 路径 | 内容 |
 | --- | --- |
-| `rtl/` | DMA、carrier adapter 和 MCF companion RTL |
-| `rtl/slvc_dma_wrapper.v` | 系统集成顶层 |
-| `rtl/frame_dma_wrapper.v` | 200 MHz OOC timing top |
-| `rtl/dma_udp_ipv4_to_shdr64_adapter.v` | 可选固定 profile Ethernet/IPv4/UDP RX adapter |
+| `rtl/include/` | 协议、寄存器和 profile 共享定义 |
+| `rtl/common/` | AXI-Stream register/FIFO、CDC FIFO、宽度聚合与 RAM 原语 |
+| `rtl/rx/`, `rtl/tx/` | RX admission/write 与 descriptor-driven TX replay |
+| `rtl/cq/`, `rtl/control/` | Completion Queue 发布与 AXI4-Lite/UFC 控制面 |
+| `rtl/integration/` | Core 集成、系统 wrapper 和 FPGA OOC top |
+| `rtl/carrier/`, `rtl/adapters/` | Carrier/CDC/MCF/Aurora 边界与可选 packet adapter |
+| `rtl/integration/slvc_dma_wrapper.v` | 系统集成顶层 |
+| `rtl/integration/frame_dma_wrapper.v` | 200 MHz OOC timing top |
+| `rtl/adapters/dma_udp_ipv4_to_shdr64_adapter.v` | 可选固定 profile Ethernet/IPv4/UDP RX adapter |
 | `pattern/`, `modelsim/` | 公开 directed testbench 与运行脚本 |
 | `asic/dc/` | Adapter-only Design Compiler OOC 入口；不分发工艺库 |
 | `fpga/xilinx/` | Vivado 2018.3 OOC Tcl 入口 |

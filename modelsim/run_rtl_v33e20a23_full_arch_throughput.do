@@ -13,7 +13,7 @@ set DMA_COMPILE_DEFINES [list \
     +define+DMA_ENABLE_FRAME_SHARED_RD_REQ_QUEUE=1 \
     +define+DMA_ENABLE_FRAME_SHARED_POOL_DRAIN_PIPELINE=1]
 do compile_dma_common.do
-vlog {*}$DMA_COMPILE_DEFINES +incdir+../rtl +incdir+../pattern ../pattern/tb_rtl_v33e20a22_full_arch_throughput.v
+vlog {*}$DMA_COMPILE_DEFINES +incdir+../rtl/include +incdir+../rtl +incdir+../pattern ../pattern/tb_rtl_v33e20a22_full_arch_throughput.v
 if {[info exists E20A22_SCENARIO]} {
     vsim work.tb +E20A22_SCENARIO=$E20A22_SCENARIO
 } else {

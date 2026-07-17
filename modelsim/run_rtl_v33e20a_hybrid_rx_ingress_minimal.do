@@ -5,31 +5,31 @@ if {[file exists work]} {
 vlib work
 vmap work work
 
-vlog +incdir+../rtl +incdir+../pattern \
-    ../rtl/dma_rx_parser.v \
-    ../rtl/dma_rx_parser_pipe.v \
-    ../rtl/dma_rx_channel_match.v \
-    ../rtl/dma_rx_payload_buffer.v \
-    ../rtl/dma_rx_ingress_queue.v \
-    ../rtl/dma_payload_beat_ram.v \
-    ../rtl/dma_rx_fc_ingress_bank.v \
-    ../rtl/dma_rx_fc_ctrl.v \
-    ../rtl/dma_axi_write_engine.v \
-    ../rtl/dma_tx_header_builder.v \
-    ../rtl/dma_axi_read_prefetch.v \
-    ../rtl/dma_tx_engine.v \
-    ../rtl/dma_cq_writer.v \
-    ../rtl/dma_rx_write_arbiter.v \
-    ../rtl/dma_ufc_mailbox.v \
-    ../rtl/dma_axil_regs.v \
-    ../rtl/dma_tx_channel_table.v \
-    ../rtl/dma_rx_channel_table.v \
-    ../rtl/dma_tx_desc_channel_table.v \
-    ../rtl/dma_frame_payload_ram.v \
-    ../rtl/dma_frame_shared_pool.v \
-    ../rtl/dma_rx_frame_shared_adapter.v \
-    ../rtl/dma_rx_ingress_source_selector.v \
-    ../rtl/frame_dma_rx_top.v \
+vlog +incdir+../rtl/include +incdir+../rtl +incdir+../pattern \
+    ../rtl/rx/dma_rx_parser.v \
+    ../rtl/rx/dma_rx_parser_pipe.v \
+    ../rtl/rx/dma_rx_channel_match.v \
+    ../rtl/rx/dma_rx_payload_buffer.v \
+    ../rtl/rx/dma_rx_ingress_queue.v \
+    ../rtl/common/dma_payload_beat_ram.v \
+    ../rtl/rx/dma_rx_fc_ingress_bank.v \
+    ../rtl/rx/dma_rx_fc_ctrl.v \
+    ../rtl/rx/dma_axi_write_engine.v \
+    ../rtl/tx/dma_tx_header_builder.v \
+    ../rtl/tx/dma_axi_read_prefetch.v \
+    ../rtl/tx/dma_tx_engine.v \
+    ../rtl/cq/dma_cq_writer.v \
+    ../rtl/rx/dma_rx_write_arbiter.v \
+    ../rtl/control/dma_ufc_mailbox.v \
+    ../rtl/control/dma_axil_regs.v \
+    ../rtl/tx/dma_tx_channel_table.v \
+    ../rtl/rx/dma_rx_channel_table.v \
+    ../rtl/tx/dma_tx_desc_channel_table.v \
+    ../rtl/rx/dma_frame_payload_ram.v \
+    ../rtl/rx/dma_frame_shared_pool.v \
+    ../rtl/rx/dma_rx_frame_shared_adapter.v \
+    ../rtl/rx/dma_rx_ingress_source_selector.v \
+    ../rtl/integration/frame_dma_rx_top.v \
     ../pattern/dma_ref_model.v \
     ../pattern/axi_lite_master_model.v \
     ../pattern/rx_axis_bfm.v \

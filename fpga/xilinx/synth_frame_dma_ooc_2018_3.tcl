@@ -63,7 +63,7 @@ while {[gets $fh line] >= 0} {
     lappend rtl_files [file join $DMA_ROOT $line]
 }
 close $fh
-read_verilog [file join $rtl_dir dma_defs.vh]
+read_verilog [file join $rtl_dir include dma_defs.vh]
 read_verilog $rtl_files
 synth_design -top frame_dma_wrapper -part $PART -mode out_of_context
 

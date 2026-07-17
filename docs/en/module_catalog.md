@@ -1,5 +1,10 @@
 # Module Catalog
 
+Sources are grouped by responsibility under `rtl/include`, `rtl/common`, `rtl/rx`,
+`rtl/tx`, `rtl/cq`, `rtl/control`, `rtl/integration`, `rtl/carrier`, and
+`rtl/adapters`. The folders describe ownership and reading boundaries; module names,
+interfaces, and compilation order remain defined by the source and `filelists/`.
+
 | Group | Public modules | Role |
 | --- | --- | --- |
 | Integration | `slvc_dma_wrapper`, `frame_dma_wrapper` | System wrapper and complete OOC timing top. |

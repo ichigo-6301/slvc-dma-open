@@ -7,7 +7,7 @@ proc run_udp_adapter_focus {testbench label} {
     puts "UDP_ADAPTER_FOCUS: starting $label"
     puts "============================================================"
     do compile_dma_common.do
-    vlog +incdir+../rtl +incdir+../pattern ../pattern/$testbench
+    vlog +incdir+../rtl/include +incdir+../rtl +incdir+../pattern ../pattern/$testbench
     vsim work.tb
     onfinish stop
     run -all

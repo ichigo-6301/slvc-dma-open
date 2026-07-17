@@ -5,7 +5,7 @@ if {[file exists work]} {
 }
 vlib work
 vmap work work
-vlog +define+DMA_ENABLE_FRAME_SHARED_POOL_DRAIN_PIPELINE=1 +incdir+../rtl +incdir+../pattern ../rtl/dma_frame_payload_ram.v ../rtl/dma_frame_shared_pool.v ../pattern/tb_rtl_v33e19_shared_frame_pool.v
+vlog +define+DMA_ENABLE_FRAME_SHARED_POOL_DRAIN_PIPELINE=1 +incdir+../rtl/include +incdir+../rtl +incdir+../pattern ../rtl/rx/dma_frame_payload_ram.v ../rtl/rx/dma_frame_shared_pool.v ../pattern/tb_rtl_v33e19_shared_frame_pool.v
 vsim work.tb
 onfinish stop
 run -all

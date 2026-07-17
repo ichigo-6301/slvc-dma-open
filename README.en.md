@@ -184,10 +184,15 @@ set.
 
 | Path | Contents |
 | --- | --- |
-| `rtl/` | DMA, carrier-adapter, and MCF-companion RTL |
-| `rtl/slvc_dma_wrapper.v` | System-integration top |
-| `rtl/frame_dma_wrapper.v` | 200 MHz OOC timing top |
-| `rtl/dma_udp_ipv4_to_shdr64_adapter.v` | Optional fixed-profile Ethernet/IPv4/UDP RX adapter |
+| `rtl/include/` | Shared protocol, register, and profile definitions |
+| `rtl/common/` | AXI-Stream register/FIFO, CDC FIFO, width packing, and RAM primitives |
+| `rtl/rx/`, `rtl/tx/` | RX admission/write and descriptor-driven TX replay |
+| `rtl/cq/`, `rtl/control/` | Completion Queue publication and AXI4-Lite/UFC control |
+| `rtl/integration/` | Core integration, system wrappers, and the FPGA OOC top |
+| `rtl/carrier/`, `rtl/adapters/` | Carrier/CDC/MCF/Aurora boundaries and optional packet adapters |
+| `rtl/integration/slvc_dma_wrapper.v` | System-integration top |
+| `rtl/integration/frame_dma_wrapper.v` | 200 MHz OOC timing top |
+| `rtl/adapters/dma_udp_ipv4_to_shdr64_adapter.v` | Optional fixed-profile Ethernet/IPv4/UDP RX adapter |
 | `pattern/`, `modelsim/` | Public directed testbenches and run scripts |
 | `asic/dc/` | Adapter-only Design Compiler OOC entrypoint; no library is distributed |
 | `fpga/xilinx/` | Vivado 2018.3 OOC Tcl entrypoint |

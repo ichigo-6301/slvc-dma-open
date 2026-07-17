@@ -1,5 +1,9 @@
 # 模块目录
 
+源码按职责位于 `rtl/include`、`rtl/common`、`rtl/rx`、`rtl/tx`、`rtl/cq`、
+`rtl/control`、`rtl/integration`、`rtl/carrier` 和 `rtl/adapters`。目录只表达模块
+所有权与阅读边界，不改变模块名、接口或编译顺序；精确依赖顺序仍由 `filelists/` 定义。
+
 | 分组 | 公开模块 | 作用 |
 | --- | --- | --- |
 | 集成 | `slvc_dma_wrapper`, `frame_dma_wrapper` | 系统 wrapper 和完整 OOC timing top。 |

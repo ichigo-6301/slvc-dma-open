@@ -34,5 +34,5 @@ set common_models [list \
     ../pattern/aurora_ufc_bfm.v \
 ]
 
-set vlog_cmd [concat [list vlog] $DMA_COMPILE_DEFINES [list +incdir+../rtl +incdir+../pattern] $rtl_files $common_models]
+set vlog_cmd [concat [list vlog] $DMA_COMPILE_DEFINES [list +incdir+../rtl/include +incdir+../rtl +incdir+../pattern] $rtl_files $common_models]
 eval $vlog_cmd

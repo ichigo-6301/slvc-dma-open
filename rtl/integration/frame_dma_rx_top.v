@@ -839,11 +839,16 @@ generate
     end
 endgenerate
 
-wire pay_done;
 wire pay_error;
 wire pay_busy;
 wire pay_arbiter_busy;
 wire pay_cmd_valid = (wr_state == WR_PAY_CMD);
+wire pay_cmd_ready;
+wire pay_cmd_fire = pay_cmd_valid && pay_cmd_ready;
+wire pay_cpl_valid;
+wire pay_cpl_ready = (wr_state == WR_PAY_WAIT);
+wire pay_cpl_fire = pay_cpl_valid && pay_cpl_ready;
+wire legacy_pay_done;
 wire cqe_done;
 wire cqe_error;
 wire cqe_full;
@@ -893,7 +898,7 @@ wire cqe_start = !HAS_CQ_SINGLE_WRITER &&
                  (wr_state == WR_CQE_CMD) && !cq_raw_full && !tx_cqe_active && !tx_cqe_req_valid;
 wire [31:0] cqe_addr = cq_base_l + (cq_wr_ptr << 6);
 wire [15:0] active_cqe_flags = active_wrap_before ? (16'h1 << `DMA_CQE_FLAG_WRAP_BEFORE) : 16'h0;
-wire cq_reserve_dec = ((wr_state == WR_PAY_WAIT) && pay_done && pay_error && active_cpl_en) ||
+wire cq_reserve_dec = (pay_cpl_fire && pay_error && active_cpl_en) ||
                       (!HAS_CQ_SINGLE_WRITER && (wr_state == WR_CQE_CMD) && cq_raw_full && active_cpl_en) ||
                       ((wr_state == WR_CQE_WAIT) && cqe_done && active_cpl_en);
 wire tx_cq_reserve_inc;
@@ -910,7 +915,7 @@ wire [1:0] cq_cmd_credit_reserve_evt_c = HAS_CQ_CMD_CREDIT ?
     ({1'b0, cq_reserve_inc} + {1'b0, tx_cq_reserve_inc}) : 2'd0;
 wire rx_cq_cmd_return_evt_c = HAS_CQ_CMD_CREDIT &&
                               active_cpl_en &&
-                              (((wr_state == WR_PAY_WAIT) && pay_done && pay_error) ||
+                              ((pay_cpl_fire && pay_error) ||
                                (HAS_CQ_SINGLE_WRITER ? cq_single_rx_accept :
                                                         (wr_state == WR_CQE_CMD)));
 wire tx_cq_cmd_return_evt_c = HAS_CQ_CMD_CREDIT && tx_cqe_start;
@@ -1947,7 +1952,7 @@ wire wide_payload_cpl_error;
 wire [3:0] wide_payload_cpl_error_code;
 wire wide_payload_busy;
 
-assign pay_done = wide_payload_cpl_valid;
+assign pay_cpl_valid = wide_payload_cpl_valid;
 assign pay_error = wide_payload_cpl_error;
 assign pay_busy = wide_payload_busy;
 assign pay_arbiter_busy = 1'b0;
@@ -1973,7 +1978,7 @@ dma_axi_write_engine_512 #(
     .rstn(aresetn),
     .soft_reset(axil_soft_reset),
     .cmd_valid(pay_cmd_valid),
-    .cmd_ready(),
+    .cmd_ready(pay_cmd_ready),
     .cmd_addr(active_dst_addr),
     .cmd_len(active_payload_len),
     .s_payload_tvalid(queue_wide_payload_tvalid),
@@ -1996,7 +2001,7 @@ dma_axi_write_engine_512 #(
     .m_axi_bvalid(m_axi_rx_payload_bvalid),
     .m_axi_bready(m_axi_rx_payload_bready),
     .cpl_valid(wide_payload_cpl_valid),
-    .cpl_ready(1'b1),
+    .cpl_ready(pay_cpl_ready),
     .cpl_error(wide_payload_cpl_error),
     .cpl_error_code(wide_payload_cpl_error_code),
     .busy(wide_payload_busy)
@@ -2004,6 +2009,7 @@ dma_axi_write_engine_512 #(
 `else
 assign queue_wide_payload_tready = 1'b0;
 assign pay_arbiter_busy = pay_busy;
+assign pay_cpl_valid = legacy_pay_done;
 
 dma_axi_write_engine #(
     .INDEX_WIDTH(RX_FC_INGRESS_PAYLOAD_AW),
@@ -2013,10 +2019,10 @@ dma_axi_write_engine #(
     .rstn(aresetn),
     .soft_reset(axil_soft_reset),
     .cmd_valid(pay_cmd_valid),
-    .cmd_ready(),
+    .cmd_ready(pay_cmd_ready),
     .cmd_addr(active_dst_addr),
     .cmd_len(active_payload_len),
-    .done(pay_done),
+    .done(legacy_pay_done),
     .error(pay_error),
     .rd_req(pay_rd_req),
     .rd_index(pay_rd_index),
@@ -3168,9 +3174,12 @@ always @(posedge aclk or negedge aresetn) begin
                 end
             end
         end
-        WR_PAY_CMD: wr_state <= WR_PAY_WAIT;
+        WR_PAY_CMD: begin
+            if (pay_cmd_fire)
+                wr_state <= WR_PAY_WAIT;
+        end
         WR_PAY_WAIT: begin
-            if (pay_done) begin
+            if (pay_cpl_fire) begin
                 if (pay_error) begin
                     post_event(1'b1, 1'b1, active_ch, `DMA_ST_AXI_ERR, 32'h0, 32'h0, 1'b0, 1'b0, 1'b1, 1'b0,
                                (16'h1 << `DMA_IRQ_AXI_ERROR), 1'b0);

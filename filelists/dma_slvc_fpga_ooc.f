@@ -14,6 +14,7 @@ rtl/rx/dma_rx_ingress_queue.v
 rtl/rx/dma_rx_fc_ingress_bank.v
 rtl/rx/dma_rx_fc_ctrl.v
 rtl/rx/dma_axi_write_engine.v
+rtl/rx/dma_axi_write_engine_512.v
 rtl/tx/dma_tx_header_builder.v
 rtl/tx/dma_axi_read_prefetch.v
 rtl/tx/dma_tx_engine.v

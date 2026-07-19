@@ -16,6 +16,13 @@ carrier adapter 与 MCF endpoint 是边界模块：前者适配可选物理 carr
 开始重新打包 payload。该模块不属于 `frame_dma_wrapper`，因此 frozen core FPGA OOC
 结果不包含 adapter logic。
 
+默认关闭的 RX-wide 开发 profile 不改变上述前端。fixed ingress 或 shared pool 的
+frame 到达现有 commit 点后，`dma_rx_ingress_source_selector` 会锁定一个 512-bit
+drain source，并送入 `dma_axi_write_engine_512`。新 writer 使用独立 512-bit AXI4
+write master；原 64-bit AXI master 继续承担 CQ、TX read 和 legacy RX traffic。
+当前边界为同步实现；后续 command/payload/completion CDC 插入点见
+[可选 512-bit RX payload 后端](rx_payload_512_backend.md)。
+
 ```mermaid
 flowchart LR
     MAC["MAC packet AXIS<br/>preamble/FCS removed"] --> UDP["Optional UDP/IPv4 adapter<br/>fixed 42-byte parse"]

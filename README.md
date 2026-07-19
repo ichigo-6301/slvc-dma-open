@@ -102,6 +102,18 @@ destination port 映射为 `SHDR64.flow_id`，并继续由未修改的 DMA chann
 控制寄存器、descriptor、CQE 和 ownership 规则见
 [接口文档](docs/zh-CN/interfaces.md)；公开 RTL port list 是最终接口定义。
 
+### 可选 RX-Wide 开发 Profile
+
+`configs/slvc_dma_512_rx_wide_defconfig` 选择一条默认关闭的同频 backend：它将
+已经 commit 的 RX frame 以 512-bit beat 读出，并通过 `frame_dma_rx_top` 上独立的
+512-bit AXI4 master 写入内存。冻结 wrapper、legacy 64-bit memory path、
+SHDR64/admission、CQ、TX 与 descriptor 行为均保持不变；destination address 必须
+按 64 byte 对齐。
+
+新增两项 regression、routed 200 MHz OOC、理想 memory model 吞吐和 writer-only
+DC sweep 属于开发 profile evidence，不进入冻结 RC1 evidence set。详见
+[512-bit RX payload 后端指南](docs/zh-CN/rx_payload_512_backend.md)。
+
 ## 已核验结果
 
 | Vivado 2018.3 strategy | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
@@ -163,8 +175,18 @@ python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 python3 flows/scripts/flowctl.py adapter-dc-ooc-dry-run
 ```
 
+### 5. 可选同频 RX-Wide Profile
+
+```text
+python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_wide_defconfig
+python3 flows/scripts/flowctl.py show-config
+python3 flows/scripts/flowctl.py sim-dry-run
+python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
+```
+
 公开 runner 要求 Python 3.6 或更高版本。`sim` 需要 ModelSim/Questa；
-`fpga-ooc` 需要 Vivado 2018.3；`adapter-dc-ooc` 需要 Design Compiler 和未跟踪的
+`fpga-ooc` 需要 Vivado 2018.3；两个 DC OOC command 都需要 Design Compiler 和未跟踪的
 本地 standard-cell `.db`。GNU Make target 是便利封装；Windows 若只有
 `python.exe`，可将 `python3` 替换为 `python`。工具路径与本地环境变量仅放在
 ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
@@ -183,7 +205,7 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 | `rtl/integration/frame_dma_wrapper.v` | 200 MHz OOC timing top |
 | `rtl/adapters/dma_udp_ipv4_to_shdr64_adapter.v` | 可选固定 profile Ethernet/IPv4/UDP RX adapter |
 | `pattern/`, `modelsim/` | 公开 directed testbench 与运行脚本 |
-| `asic/dc/` | Adapter-only Design Compiler OOC 入口；不分发工艺库 |
+| `asic/dc/` | Adapter-only 与 RX-writer-only Design Compiler OOC 入口；不分发工艺库 |
 | `fpga/xilinx/` | Vivado 2018.3 OOC Tcl 入口 |
 | `flows/`, `configs/` | 可移植 runner、manifest 和 defconfig |
 | `evidence/`, `provenance/` | 固定提交的验证、PPA 与 SHA-256 证据 |
@@ -194,6 +216,7 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 - [接口](docs/zh-CN/interfaces.md)
 - [集成指南](docs/zh-CN/integration.md)
 - [UDP/IPv4 Adapter](docs/zh-CN/udp_ipv4_adapter.md)
+- [可选 512-bit RX Payload 后端](docs/zh-CN/rx_payload_512_backend.md)
 - [模块目录](docs/zh-CN/module_catalog.md)
 - [验证](docs/zh-CN/verification.md)
 - [验证矩阵](docs/zh-CN/verification_matrix.md)
@@ -215,6 +238,8 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 - 当前公开版本不包含 P0/U5 board design、generated Xilinx IP、SDK application、
   ASIC SRAM/library、DFT、P&R 或 signoff STA。
 - 可选 adapter 不是完整 Ethernet/IP stack，不声明 board-level 或 lossless UDP。
+- 可选 RX-wide backend 是同频、64-byte 对齐的开发 profile；其 OOC 与
+  writer-only synthesis 结果不是板级 DDR、完整 DMA ASIC 或 signoff claim。
 
 详细边界以 [限制文档](docs/zh-CN/limitations.md) 和
 [公开范围](PUBLIC_SCOPE.md) 为准。

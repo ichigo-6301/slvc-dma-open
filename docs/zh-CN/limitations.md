@@ -11,3 +11,10 @@
   VLAN、IPv6、options、fragment、UDP checksum 或 FCS handling。
 - adapter-only DC OOC 不等于完整 DMA ASIC synthesis、physical implementation、
   signoff、board-level 10G 或 lossless UDP evidence。
+- 可选 512-bit RX payload master 是同频、64-byte 对齐的开发 profile；尚无 AXI
+  CDC、非对齐首拍支持、TX/CQ 宽化或板级 DDR 带宽实测。
+- 其 Vivado 结果是 OOC，Design Compiler 结果是 writer-only frontend synthesis；
+  二者都不是 full-system FPGA implementation、routed ASIC timing、physical
+  design 或 signoff evidence。
+- RX-wide profile 保留破坏式同步 soft-reset 语义，不声明能够安全 drain 已经发出的
+  external AXI burst。

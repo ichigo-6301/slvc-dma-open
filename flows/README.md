@@ -1,7 +1,8 @@
 # Public Flow
 
-The public flow dispatches the native ModelSim, Vivado, and optional
-adapter-only Design Compiler source-level entrypoints. It never carries tools,
+The public flow dispatches the native ModelSim, Vivado, optional adapter-only
+Design Compiler, and RX payload writer-only Design Compiler source-level
+entrypoints. It never carries tools,
 PDKs, libraries, generated IP, board
 projects, implementation databases, or credentials.
 
@@ -11,7 +12,10 @@ requires `vsim` on `PATH`;
 `fpga-ooc` requires `vivado` on `PATH` or an explicit `VIVADO` environment
 variable and writes only ignored `build/` and
 `reports/` outputs. `adapter-dc-ooc` requires `dc_shell` and an untracked
-`DMA_DC_TARGET_LIBRARY` pointing to a local standard-cell `.db`. The
+`DMA_DC_TARGET_LIBRARY` pointing to a local standard-cell `.db`.
+`rx-payload-writer-dc-ooc` uses the same private library binding and defaults
+to the `wide512` writer at the configured clock period. These DC commands are
+module-only frontend synthesis, not full-DMA area or signoff flows. The
 `*-dry-run` commands print the exact invocation
 without calling a commercial tool.
 
@@ -21,9 +25,25 @@ with `PYTHON=python` when that command resolves to Python 3.6 or newer.
 The selected simulation runner always validates the ten frozen core tests. When
 `CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y`, it appends four optional adapter tests;
 the default adapter-enabled profile therefore requires fourteen markers. With
-the adapter disabled it requires ten. The runner uses tool exit status, native
+the adapter disabled it requires ten. The optional RX-wide defconfig disables
+the adapter and appends two wide-backend tests, so it requires twelve markers.
+The runner uses tool exit status, native
 error summary, and one exact completion marker per test. It has no dependency on
 `rg`, `grep`, or another external source-search utility.
+
+Select and inspect the optional same-clock wide RX profile with:
+
+```text
+python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_wide_defconfig
+python3 flows/scripts/flowctl.py show-config
+python3 flows/scripts/flowctl.py sim-dry-run
+python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
+```
+
+The profile adds a dedicated 512-bit AXI4 write master at `frame_dma_rx_top`.
+It remains same-clock and default-off; the frozen wrapper and legacy 64-bit
+memory path remain the default release configuration.
 
 `python3 flows/scripts/public_hygiene.py --root .` verifies the tracked public
 release checksum manifest and local Markdown links without invoking an EDA

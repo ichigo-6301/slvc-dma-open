@@ -109,6 +109,18 @@ See [Interfaces](docs/en/interfaces.md) for control registers, descriptors,
 CQEs, and ownership rules. The public RTL port lists are the authoritative
 interface definitions.
 
+### Optional RX-Wide Development Profile
+
+`configs/slvc_dma_512_rx_wide_defconfig` selects a default-off, same-clock
+backend that drains already committed RX frames as 512-bit beats and writes
+them through a dedicated 512-bit AXI4 master on `frame_dma_rx_top`. It preserves
+the frozen wrapper, 64-bit legacy memory path, SHDR64/admission logic, CQ, TX,
+and descriptor behavior. Destinations must be 64-byte aligned.
+
+Its two new regressions, routed 200 MHz OOC result, ideal-model throughput, and
+writer-only DC sweep are development-profile evidence, not part of the frozen
+RC1 evidence set. See the [512-bit RX payload backend guide](docs/en/rx_payload_512_backend.md).
+
 ## Verified Results
 
 | Vivado 2018.3 strategy | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
@@ -172,8 +184,18 @@ python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 python3 flows/scripts/flowctl.py adapter-dc-ooc-dry-run
 ```
 
+### 5. Optional Same-Clock RX-Wide Profile
+
+```text
+python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_wide_defconfig
+python3 flows/scripts/flowctl.py show-config
+python3 flows/scripts/flowctl.py sim-dry-run
+python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
+```
+
 The public runner requires Python 3.6 or newer. `sim` requires ModelSim or
-Questa; `fpga-ooc` requires Vivado 2018.3. `adapter-dc-ooc` requires Design
+Questa; `fpga-ooc` requires Vivado 2018.3. Both DC OOC commands require Design
 Compiler and an untracked local standard-cell `.db`. GNU Make targets are convenience
 wrappers. On Windows, replace `python3` with `python` when that command resolves
 to Python 3.6 or newer. Keep tool paths and environment overrides under ignored
@@ -194,7 +216,7 @@ set.
 | `rtl/integration/frame_dma_wrapper.v` | 200 MHz OOC timing top |
 | `rtl/adapters/dma_udp_ipv4_to_shdr64_adapter.v` | Optional fixed-profile Ethernet/IPv4/UDP RX adapter |
 | `pattern/`, `modelsim/` | Public directed testbenches and run scripts |
-| `asic/dc/` | Adapter-only Design Compiler OOC entrypoint; no library is distributed |
+| `asic/dc/` | Adapter-only and RX-writer-only Design Compiler OOC entrypoints; no library is distributed |
 | `fpga/xilinx/` | Vivado 2018.3 OOC Tcl entrypoint |
 | `flows/`, `configs/` | Portable runner, manifest, and defconfig |
 | `evidence/`, `provenance/` | Fixed-commit verification, PPA, and SHA-256 evidence |
@@ -205,6 +227,7 @@ set.
 - [Interfaces](docs/en/interfaces.md)
 - [Integration Guide](docs/en/integration.md)
 - [UDP/IPv4 Adapter](docs/en/udp_ipv4_adapter.md)
+- [Optional 512-bit RX Payload Backend](docs/en/rx_payload_512_backend.md)
 - [Module Catalog](docs/en/module_catalog.md)
 - [Verification](docs/en/verification.md)
 - [Verification Matrix](docs/en/verification_matrix.md)
@@ -227,6 +250,9 @@ set.
   application, ASIC SRAM/library, DFT, P&R, and signoff STA.
 - The optional adapter is not a complete Ethernet/IP stack and has no
   board-level or lossless UDP claim.
+- The optional RX-wide backend is same-clock and 64-byte aligned. Its OOC and
+  writer-only synthesis results are not board DDR, full-DMA ASIC, or signoff
+  claims.
 
 See [Limitations](docs/en/limitations.md) and [Public Scope](PUBLIC_SCOPE.md) for
 the complete release boundary.

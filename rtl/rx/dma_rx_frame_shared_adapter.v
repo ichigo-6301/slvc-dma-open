@@ -11,7 +11,8 @@ module dma_rx_frame_shared_adapter #(
     parameter integer BLOCK_AW = `DMA_FRAME_POOL_BLOCK_AW,
     parameter integer CTX_DEPTH = `DMA_RX_FC_INGRESS_META_DEPTH,
     parameter integer CTX_AW = `DMA_RX_FC_INGRESS_META_AW,
-    parameter integer PAYLOAD_AW = `DMA_RX_FC_INGRESS_PAYLOAD_AW
+    parameter integer PAYLOAD_AW = `DMA_RX_FC_INGRESS_PAYLOAD_AW,
+    parameter integer WIDE_READ_ENABLE = 0
 )(
     input             clk,
     input             rstn,
@@ -71,6 +72,13 @@ module dma_rx_frame_shared_adapter #(
     input      [PAYLOAD_AW-1:0] payload_rd_index,
     output reg         payload_rd_valid,
     output reg  [63:0] payload_rd_data,
+
+    input              wide_payload_enable,
+    output             wide_payload_tvalid,
+    input              wide_payload_tready,
+    output     [511:0] wide_payload_tdata,
+    output      [63:0] wide_payload_tkeep,
+    output             wide_payload_tlast,
 
     output wire [15:0] pool_free_count,
     output wire [15:0] pool_alloc_count,
@@ -168,6 +176,8 @@ reg frame_cpl_en_q;
 reg frame_ring_q;
 reg frame_wrap_before_q;
 reg [511:0] beat_buf_q;
+reg [63:0] beat_buf_keep_q;
+reg beat_buf_last_q;
 reg [15:0] beat_block_q;
 reg beat_buf_valid_q;
 reg pending_rd_q;
@@ -275,7 +285,22 @@ wire pool_prefetch_ready = pool_prefetch_candidate &&
 wire pool_read_ready = frame_valid_q &&
                        need_pool_for_pending &&
                        (pool_m_ch_id == frame_ch_q);
-assign pool_m_ready = pool_m_valid && pool_accept_q;
+wire wide_beat_buf_valid = (WIDE_READ_ENABLE != 0) && wide_payload_enable &&
+                           frame_valid_q && beat_buf_valid_q;
+wire wide_pool_valid = (WIDE_READ_ENABLE != 0) && wide_payload_enable &&
+                       frame_valid_q && !beat_buf_valid_q && pool_m_valid &&
+                       (pool_m_ch_id == frame_ch_q);
+wire wide_beat_buf_fire = wide_beat_buf_valid && wide_payload_tready;
+wire wide_pool_ready = (WIDE_READ_ENABLE != 0) && wide_payload_enable &&
+                       frame_valid_q && !beat_buf_valid_q &&
+                       (pool_m_ch_id == frame_ch_q) && wide_payload_tready;
+assign wide_payload_tvalid = wide_beat_buf_valid || wide_pool_valid;
+assign wide_payload_tdata = wide_beat_buf_valid ? beat_buf_q : pool_m_data;
+assign wide_payload_tkeep = wide_beat_buf_valid ? beat_buf_keep_q : pool_m_keep;
+assign wide_payload_tlast = wide_beat_buf_valid ? beat_buf_last_q : pool_m_last;
+assign pool_m_ready = (WIDE_READ_ENABLE != 0) ?
+                      (pool_m_valid && (pool_prefetch_ready || wide_pool_ready)) :
+                      (pool_m_valid && pool_accept_q);
 wire pool_m_fire = pool_m_valid && pool_m_ready;
 wire ctx_read_issue = pool_m_fire && pool_prefetch_ready;
 wire rdq_pop = HAS_RD_REQ_QUEUE && ((pool_m_fire && pool_read_ready) || rdq_front_hit);
@@ -414,6 +439,8 @@ always @(posedge clk or negedge rstn) begin
         ctx_total_count_q <= {CTX_TOTAL_W{1'b0}};
         frame_valid_q <= 1'b0;
         beat_buf_valid_q <= 1'b0;
+        beat_buf_keep_q <= 64'h0;
+        beat_buf_last_q <= 1'b0;
         pending_rd_q <= 1'b0;
         rdq_wr_ptr <= {RDQ_AW{1'b0}};
         rdq_rd_ptr <= {RDQ_AW{1'b0}};
@@ -438,6 +465,8 @@ always @(posedge clk or negedge rstn) begin
         ctx_total_count_q <= {CTX_TOTAL_W{1'b0}};
         frame_valid_q <= 1'b0;
         beat_buf_valid_q <= 1'b0;
+        beat_buf_keep_q <= 64'h0;
+        beat_buf_last_q <= 1'b0;
         pending_rd_q <= 1'b0;
         rdq_wr_ptr <= {RDQ_AW{1'b0}};
         rdq_rd_ptr <= {RDQ_AW{1'b0}};
@@ -450,10 +479,14 @@ always @(posedge clk or negedge rstn) begin
             ctx_count[i] <= {(CTX_AW+1){1'b0}};
         end
     end else begin
-        if (pool_m_fire)
+        if (WIDE_READ_ENABLE != 0) begin
             pool_accept_q <= 1'b0;
-        else if (!pool_accept_q && pool_m_valid && (pool_prefetch_ready || pool_read_ready))
-            pool_accept_q <= 1'b1;
+        end else begin
+            if (pool_m_fire)
+                pool_accept_q <= 1'b0;
+            else if (!pool_accept_q && pool_m_valid && (pool_prefetch_ready || pool_read_ready))
+                pool_accept_q <= 1'b1;
+        end
         ctx_read_pending_q <= ctx_mem_rd_addr_valid_q;
         if (ctx_read_issue)
             ctx_read_ch_q <= pool_m_ch_id;
@@ -597,9 +630,21 @@ always @(posedge clk or negedge rstn) begin
                 drop_event_ch <= pool_drop_event_ch;
             end
 
-            if (HAS_RD_REQ_QUEUE) begin
+            if (WIDE_READ_ENABLE != 0) begin
+                if (pool_m_fire && pool_prefetch_ready) begin
+                    beat_buf_q <= pool_m_data;
+                    beat_buf_keep_q <= pool_m_keep;
+                    beat_buf_last_q <= pool_m_last;
+                    beat_block_q <= 16'h0;
+                    beat_buf_valid_q <= 1'b1;
+                end
+                if (wide_beat_buf_fire)
+                    beat_buf_valid_q <= 1'b0;
+            end else if (HAS_RD_REQ_QUEUE) begin
                 if (pool_m_fire) begin
                     beat_buf_q <= pool_m_data;
+                    beat_buf_keep_q <= pool_m_keep;
+                    beat_buf_last_q <= pool_m_last;
                     if (pool_prefetch_ready) begin
                         beat_block_q <= 16'h0;
                         beat_buf_valid_q <= 1'b1;
@@ -637,6 +682,8 @@ always @(posedge clk or negedge rstn) begin
             end else begin
                 if (pool_m_fire) begin
                     beat_buf_q <= pool_m_data;
+                    beat_buf_keep_q <= pool_m_keep;
+                    beat_buf_last_q <= pool_m_last;
                     if (pool_prefetch_ready) begin
                         beat_block_q <= 16'h0;
                         beat_buf_valid_q <= 1'b1;

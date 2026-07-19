@@ -78,6 +78,22 @@ module frame_dma_rx_top #(
     input      [31:0]  ufc_rx_arg0,
     input      [31:0]  ufc_rx_arg1,
     output             irq
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+    ,output     [31:0] m_axi_rx_payload_awaddr
+    ,output      [7:0] m_axi_rx_payload_awlen
+    ,output      [2:0] m_axi_rx_payload_awsize
+    ,output      [1:0] m_axi_rx_payload_awburst
+    ,output            m_axi_rx_payload_awvalid
+    ,input             m_axi_rx_payload_awready
+    ,output    [511:0] m_axi_rx_payload_wdata
+    ,output     [63:0] m_axi_rx_payload_wstrb
+    ,output            m_axi_rx_payload_wlast
+    ,output            m_axi_rx_payload_wvalid
+    ,input             m_axi_rx_payload_wready
+    ,input       [1:0] m_axi_rx_payload_bresp
+    ,input             m_axi_rx_payload_bvalid
+    ,output            m_axi_rx_payload_bready
+`endif
 );
 
 // RX 状态机把 header 解析、channel context、资源检查、提交和异常恢复分开，
@@ -114,6 +130,11 @@ localparam HAS_RX_AXIS_SKID = (`DMA_ENABLE_RX_AXIS_SKID != 0);
 localparam HAS_CQ_SINGLE_WRITER = (`DMA_ENABLE_CQ_SINGLE_WRITER != 0);
 localparam HAS_RX_MATCH_PIPELINE = (`DMA_ENABLE_RX_MATCH_PIPELINE != 0);
 localparam [3:0] CQ_CMD_CREDIT_DEPTH = 4'd8;
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+localparam HAS_RX_WIDE_PAYLOAD = 1;
+`else
+localparam HAS_RX_WIDE_PAYLOAD = 0;
+`endif
 
 initial begin
     if (`DMA_RX_CH_NUM > `DMA_MAX_CH)
@@ -701,6 +722,12 @@ wire stream_pay_rd_req;
 wire [RX_FC_INGRESS_PAYLOAD_AW-1:0] stream_pay_rd_index;
 wire stream_pay_rd_valid;
 wire [63:0] stream_pay_rd_data;
+wire stream_wide_payload_enable;
+wire stream_wide_payload_tvalid;
+wire stream_wide_payload_tready;
+wire [511:0] stream_wide_payload_tdata;
+wire [63:0] stream_wide_payload_tkeep;
+wire stream_wide_payload_tlast;
 
 wire frame_meta_valid;
 wire frame_meta_pop;
@@ -723,6 +750,12 @@ wire frame_pay_rd_req;
 wire [RX_FC_INGRESS_PAYLOAD_AW-1:0] frame_pay_rd_index;
 wire frame_pay_rd_valid;
 wire [63:0] frame_pay_rd_data;
+wire frame_wide_payload_enable;
+wire frame_wide_payload_tvalid;
+wire frame_wide_payload_tready;
+wire [511:0] frame_wide_payload_tdata;
+wire [63:0] frame_wide_payload_tkeep;
+wire frame_wide_payload_tlast;
 wire frame_drop_event_valid;
 wire [3:0] frame_drop_event_ch;
 wire [15:0] frame_pool_free_count;
@@ -733,6 +766,11 @@ wire frame_pool_overflow_sticky;
 wire frame_pool_leak_check_error;
 wire frame_queue_busy;
 wire queue_active_is_frame;
+wire queue_wide_payload_tvalid;
+wire queue_wide_payload_tready;
+wire [511:0] queue_wide_payload_tdata;
+wire [63:0] queue_wide_payload_tkeep;
+wire queue_wide_payload_tlast;
 wire [`DMA_MAX_CH-1:0] rx_ch_busy_flat;
 genvar busy_g;
 reg [`DMA_MAX_CH-1:0] lookup_busy_preload_mask_c;
@@ -804,6 +842,7 @@ endgenerate
 wire pay_done;
 wire pay_error;
 wire pay_busy;
+wire pay_arbiter_busy;
 wire pay_cmd_valid = (wr_state == WR_PAY_CMD);
 wire cqe_done;
 wire cqe_error;
@@ -1541,7 +1580,8 @@ dma_rx_fc_ingress_bank #(
     .PAYLOAD_WORDS(`DMA_RX_FC_INGRESS_PAYLOAD_WORDS),
     .PAYLOAD_AW(`DMA_RX_FC_INGRESS_PAYLOAD_AW),
     .META_DEPTH(`DMA_RX_FC_INGRESS_META_DEPTH),
-    .META_AW(`DMA_RX_FC_INGRESS_META_AW)
+    .META_AW(`DMA_RX_FC_INGRESS_META_AW),
+    .WIDE_READ_ENABLE(HAS_RX_WIDE_PAYLOAD)
 ) u_ingress_queue(
     .clk(aclk),
     .rstn(aresetn),
@@ -1595,7 +1635,13 @@ dma_rx_fc_ingress_bank #(
     .payload_rd_req(stream_pay_rd_req),
     .payload_rd_index(stream_pay_rd_index),
     .payload_rd_valid(stream_pay_rd_valid),
-    .payload_rd_data(stream_pay_rd_data)
+    .payload_rd_data(stream_pay_rd_data),
+    .wide_payload_enable(stream_wide_payload_enable),
+    .wide_payload_tvalid(stream_wide_payload_tvalid),
+    .wide_payload_tready(stream_wide_payload_tready),
+    .wide_payload_tdata(stream_wide_payload_tdata),
+    .wide_payload_tkeep(stream_wide_payload_tkeep),
+    .wide_payload_tlast(stream_wide_payload_tlast)
 );
 
 dma_rx_frame_shared_adapter #(
@@ -1605,7 +1651,8 @@ dma_rx_frame_shared_adapter #(
     .BLOCK_AW(`DMA_FRAME_POOL_BLOCK_AW),
     .CTX_DEPTH(`DMA_RX_FC_INGRESS_META_DEPTH),
     .CTX_AW(`DMA_RX_FC_INGRESS_META_AW),
-    .PAYLOAD_AW(`DMA_RX_FC_INGRESS_PAYLOAD_AW)
+    .PAYLOAD_AW(`DMA_RX_FC_INGRESS_PAYLOAD_AW),
+    .WIDE_READ_ENABLE(HAS_RX_WIDE_PAYLOAD)
 ) u_frame_shared_adapter (
     .clk(aclk),
     .rstn(aresetn),
@@ -1661,6 +1708,12 @@ dma_rx_frame_shared_adapter #(
     .payload_rd_index(frame_pay_rd_index),
     .payload_rd_valid(frame_pay_rd_valid),
     .payload_rd_data(frame_pay_rd_data),
+    .wide_payload_enable(frame_wide_payload_enable),
+    .wide_payload_tvalid(frame_wide_payload_tvalid),
+    .wide_payload_tready(frame_wide_payload_tready),
+    .wide_payload_tdata(frame_wide_payload_tdata),
+    .wide_payload_tkeep(frame_wide_payload_tkeep),
+    .wide_payload_tlast(frame_wide_payload_tlast),
     .pool_free_count(frame_pool_free_count),
     .pool_alloc_count(frame_pool_alloc_count),
     .pool_committed_frame_count(frame_pool_committed_frame_count),
@@ -1701,6 +1754,12 @@ dma_rx_ingress_source_selector #(
     .s0_payload_rd_index(stream_pay_rd_index),
     .s0_payload_rd_valid(stream_pay_rd_valid),
     .s0_payload_rd_data(stream_pay_rd_data),
+    .s0_wide_payload_enable(stream_wide_payload_enable),
+    .s0_wide_payload_tvalid(stream_wide_payload_tvalid),
+    .s0_wide_payload_tready(stream_wide_payload_tready),
+    .s0_wide_payload_tdata(stream_wide_payload_tdata),
+    .s0_wide_payload_tkeep(stream_wide_payload_tkeep),
+    .s0_wide_payload_tlast(stream_wide_payload_tlast),
     .s1_meta_valid(frame_meta_valid),
     .s1_meta_pop(frame_meta_pop),
     .s1_ch(frame_queue_ch),
@@ -1722,6 +1781,12 @@ dma_rx_ingress_source_selector #(
     .s1_payload_rd_index(frame_pay_rd_index),
     .s1_payload_rd_valid(frame_pay_rd_valid),
     .s1_payload_rd_data(frame_pay_rd_data),
+    .s1_wide_payload_enable(frame_wide_payload_enable),
+    .s1_wide_payload_tvalid(frame_wide_payload_tvalid),
+    .s1_wide_payload_tready(frame_wide_payload_tready),
+    .s1_wide_payload_tdata(frame_wide_payload_tdata),
+    .s1_wide_payload_tkeep(frame_wide_payload_tkeep),
+    .s1_wide_payload_tlast(frame_wide_payload_tlast),
     .meta_valid(queue_meta_valid),
     .out_ch(queue_ch),
     .out_tc(queue_tc),
@@ -1742,6 +1807,11 @@ dma_rx_ingress_source_selector #(
     .payload_rd_index(pay_rd_index),
     .payload_rd_valid(pay_rd_valid),
     .payload_rd_data(pay_rd_data),
+    .wide_payload_tvalid(queue_wide_payload_tvalid),
+    .wide_payload_tready(queue_wide_payload_tready),
+    .wide_payload_tdata(queue_wide_payload_tdata),
+    .wide_payload_tkeep(queue_wide_payload_tkeep),
+    .wide_payload_tlast(queue_wide_payload_tlast),
     .active_is_frame(queue_active_is_frame)
 );
 
@@ -1871,6 +1941,70 @@ dma_tx_engine #(
     .tx_axis_tready(tx_axis_tready)
 );
 
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+wire wide_payload_cpl_valid;
+wire wide_payload_cpl_error;
+wire [3:0] wide_payload_cpl_error_code;
+wire wide_payload_busy;
+
+assign pay_done = wide_payload_cpl_valid;
+assign pay_error = wide_payload_cpl_error;
+assign pay_busy = wide_payload_busy;
+assign pay_arbiter_busy = 1'b0;
+assign pay_rd_req = 1'b0;
+assign pay_rd_index = {RX_FC_INGRESS_PAYLOAD_AW{1'b0}};
+assign pay_awaddr = 32'h0;
+assign pay_awlen = 8'h0;
+assign pay_awsize = 3'd3;
+assign pay_awburst = 2'b01;
+assign pay_awvalid = 1'b0;
+assign pay_wdata = 64'h0;
+assign pay_wstrb = 8'h0;
+assign pay_wlast = 1'b0;
+assign pay_wvalid = 1'b0;
+assign pay_bready = 1'b0;
+
+dma_axi_write_engine_512 #(
+    .MAX_BURST_BEATS(`DMA_MAX_BURST_LEN),
+    .MAX_OUTSTANDING(RX_WR_MAX_OUTSTANDING),
+    .MAX_CMD_BYTES(4096)
+) u_payload_writer_512 (
+    .clk(aclk),
+    .rstn(aresetn),
+    .soft_reset(axil_soft_reset),
+    .cmd_valid(pay_cmd_valid),
+    .cmd_ready(),
+    .cmd_addr(active_dst_addr),
+    .cmd_len(active_payload_len),
+    .s_payload_tvalid(queue_wide_payload_tvalid),
+    .s_payload_tready(queue_wide_payload_tready),
+    .s_payload_tdata(queue_wide_payload_tdata),
+    .s_payload_tkeep(queue_wide_payload_tkeep),
+    .s_payload_tlast(queue_wide_payload_tlast),
+    .m_axi_awaddr(m_axi_rx_payload_awaddr),
+    .m_axi_awlen(m_axi_rx_payload_awlen),
+    .m_axi_awsize(m_axi_rx_payload_awsize),
+    .m_axi_awburst(m_axi_rx_payload_awburst),
+    .m_axi_awvalid(m_axi_rx_payload_awvalid),
+    .m_axi_awready(m_axi_rx_payload_awready),
+    .m_axi_wdata(m_axi_rx_payload_wdata),
+    .m_axi_wstrb(m_axi_rx_payload_wstrb),
+    .m_axi_wlast(m_axi_rx_payload_wlast),
+    .m_axi_wvalid(m_axi_rx_payload_wvalid),
+    .m_axi_wready(m_axi_rx_payload_wready),
+    .m_axi_bresp(m_axi_rx_payload_bresp),
+    .m_axi_bvalid(m_axi_rx_payload_bvalid),
+    .m_axi_bready(m_axi_rx_payload_bready),
+    .cpl_valid(wide_payload_cpl_valid),
+    .cpl_ready(1'b1),
+    .cpl_error(wide_payload_cpl_error),
+    .cpl_error_code(wide_payload_cpl_error_code),
+    .busy(wide_payload_busy)
+);
+`else
+assign queue_wide_payload_tready = 1'b0;
+assign pay_arbiter_busy = pay_busy;
+
 dma_axi_write_engine #(
     .INDEX_WIDTH(RX_FC_INGRESS_PAYLOAD_AW),
     .MAX_OUTSTANDING(RX_WR_MAX_OUTSTANDING)
@@ -1904,6 +2038,7 @@ dma_axi_write_engine #(
     .m_axi_bready(pay_bready),
     .busy(pay_busy)
 );
+`endif
 
 generate
     if (HAS_CQ_SINGLE_WRITER) begin : g_cq_single_writer
@@ -2079,7 +2214,7 @@ dma_rx_write_arbiter u_write_arbiter(
     .clk(aclk),
     .rstn(aresetn),
     .soft_reset(axil_soft_reset),
-    .payload_busy(pay_busy),
+    .payload_busy(pay_arbiter_busy),
     .p_awaddr(pay_awaddr),
     .p_awlen(pay_awlen),
     .p_awsize(pay_awsize),

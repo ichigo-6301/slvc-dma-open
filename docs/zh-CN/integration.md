@@ -19,6 +19,19 @@
 `sl_tx_aclk` 与 `sl_tx_aresetn` 驱动 TX shared-link boundary。carrier 时钟跨域应由
 `slvc_carrier_cdc_adapter` 处理，不能直接把异步时钟连接到 wrapper。
 
+## 可选同频 Wide RX Memory Boundary
+
+`configs/slvc_dma_512_rx_wide_defconfig` 选择以 `frame_dma_rx_top` 为 OOC top 的
+开发 profile。定义 `DMA_RX_WIDE_PAYLOAD_PROFILE` 后，该 top 增加 write-only
+`m_axi_rx_payload_*` AXI4 master：32-bit address、512-bit WDATA 和 64-bit WSTRB。
+RX destination address 必须按 64 byte 对齐。冻结的 `slvc_dma_wrapper` 接口及默认
+64-bit AXI master 保持不变。
+
+该 profile 是同频实现：RX ingress store、source selector、writer 和外部 memory
+slave 都使用 `aclk`。若 memory clock 异步，必须先增加 command、512-bit payload
+和 completion CDC FIFO，不能直接连接。详见
+[wide-backend profile 指南](rx_payload_512_backend.md)。
+
 ## 可选 Ethernet Packet Boundary
 
 只有上游提供带 `TKEEP`/`TLAST` 的 512-bit Ethernet II packet AXI4-Stream 时，

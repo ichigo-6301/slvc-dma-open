@@ -33,6 +33,12 @@ module dma_rx_ingress_source_selector #(
     output     [PAYLOAD_AW-1:0] s0_payload_rd_index,
     input             s0_payload_rd_valid,
     input      [63:0] s0_payload_rd_data,
+    output            s0_wide_payload_enable,
+    input             s0_wide_payload_tvalid,
+    output            s0_wide_payload_tready,
+    input      [511:0] s0_wide_payload_tdata,
+    input      [63:0] s0_wide_payload_tkeep,
+    input             s0_wide_payload_tlast,
 
     input             s1_meta_valid,
     output            s1_meta_pop,
@@ -55,6 +61,12 @@ module dma_rx_ingress_source_selector #(
     output     [PAYLOAD_AW-1:0] s1_payload_rd_index,
     input             s1_payload_rd_valid,
     input      [63:0] s1_payload_rd_data,
+    output            s1_wide_payload_enable,
+    input             s1_wide_payload_tvalid,
+    output            s1_wide_payload_tready,
+    input      [511:0] s1_wide_payload_tdata,
+    input      [63:0] s1_wide_payload_tkeep,
+    input             s1_wide_payload_tlast,
 
     output            meta_valid,
     output     [3:0]  out_ch,
@@ -76,6 +88,11 @@ module dma_rx_ingress_source_selector #(
     input      [PAYLOAD_AW-1:0] payload_rd_index,
     output            payload_rd_valid,
     output     [63:0] payload_rd_data,
+    output            wide_payload_tvalid,
+    input             wide_payload_tready,
+    output     [511:0] wide_payload_tdata,
+    output      [63:0] wide_payload_tkeep,
+    output            wide_payload_tlast,
     output            active_is_frame
 );
 
@@ -117,6 +134,15 @@ assign s0_payload_rd_index = payload_rd_index;
 assign s1_payload_rd_index = payload_rd_index;
 assign payload_rd_valid = (active_q && (src_q == SRC_FRAME)) ? s1_payload_rd_valid : s0_payload_rd_valid;
 assign payload_rd_data = (active_q && (src_q == SRC_FRAME)) ? s1_payload_rd_data : s0_payload_rd_data;
+assign s0_wide_payload_enable = active_q && (src_q == SRC_STREAM);
+assign s1_wide_payload_enable = active_q && (src_q == SRC_FRAME);
+assign s0_wide_payload_tready = s0_wide_payload_enable && wide_payload_tready;
+assign s1_wide_payload_tready = s1_wide_payload_enable && wide_payload_tready;
+assign wide_payload_tvalid = active_q &&
+    ((src_q == SRC_FRAME) ? s1_wide_payload_tvalid : s0_wide_payload_tvalid);
+assign wide_payload_tdata = (src_q == SRC_FRAME) ? s1_wide_payload_tdata : s0_wide_payload_tdata;
+assign wide_payload_tkeep = (src_q == SRC_FRAME) ? s1_wide_payload_tkeep : s0_wide_payload_tkeep;
+assign wide_payload_tlast = (src_q == SRC_FRAME) ? s1_wide_payload_tlast : s0_wide_payload_tlast;
 assign active_is_frame = active_q && (src_q == SRC_FRAME);
 
 always @(posedge clk or negedge rstn) begin

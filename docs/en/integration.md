@@ -21,6 +21,20 @@ logic. `sl_tx_aclk` and `sl_tx_aresetn` clock the TX shared-link boundary.
 Carrier-clock crossing belongs in `slvc_carrier_cdc_adapter`, not in an
 unconstrained wrapper connection.
 
+## Optional Same-Clock Wide RX Memory Boundary
+
+`configs/slvc_dma_512_rx_wide_defconfig` selects a development profile whose
+OOC top is `frame_dma_rx_top`. Under `DMA_RX_WIDE_PAYLOAD_PROFILE`, that top
+adds `m_axi_rx_payload_*`: a write-only AXI4 master with 32-bit addresses,
+512-bit WDATA, and 64-bit WSTRB. RX destination addresses must be 64-byte
+aligned. The frozen `slvc_dma_wrapper` interface and default 64-bit AXI master
+remain unchanged.
+
+This profile is same-clock: the RX ingress stores, source selector, writer, and
+external memory slave all use `aclk`. Do not connect it to an asynchronous
+memory clock without command, 512-bit payload, and completion CDC FIFOs. See
+the [wide-backend profile guide](rx_payload_512_backend.md).
+
 ## Optional Ethernet Packet Boundary
 
 Place `dma_udp_ipv4_to_shdr64_adapter` before `sl_rx_*` only when the upstream

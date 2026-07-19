@@ -31,6 +31,11 @@ ADAPTER_SIM_CASES = [
     ("run_rtl_v33e20a107_udp_to_dma_smoke.do", "PASS tb_rtl_v33e20a107_udp_to_dma_smoke packets=2 channels=2 cqes=2 ch0_full_then_ch1=1"),
 ]
 
+WIDE_RX_SIM_CASES = [
+    ("run_rtl_rx_payload_writer_512.do", "PASS tb_rtl_rx_payload_writer_512 cases=2028"),
+    ("run_rtl_rx_payload_writer_512_integration.do", "PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256"),
+]
+
 
 def parse_config(path):
     values = {}
@@ -52,33 +57,45 @@ def require_tool(name):
 
 def simulation_profile(config):
     adapter_enabled = config.get("CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER") == "y"
+    wide_rx_enabled = config.get("CONFIG_SLVC_DMA_RX_WIDE_PAYLOAD") == "y"
     adapter_count = len(ADAPTER_SIM_CASES) if adapter_enabled else 0
-    return adapter_enabled, len(SIM_CASES), adapter_count, len(SIM_CASES) + adapter_count
+    wide_rx_count = len(WIDE_RX_SIM_CASES) if wide_rx_enabled else 0
+    return (adapter_enabled, wide_rx_enabled, len(SIM_CASES), adapter_count,
+            wide_rx_count, len(SIM_CASES) + adapter_count + wide_rx_count)
 
 
 def show_config(config):
     print("top: {}".format(config.get("CONFIG_SLVC_DMA_TOP", "frame_dma_wrapper")))
     print("clock_period_ns: {}".format(config.get("CONFIG_SLVC_DMA_CLOCK_PERIOD_NS", "5.000")))
-    print("profile: slvc_dma_v1_512_udp_ipv4_adapter_p0")
-    adapter_enabled, core_count, adapter_count, total_count = simulation_profile(config)
+    adapter_enabled, wide_rx_enabled, core_count, adapter_count, wide_rx_count, total_count = simulation_profile(config)
+    print("profile: {}".format(
+        "slvc_dma_v1_512_rx_wide_payload" if wide_rx_enabled else
+        "slvc_dma_v1_512_udp_ipv4_adapter_p0"))
     print("udp_ipv4_adapter: {}".format("y" if adapter_enabled else "n"))
+    print("rx_wide_payload_master: {}".format("y" if wide_rx_enabled else "n"))
     print("simulation_profile: {}".format(
-        "frozen_core_plus_udp_adapter" if adapter_enabled else "frozen_core"))
+        "frozen_core_plus_rx_wide" if wide_rx_enabled else
+        ("frozen_core_plus_udp_adapter" if adapter_enabled else "frozen_core")))
     print("required_core_markers: {}".format(core_count))
     print("required_adapter_markers: {}".format(adapter_count))
+    print("required_rx_wide_markers: {}".format(wide_rx_count))
     print("required_total_markers: {}".format(total_count))
 
 
 def run_sim(root, config, dry_run):
     cases = list(SIM_CASES)
-    adapter_enabled, core_count, adapter_count, total_count = simulation_profile(config)
+    adapter_enabled, wide_rx_enabled, core_count, adapter_count, wide_rx_count, total_count = simulation_profile(config)
     print("simulation_profile: {}".format(
-        "frozen_core_plus_udp_adapter" if adapter_enabled else "frozen_core"))
+        "frozen_core_plus_rx_wide" if wide_rx_enabled else
+        ("frozen_core_plus_udp_adapter" if adapter_enabled else "frozen_core")))
     print("required_core_markers: {}".format(core_count))
     print("required_adapter_markers: {}".format(adapter_count))
+    print("required_rx_wide_markers: {}".format(wide_rx_count))
     print("required_total_markers: {}".format(total_count))
     if adapter_enabled:
         cases.extend(ADAPTER_SIM_CASES)
+    if wide_rx_enabled:
+        cases.extend(WIDE_RX_SIM_CASES)
     commands = [(["vsim", "-c", "-do", script], marker) for script, marker in cases]
     for command, _ in commands:
         print("command: " + " ".join(command))
@@ -103,10 +120,13 @@ def run_sim(root, config, dry_run):
             raise RuntimeError("ModelSim regression failed: {}".format(command[-1]))
 
 
-def run_ooc(root, dry_run):
+def run_ooc(root, config, dry_run):
     tool_name = os.environ.get("VIVADO", "vivado")
     tool = shutil.which(tool_name) or tool_name
-    command = [tool, "-mode", "batch", "-source", "fpga/xilinx/synth_frame_dma_ooc_2018_3.tcl"]
+    wide_rx_enabled = config.get("CONFIG_SLVC_DMA_RX_WIDE_PAYLOAD") == "y"
+    script = ("fpga/xilinx/synth_rx_payload_512_ooc_2018_3.tcl" if wide_rx_enabled else
+              "fpga/xilinx/synth_frame_dma_ooc_2018_3.tcl")
+    command = [tool, "-mode", "batch", "-source", script]
     print("command: " + " ".join(command))
     if dry_run:
         return
@@ -134,6 +154,33 @@ def run_adapter_dc_ooc(root, dry_run):
     subprocess.run(command, cwd=str(root / "asic" / "dc"), check=True)
 
 
+def run_rx_payload_writer_dc_ooc(root, config, dry_run):
+    tool_name = os.environ.get("DC_SHELL", "dc_shell")
+    tool = shutil.which(tool_name) or tool_name
+    command = [tool, "-f", "run_rx_payload_writer_ooc.tcl"]
+    environment = os.environ.copy()
+    environment.setdefault("DMA_DC_WRITER_PROFILE", "wide512")
+    environment.setdefault(
+        "DMA_DC_CLOCK_PERIOD_NS",
+        config.get("CONFIG_SLVC_DMA_CLOCK_PERIOD_NS", "5.000"),
+    )
+    print("writer_profile: {}".format(environment["DMA_DC_WRITER_PROFILE"]))
+    print("clock_period_ns: {}".format(environment["DMA_DC_CLOCK_PERIOD_NS"]))
+    print("command: " + " ".join(command))
+    if dry_run:
+        return
+    if not environment.get("DMA_DC_TARGET_LIBRARY"):
+        raise RuntimeError("DMA_DC_TARGET_LIBRARY must name a local standard-cell .db library")
+    if not shutil.which(tool_name) and not Path(tool_name).is_file():
+        raise RuntimeError("tool not found on PATH: {}".format(tool_name))
+    subprocess.run(
+        command,
+        cwd=str(root / "asic" / "dc"),
+        env=environment,
+        check=True,
+    )
+
+
 def main():
     if sys.version_info < MIN_PYTHON:
         sys.stderr.write("flowctl: error: Python 3.6 or newer is required\n")
@@ -151,6 +198,8 @@ def main():
     sub.add_parser("fpga-ooc-dry-run")
     sub.add_parser("adapter-dc-ooc")
     sub.add_parser("adapter-dc-ooc-dry-run")
+    sub.add_parser("rx-payload-writer-dc-ooc")
+    sub.add_parser("rx-payload-writer-dc-ooc-dry-run")
     args = parser.parse_args()
     if args.command is None:
         parser.print_help()
@@ -171,9 +220,13 @@ def main():
         elif args.command.startswith("sim"):
             run_sim(root, config, args.command.endswith("dry-run"))
         elif args.command.startswith("fpga-ooc"):
-            run_ooc(root, args.command.endswith("dry-run"))
-        else:
+            run_ooc(root, config, args.command.endswith("dry-run"))
+        elif args.command.startswith("adapter-dc-ooc"):
             run_adapter_dc_ooc(root, args.command.endswith("dry-run"))
+        else:
+            run_rx_payload_writer_dc_ooc(
+                root, config, args.command.endswith("dry-run")
+            )
         return 0
     except RuntimeError as error:
         print("flowctl: error: {}".format(error), file=sys.stderr)

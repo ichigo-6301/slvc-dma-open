@@ -9,7 +9,8 @@ module dma_rx_fc_ingress_bank #(
     parameter PAYLOAD_WORDS = `DMA_RX_FC_INGRESS_PAYLOAD_WORDS,
     parameter PAYLOAD_AW    = `DMA_RX_FC_INGRESS_PAYLOAD_AW,
     parameter META_DEPTH    = `DMA_RX_FC_INGRESS_META_DEPTH,
-    parameter META_AW       = `DMA_RX_FC_INGRESS_META_AW
+    parameter META_AW       = `DMA_RX_FC_INGRESS_META_AW,
+    parameter WIDE_READ_ENABLE = 0
 )(
     input             clk,
     input             rstn,
@@ -67,7 +68,14 @@ module dma_rx_fc_ingress_bank #(
     input              payload_rd_req,
     input      [PAYLOAD_AW-1:0] payload_rd_index,
     output reg         payload_rd_valid,
-    output     [63:0]  payload_rd_data
+    output     [63:0]  payload_rd_data,
+
+    input              wide_payload_enable,
+    output             wide_payload_tvalid,
+    input              wide_payload_tready,
+    output     [511:0] wide_payload_tdata,
+    output      [63:0] wide_payload_tkeep,
+    output             wide_payload_tlast
 );
 
 function integer clog2;
@@ -204,6 +212,24 @@ reg [TOTAL_BEAT_AW-1:0] payload_ram_rd_addr_q;
 reg [2:0] payload_ram_rd_lane_q;
 reg [2:0] payload_rd_lane_q;
 
+// The optional wide drain reuses the existing 512-bit payload RAM directly.
+// A small response FIFO absorbs the synchronous RAM latency and keeps the RAM
+// output isolated from downstream W-channel backpressure.
+localparam integer WIDE_FIFO_DEPTH = 4;
+reg          wide_session_q;
+reg [PAYLOAD_BEAT_AW:0] wide_issue_index_q;
+reg [63:0]   wide_ram_keep_q;
+reg          wide_ram_last_q;
+reg          wide_ram_resp_valid_q;
+reg [63:0]   wide_ram_resp_keep_q;
+reg          wide_ram_resp_last_q;
+reg [511:0]  wide_fifo_data [0:WIDE_FIFO_DEPTH-1];
+reg [63:0]   wide_fifo_keep [0:WIDE_FIFO_DEPTH-1];
+reg          wide_fifo_last [0:WIDE_FIFO_DEPTH-1];
+reg [1:0]    wide_fifo_wr_ptr_q;
+reg [1:0]    wide_fifo_rd_ptr_q;
+reg [2:0]    wide_fifo_count_q;
+
 wire [PAYLOAD_AW:0] req_words = req_aligned_len[PAYLOAD_AW+2:3];
 wire [PAYLOAD_AW:0] req_free_words = PAYLOAD_WORDS[PAYLOAD_AW:0] - used_words[req_ch];
 wire [META_AW:0] req_meta_count = meta_count[req_ch];
@@ -231,6 +257,22 @@ wire [PAYLOAD_BEAT_AW-1:0] selected_beat_offset =
 wire [2:0] selected_lane = selected_word_offset[2:0];
 wire [31:0] payload_ram_rd_addr_calc = out_payload_base_beat + selected_beat_offset;
 wire [31:0] payload_ram_wr_addr_calc = collect_payload_base_beat + collect_wr_beat_ptr;
+wire [PAYLOAD_BEAT_AW-1:0] wide_selected_beat_offset =
+    wrap_add_beats(out_payload_start_q[PAYLOAD_AW-1:3], wide_issue_index_q);
+wire [31:0] wide_payload_ram_rd_addr_calc = out_payload_base_beat + wide_selected_beat_offset;
+wire [31:0] wide_total_beats = (out_payload_len + 32'd63) >> 6;
+wire [31:0] wide_bytes_before_issue = wide_issue_index_q << 6;
+wire [31:0] wide_bytes_left_issue =
+    (out_payload_len > wide_bytes_before_issue) ?
+        (out_payload_len - wide_bytes_before_issue) : 32'h0;
+wire [2:0] wide_reserved_count = wide_fifo_count_q +
+                                 {2'b00, payload_ram_rd_en_q} +
+                                 {2'b00, wide_ram_resp_valid_q};
+wire wide_read_issue = (WIDE_READ_ENABLE != 0) && wide_session_q &&
+                       (wide_issue_index_q < wide_total_beats) &&
+                       (wide_reserved_count < WIDE_FIFO_DEPTH);
+wire wide_fifo_push = (WIDE_READ_ENABLE != 0) && wide_ram_resp_valid_q;
+wire wide_fifo_pop = wide_payload_tvalid && wide_payload_tready;
 wire payload_write_fire = payload_tvalid && payload_tready;
 wire [META_ADDR_W-1:0] meta_write_addr =
     (commit_ch_q * META_DEPTH) + commit_meta_wr_q;
@@ -299,6 +341,10 @@ assign out_cpl_en = out_meta_cpl_en;
 assign out_ring = out_meta_ring;
 assign out_wrap_before = out_meta_wrap_before;
 assign payload_rd_data = payload_ram_rd_data[payload_rd_lane_q*64 +: 64];
+assign wide_payload_tvalid = (WIDE_READ_ENABLE != 0) && (wide_fifo_count_q != 0);
+assign wide_payload_tdata = wide_fifo_data[wide_fifo_rd_ptr_q];
+assign wide_payload_tkeep = wide_fifo_keep[wide_fifo_rd_ptr_q];
+assign wide_payload_tlast = wide_fifo_last[wide_fifo_rd_ptr_q];
 assign payload_ram_wr_en = payload_ram_wr_en_q;
 assign payload_ram_wr_addr = payload_ram_wr_addr_q;
 assign payload_ram_wr_data = payload_ram_wr_data_q;
@@ -354,6 +400,18 @@ function [PAYLOAD_AW-1:0] wrap_add_words;
     end
 endfunction
 
+function [63:0] wide_keep_for_bytes;
+    input [31:0] bytes;
+    integer keep_i;
+    begin
+        wide_keep_for_bytes = 64'h0;
+        for (keep_i = 0; keep_i < 64; keep_i = keep_i + 1) begin
+            if (keep_i < bytes)
+                wide_keep_for_bytes[keep_i] = 1'b1;
+        end
+    end
+endfunction
+
 always @(*) begin
     sel_valid = 1'b0;
     sel_ch = rr_ptr;
@@ -403,6 +461,11 @@ always @(posedge clk) begin
     if (!rstn || soft_reset) begin
         payload_ram_wr_en_q <= 1'b0;
         payload_ram_rd_en_q <= 1'b0;
+        wide_ram_keep_q <= 64'h0;
+        wide_ram_last_q <= 1'b0;
+        wide_ram_resp_valid_q <= 1'b0;
+        wide_ram_resp_keep_q <= 64'h0;
+        wide_ram_resp_last_q <= 1'b0;
     end else begin
         payload_ram_wr_en_q <= payload_write_fire;
         if (payload_write_fire) begin
@@ -410,10 +473,71 @@ always @(posedge clk) begin
             payload_ram_wr_data_q <= payload_tdata;
         end
 
-        payload_ram_rd_en_q <= payload_rd_req;
-        if (payload_rd_req) begin
-            payload_ram_rd_addr_q <= payload_ram_rd_addr_calc[TOTAL_BEAT_AW-1:0];
-            payload_ram_rd_lane_q <= selected_lane;
+        wide_ram_resp_valid_q <= (WIDE_READ_ENABLE != 0) && payload_ram_rd_en_q;
+        if (payload_ram_rd_en_q) begin
+            wide_ram_resp_keep_q <= wide_ram_keep_q;
+            wide_ram_resp_last_q <= wide_ram_last_q;
+        end
+
+        if (WIDE_READ_ENABLE != 0) begin
+            payload_ram_rd_en_q <= wide_read_issue;
+            if (wide_read_issue) begin
+                payload_ram_rd_addr_q <= wide_payload_ram_rd_addr_calc[TOTAL_BEAT_AW-1:0];
+                wide_ram_keep_q <= wide_keep_for_bytes(wide_bytes_left_issue);
+                wide_ram_last_q <= ((wide_issue_index_q + 1'b1) >= wide_total_beats);
+            end
+        end else begin
+            payload_ram_rd_en_q <= payload_rd_req;
+            if (payload_rd_req) begin
+                payload_ram_rd_addr_q <= payload_ram_rd_addr_calc[TOTAL_BEAT_AW-1:0];
+                payload_ram_rd_lane_q <= selected_lane;
+            end
+        end
+    end
+end
+
+always @(posedge clk or negedge rstn) begin
+    if (!rstn) begin
+        wide_session_q <= 1'b0;
+        wide_issue_index_q <= {(PAYLOAD_BEAT_AW+1){1'b0}};
+        wide_fifo_wr_ptr_q <= 2'h0;
+        wide_fifo_rd_ptr_q <= 2'h0;
+        wide_fifo_count_q <= 3'h0;
+    end else if (soft_reset) begin
+        wide_session_q <= 1'b0;
+        wide_issue_index_q <= {(PAYLOAD_BEAT_AW+1){1'b0}};
+        wide_fifo_wr_ptr_q <= 2'h0;
+        wide_fifo_rd_ptr_q <= 2'h0;
+        wide_fifo_count_q <= 3'h0;
+    end else if (WIDE_READ_ENABLE != 0) begin
+        if (!wide_payload_enable) begin
+            wide_session_q <= 1'b0;
+            wide_issue_index_q <= {(PAYLOAD_BEAT_AW+1){1'b0}};
+            wide_fifo_wr_ptr_q <= 2'h0;
+            wide_fifo_rd_ptr_q <= 2'h0;
+            wide_fifo_count_q <= 3'h0;
+        end else begin
+            if (!wide_session_q) begin
+                wide_session_q <= 1'b1;
+                wide_issue_index_q <= {(PAYLOAD_BEAT_AW+1){1'b0}};
+            end else if (wide_read_issue) begin
+                wide_issue_index_q <= wide_issue_index_q + 1'b1;
+            end
+
+            if (wide_fifo_push) begin
+                wide_fifo_data[wide_fifo_wr_ptr_q] <= payload_ram_rd_data;
+                wide_fifo_keep[wide_fifo_wr_ptr_q] <= wide_ram_resp_keep_q;
+                wide_fifo_last[wide_fifo_wr_ptr_q] <= wide_ram_resp_last_q;
+                wide_fifo_wr_ptr_q <= wide_fifo_wr_ptr_q + 1'b1;
+            end
+            if (wide_fifo_pop)
+                wide_fifo_rd_ptr_q <= wide_fifo_rd_ptr_q + 1'b1;
+            case ({wide_fifo_push, wide_fifo_pop})
+            2'b10: wide_fifo_count_q <= wide_fifo_count_q + 1'b1;
+            2'b01: wide_fifo_count_q <= wide_fifo_count_q - 1'b1;
+            default: begin
+            end
+            endcase
         end
     end
 end
@@ -465,9 +589,13 @@ always @(posedge clk or negedge rstn) begin
             commit_valid_q <= 1'b0;
             collect_done <= 1'b1;
         end
-        payload_rd_valid <= payload_ram_rd_en_q;
-        if (payload_ram_rd_en_q)
-            payload_rd_lane_q <= payload_ram_rd_lane_q;
+        if (WIDE_READ_ENABLE == 0) begin
+            payload_rd_valid <= payload_ram_rd_en_q;
+            if (payload_ram_rd_en_q)
+                payload_rd_lane_q <= payload_ram_rd_lane_q;
+        end else begin
+            payload_rd_valid <= 1'b0;
+        end
         meta_read_pending_q <= meta_mem_rd_addr_valid_q;
         if (meta_read_issue) begin
             meta_read_ch_q <= sel_ch;

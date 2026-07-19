@@ -19,10 +19,14 @@ marker per test.
 | `run_rtl_v33e20a105_udp_to_shdr_random.do` | Four-seed random packet, gap, and stall scoreboard | `PASS tb_rtl_v33e20a105_udp_to_shdr_random seeds=13579bdf,2468ace1,51a7c0de,6d2b79f5 packets_per_seed=100 total=400` |
 | `run_rtl_v33e20a106_udp_to_shdr_error_matrix.do` | Fixed-profile rejects including payload overflow, reset recovery, and stall stability; 17 explicit invalid-packet drops | `PASS tb_rtl_v33e20a106_udp_to_shdr_error_matrix cases=23 drops=17 accepts=23` |
 | `run_rtl_v33e20a107_udp_to_dma_smoke.do` | UDP-port flow mapping through two DMA channels and CQEs | `PASS tb_rtl_v33e20a107_udp_to_dma_smoke packets=2 channels=2 cqes=2 ch0_full_then_ch1=1` |
+| `run_rtl_rx_payload_writer_512.do` | Wide writer lengths, burst boundaries, errors, random stalls, stress, and ideal-model throughput | `PASS tb_rtl_rx_payload_writer_512 cases=2028` |
+| `run_rtl_rx_payload_writer_512_integration.do` | Fixed-ingress/shared-pool source locking and integrated wide RX writes | `PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256` |
 
 The first ten rows are the frozen core regression and are always required. The
 final four belong to the optional adapter P0 profile and are required only when
 `CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y`; the default adapter-enabled defconfig
 therefore schedules fourteen markers, while the core-only defconfig schedules
-ten. The matrix is directed verification, not coverage closure, formal proof,
-or CDC/RDC signoff.
+ten. The final two rows belong to the default-off RX-wide development profile;
+`configs/slvc_dma_512_rx_wide_defconfig` disables the adapter and schedules ten
+core plus two wide markers, twelve total. The matrix is directed verification,
+not coverage closure, formal proof, or CDC/RDC signoff.

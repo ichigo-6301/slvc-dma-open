@@ -58,10 +58,39 @@ wire        m_axi_rvalid;
 wire        m_axi_rready;
 wire        irq;
 
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+wire [31:0]  m_axi_rx_payload_awaddr;
+wire [7:0]   m_axi_rx_payload_awlen;
+wire [2:0]   m_axi_rx_payload_awsize;
+wire [1:0]   m_axi_rx_payload_awburst;
+wire         m_axi_rx_payload_awvalid;
+wire         m_axi_rx_payload_awready;
+wire [511:0] m_axi_rx_payload_wdata;
+wire [63:0]  m_axi_rx_payload_wstrb;
+wire         m_axi_rx_payload_wlast;
+wire         m_axi_rx_payload_wvalid;
+wire         m_axi_rx_payload_wready;
+wire [1:0]   m_axi_rx_payload_bresp;
+wire         m_axi_rx_payload_bvalid;
+wire         m_axi_rx_payload_bready;
+`endif
+
 reg [511:0] header;
 reg [511:0] hold_beat;
 reg [31:0] rdata;
 integer i;
+
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+integer wide_lengths [0:17];
+integer wide_idx;
+integer wide_len;
+integer wide_aligned_len;
+integer wide_ch_sel;
+integer stress_offset [0:2];
+reg [31:0] stress_dst [0:255];
+reg [31:0] stress_src [0:255];
+reg [31:0] stress_len [0:255];
+`endif
 
 localparam [3:0] CH_FRAME0 = 4'd0;
 localparam [3:0] CH_FRAME1 = 4'd1;
@@ -136,6 +165,30 @@ axi64_slave_model u_mem(
     .rready(m_axi_rready)
 );
 
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+axi512_write_slave_model #(
+    .RANDOM_STALL(1),
+    .RANDOM_SEED(32'h5120_2301)
+) u_wide_mem (
+    .aclk(clk),
+    .arstn(rstn),
+    .awaddr(m_axi_rx_payload_awaddr),
+    .awlen(m_axi_rx_payload_awlen),
+    .awsize(m_axi_rx_payload_awsize),
+    .awburst(m_axi_rx_payload_awburst),
+    .awvalid(m_axi_rx_payload_awvalid),
+    .awready(m_axi_rx_payload_awready),
+    .wdata(m_axi_rx_payload_wdata),
+    .wstrb(m_axi_rx_payload_wstrb),
+    .wlast(m_axi_rx_payload_wlast),
+    .wvalid(m_axi_rx_payload_wvalid),
+    .wready(m_axi_rx_payload_wready),
+    .bresp(m_axi_rx_payload_bresp),
+    .bvalid(m_axi_rx_payload_bvalid),
+    .bready(m_axi_rx_payload_bready)
+);
+`endif
+
 frame_dma_rx_top u_dut(
     .aclk(clk),
     .aresetn(rstn),
@@ -202,6 +255,22 @@ frame_dma_rx_top u_dut(
     .ufc_rx_arg0(32'h0),
     .ufc_rx_arg1(32'h0),
     .irq(irq)
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+    ,.m_axi_rx_payload_awaddr(m_axi_rx_payload_awaddr)
+    ,.m_axi_rx_payload_awlen(m_axi_rx_payload_awlen)
+    ,.m_axi_rx_payload_awsize(m_axi_rx_payload_awsize)
+    ,.m_axi_rx_payload_awburst(m_axi_rx_payload_awburst)
+    ,.m_axi_rx_payload_awvalid(m_axi_rx_payload_awvalid)
+    ,.m_axi_rx_payload_awready(m_axi_rx_payload_awready)
+    ,.m_axi_rx_payload_wdata(m_axi_rx_payload_wdata)
+    ,.m_axi_rx_payload_wstrb(m_axi_rx_payload_wstrb)
+    ,.m_axi_rx_payload_wlast(m_axi_rx_payload_wlast)
+    ,.m_axi_rx_payload_wvalid(m_axi_rx_payload_wvalid)
+    ,.m_axi_rx_payload_wready(m_axi_rx_payload_wready)
+    ,.m_axi_rx_payload_bresp(m_axi_rx_payload_bresp)
+    ,.m_axi_rx_payload_bvalid(m_axi_rx_payload_bvalid)
+    ,.m_axi_rx_payload_bready(m_axi_rx_payload_bready)
+`endif
 );
 
 always #5 clk = ~clk;
@@ -548,6 +617,92 @@ task run_t9_reset_recovery;
     end
 endtask
 
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+task run_t10_wide_directed_lengths;
+    reg [15:0] flow_sel;
+    reg [31:0] base_sel;
+    begin
+        $display("WIDE512_INTEGRATION T10 directed_lengths");
+        wide_lengths[0] = 1;
+        wide_lengths[1] = 7;
+        wide_lengths[2] = 8;
+        wide_lengths[3] = 31;
+        wide_lengths[4] = 63;
+        wide_lengths[5] = 64;
+        wide_lengths[6] = 65;
+        wide_lengths[7] = 127;
+        wide_lengths[8] = 128;
+        wide_lengths[9] = 255;
+        wide_lengths[10] = 256;
+        wide_lengths[11] = 511;
+        wide_lengths[12] = 512;
+        wide_lengths[13] = 1023;
+        wide_lengths[14] = 1024;
+        wide_lengths[15] = 2048;
+        wide_lengths[16] = 4095;
+        wide_lengths[17] = 4096;
+
+        for (wide_idx = 0; wide_idx < 18; wide_idx = wide_idx + 1) begin
+            fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+            wide_ch_sel = wide_idx % 3;
+            if (wide_ch_sel == 0) begin
+                flow_sel = FLOW_FRAME0;
+                base_sel = BASE_FRAME0;
+            end else if (wide_ch_sel == 1) begin
+                flow_sel = FLOW_FRAME1;
+                base_sel = BASE_FRAME1;
+            end else begin
+                flow_sel = FLOW_STREAM;
+                base_sel = BASE_STREAM;
+            end
+            wide_len = wide_lengths[wide_idx];
+            send_fc(flow_sel, wide_len, 32'h0001_0000 + wide_idx * 32'h1200,
+                    32'h100 + wide_idx);
+            wait_idle();
+            check_payload(base_sel, 32'h0001_0000 + wide_idx * 32'h1200, wide_len);
+            expect_pool_released();
+        end
+    end
+endtask
+
+task run_t11_wide_mixed_stress;
+    reg [15:0] flow_sel;
+    reg [31:0] base_sel;
+    integer frame_idx;
+    begin
+        $display("WIDE512_INTEGRATION T11 mixed_source_stress frames=256");
+        fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+        stress_offset[0] = 0;
+        stress_offset[1] = 0;
+        stress_offset[2] = 0;
+        for (frame_idx = 0; frame_idx < 256; frame_idx = frame_idx + 1) begin
+            wide_ch_sel = frame_idx % 3;
+            wide_len = ((frame_idx * 73) % 255) + 1;
+            wide_aligned_len = (wide_len + 63) & 32'hffff_ffc0;
+            if (wide_ch_sel == 0) begin
+                flow_sel = FLOW_FRAME0;
+                base_sel = BASE_FRAME0;
+            end else if (wide_ch_sel == 1) begin
+                flow_sel = FLOW_FRAME1;
+                base_sel = BASE_FRAME1;
+            end else begin
+                flow_sel = FLOW_STREAM;
+                base_sel = BASE_STREAM;
+            end
+            stress_dst[frame_idx] = base_sel + stress_offset[wide_ch_sel];
+            stress_src[frame_idx] = 32'h0000_8000 + frame_idx * 32'h400;
+            stress_len[frame_idx] = wide_len;
+            stress_offset[wide_ch_sel] = stress_offset[wide_ch_sel] + wide_aligned_len;
+            send_fc(flow_sel, wide_len, stress_src[frame_idx], 32'h400 + frame_idx);
+        end
+        wait_idle();
+        for (frame_idx = 0; frame_idx < 256; frame_idx = frame_idx + 1)
+            check_payload(stress_dst[frame_idx], stress_src[frame_idx], stress_len[frame_idx]);
+        expect_pool_released();
+    end
+endtask
+`endif
+
 initial begin
     clk = 1'b0;
     rstn = 1'b0;
@@ -563,8 +718,16 @@ initial begin
     run_t7_frame_pool_drop();
     run_t8_disabled_channel();
     run_t9_reset_recovery();
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+    run_t10_wide_directed_lengths();
+    run_t11_wide_mixed_stress();
+`endif
 
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+    $display("PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256");
+`else
     $display("OK: dma RTL v33e20a hybrid RX ingress minimal directed test passed.");
+`endif
     repeat (10) @(posedge clk);
     $finish;
 end

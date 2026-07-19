@@ -1,4 +1,4 @@
-mainmenu "SLVC DMA public flow with optional UDP/IPv4 adapter P0"
+mainmenu "SLVC DMA public flow"
 
 config SLVC_DMA_V1_512
   bool "Enable the 512-bit SLVC DMA release profile"
@@ -19,6 +19,11 @@ config SLVC_DMA_SIM
 config SLVC_DMA_FPGA_OOC
   bool "Run Vivado OOC implementation"
   default y
+
+config SLVC_DMA_RX_WIDE_PAYLOAD
+  bool "Enable optional same-clock 512-bit RX payload AXI master profile"
+  default n
+  depends on SLVC_DMA_V1_512
 
 config SLVC_DMA_UDP_IPV4_ADAPTER
   bool "Enable optional 512-bit UDP/IPv4 to SHDR64 adapter tests"

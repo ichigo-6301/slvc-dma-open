@@ -63,6 +63,7 @@ adapter markers, fourteen total. Use
 - AXI/AXI-Stream backpressure, payload-writer prefetch, and local soft-reset control;
 - Optional carrier CDC adapter and MCF companion endpoint for multi-source aggregation.
 - Optional fixed-profile 512-bit Ethernet II / IPv4 / UDP RX-to-SHDR64 adapter.
+- Optional same-clock 512, dual-clock 64, and dual-clock 512 RX memory backends.
 
 ## Architecture
 
@@ -109,17 +110,20 @@ See [Interfaces](docs/en/interfaces.md) for control registers, descriptors,
 CQEs, and ownership rules. The public RTL port lists are the authoritative
 interface definitions.
 
-### Optional RX-Wide Development Profile
+### Optional RX Memory Development Profiles
 
-`configs/slvc_dma_512_rx_wide_defconfig` selects a default-off, same-clock
-backend that drains already committed RX frames as 512-bit beats and writes
-them through a dedicated 512-bit AXI4 master on `frame_dma_rx_top`. It preserves
-the frozen wrapper, 64-bit legacy memory path, SHDR64/admission logic, CQ, TX,
-and descriptor behavior. Destinations must be 64-byte aligned.
+Three default-off profiles retain the committed-frame source and dedicated RX
+AXI4 boundary: same-clock 512, dual-clock 64, and dual-clock 512. The
+asynchronous profiles cross one command, ordered 512-bit payload entries, and
+one tagged completion; AW/W/B remain entirely in `mem_clk`. The frozen wrapper,
+legacy 64-bit path, SHDR64/admission logic, CQ, TX, and descriptors are unchanged.
 
-Its two new regressions, routed 200 MHz OOC result, ideal-model throughput, and
-writer-only DC sweep are development-profile evidence, not part of the frozen
-RC1 evidence set. See the [512-bit RX payload backend guide](docs/en/rx_payload_512_backend.md).
+The same-clock profile has no generated CDC cells. Both asynchronous profiles
+passed 13-test ModelSim/Questa regression, 200 MHz routed OOC for both clocks,
+and 5 ns Design Compiler OOC. These are branch-local development-profile
+results, not additions to the frozen RC1 evidence set. See the
+[same-clock backend guide](docs/en/rx_payload_512_backend.md) and
+[dual-clock backend guide](docs/en/rx_payload_cdc_backends.md).
 
 ## Verified Results
 
@@ -184,7 +188,7 @@ python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 python3 flows/scripts/flowctl.py adapter-dc-ooc-dry-run
 ```
 
-### 5. Optional Same-Clock RX-Wide Profile
+### 5. Optional RX Memory Profiles
 
 ```text
 python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_wide_defconfig
@@ -192,6 +196,13 @@ python3 flows/scripts/flowctl.py show-config
 python3 flows/scripts/flowctl.py sim-dry-run
 python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
+```
+
+For the two dual-clock profiles, replace the defconfig with one of:
+
+```text
+configs/slvc_dma_512_rx_async64_defconfig
+configs/slvc_dma_512_rx_async512_defconfig
 ```
 
 The public runner requires Python 3.6 or newer. `sim` requires ModelSim or
@@ -228,6 +239,7 @@ set.
 - [Integration Guide](docs/en/integration.md)
 - [UDP/IPv4 Adapter](docs/en/udp_ipv4_adapter.md)
 - [Optional 512-bit RX Payload Backend](docs/en/rx_payload_512_backend.md)
+- [Optional Dual-Clock RX Payload Backends](docs/en/rx_payload_cdc_backends.md)
 - [Module Catalog](docs/en/module_catalog.md)
 - [Verification](docs/en/verification.md)
 - [Verification Matrix](docs/en/verification_matrix.md)
@@ -250,9 +262,9 @@ set.
   application, ASIC SRAM/library, DFT, P&R, and signoff STA.
 - The optional adapter is not a complete Ethernet/IP stack and has no
   board-level or lossless UDP claim.
-- The optional RX-wide backend is same-clock and 64-byte aligned. Its OOC and
-  writer-only synthesis results are not board DDR, full-DMA ASIC, or signoff
-  claims.
+- Optional RX memory profiles support only same-clock 512, async64, and
+  async512. They do not claim arbitrary widths, one-sided hard-reset recovery,
+  board DDR throughput, full-DMA ASIC implementation, or signoff.
 
 See [Limitations](docs/en/limitations.md) and [Public Scope](PUBLIC_SCOPE.md) for
 the complete release boundary.

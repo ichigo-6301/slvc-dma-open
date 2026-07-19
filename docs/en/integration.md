@@ -35,6 +35,21 @@ external memory slave all use `aclk`. Do not connect it to an asynchronous
 memory clock without command, 512-bit payload, and completion CDC FIFOs. See
 the [wide-backend profile guide](rx_payload_512_backend.md).
 
+## Optional Dual-Clock RX Memory Boundary
+
+`configs/slvc_dma_512_rx_async64_defconfig` and
+`configs/slvc_dma_512_rx_async512_defconfig` add `mem_clk`, `mem_aresetn`, and a
+dedicated RX write master to the development top. The 64-bit profile exposes
+64-bit WDATA/8-bit WSTRB; the 512-bit profile exposes 512-bit WDATA/64-bit
+WSTRB. AXI AW/W/B are generated and consumed only in `mem_clk`.
+
+The integrator must assert `aresetn` and `mem_aresetn` together. Each domain
+synchronizes deassertion locally. A soft reset received during an active RX
+memory operation is deferred until the frame completion returns and the source
+is released. Do not reset one side independently or use this boundary for TX,
+CQ, descriptor, or AXI4-Lite clock crossing. See the
+[dual-clock backend guide](rx_payload_cdc_backends.md).
+
 ## Optional Ethernet Packet Boundary
 
 Place `dma_udp_ipv4_to_shdr64_adapter` before `sl_rx_*` only when the upstream

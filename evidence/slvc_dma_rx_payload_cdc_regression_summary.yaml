@@ -1,0 +1,54 @@
+kind: regression_summary
+schema_version: 1.0.0
+id: slvc_dma_rx_payload_cdc_regression_summary
+profile: slvc_dma_v1_512_rx_payload_cdc_development
+source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+status: verified
+scope: optional same-clock and dual-clock RX payload memory backends
+hosts:
+  - host: Windows
+    tool: ModelSim SE-64 2020.4
+    results:
+      default_adapter: {required_markers: 14, result: pass, log_sha256: 46cd86741305f71d7f94b1f1fc98792480ec670de5eab452d3c862daff9c8737}
+      same_clock_512: {required_markers: 12, result: pass, log_sha256: 54bdbe47c8985dadb8025ac250fe79f4b0bd5f8b4707ee3b8a10f9619e1df75f}
+      async64: {required_markers: 13, result: pass, log_sha256: 7e22c2aaebeaed78b371385c3f4555c520c8325e259319bab12b848d47001de2}
+      async512: {required_markers: 13, result: pass, log_sha256: 7acd579b103b49889f596f30fad227f038d88973f908032095194b91ac18ad1f}
+  - host: IC_EDA Linux
+    tool: Questa Sim-64 10.7c
+    results:
+      default_adapter: {required_markers: 14, result: pass, log_sha256: 1116d031283837aea2cdf2fb83ff4840578bc2006debf1f007cbbb28bd587361}
+      same_clock_512: {required_markers: 12, result: pass, log_sha256: 9f9945f8ac0c3a62cfcf3ca708b2cef01f68965fd97a2436765b7e6bdfed32d5}
+      async64: {required_markers: 13, result: pass, log_sha256: 5e0e2403ce4a324b27ee0a43aed3a7d1d3cccc725435bb69e07a41cad9760448}
+      async512: {required_markers: 13, result: pass, log_sha256: 92e8272b8241f9a32ac1240c71fbdb765e3d8183273723f8f786c064b0910ed2}
+required_new_markers:
+  - PASS tb_rtl_rx_payload_cdc_bridge frames=450 bytes=924873 source_stalls=321 fifo_empty=169 peak_payload_level=32 clock_profiles=6 clock_stops=2
+  - PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2
+  - PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1
+  - PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2
+  - PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1
+clock_profiles:
+  - aclk_100mhz_mem_clk_200mhz
+  - aclk_200mhz_mem_clk_100mhz
+  - aclk_125mhz_mem_clk_200mhz
+  - aclk_200mhz_mem_clk_125mhz
+  - independent_200mhz_with_phase_offset
+  - non_integer_clock_ratio_with_random_phase
+clock_stop_cases: [source_clock_stop, memory_clock_stop]
+stress:
+  bridge_frames: 450
+  bridge_bytes: 924873
+  backend_random_frames_per_profile: 2000
+  integration_mixed_frames_per_profile: 256
+  payload_fifo_peak_entries: 32
+throughput_ideal_memory:
+  async64: {bytes: 1048576, bytes_per_mem_cycle: 8, w_utilization_percent: 100, peak_outstanding: 4}
+  async512: {bytes: 1048576, bytes_per_mem_cycle: 64, w_utilization_percent: 100, peak_outstanding: 4}
+checks:
+  - byte-accurate memory scoreboard
+  - command and completion tag accounting
+  - FIFO overflow and underflow guards
+  - ordered non-interleaved frame payload
+  - AW/W/B randomized backpressure and response errors
+  - 4 KiB burst splitting and tail strobe generation
+  - deferred active soft-reset drain
+caveat: Directed and deterministic random simulation is not functional coverage closure, formal proof, board DDR measurement, or complete CDC/RDC signoff.

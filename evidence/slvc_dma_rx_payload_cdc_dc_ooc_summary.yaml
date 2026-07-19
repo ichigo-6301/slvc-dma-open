@@ -1,0 +1,53 @@
+kind: asic_frontend_ooc_summary
+schema_version: 1.0.0
+id: slvc_dma_rx_payload_cdc_dc_ooc_summary
+profile: slvc_dma_v1_512_rx_payload_cdc_development
+source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+status: verified
+tool: Design Compiler O-2018.06-SP1
+top: dma_rx_payload_async_ooc_top
+clock_period_ns: {source: 5.000, memory: 5.000}
+clock_groups: asynchronous
+constraints:
+  setup_uncertainty_ns: 0.200
+  hold_uncertainty_ns: 0.050
+  input_delay_ns: 0.500
+  output_delay_ns: 0.500
+results:
+  async64:
+    setup_wns_ns: {source: 2.93339, memory: 1.68611}
+    hold_wns_ns: {source: 0.0394817, memory: 0.0394817}
+    setup_tns_ns: 0.0
+    setup_violating_paths: 0
+    total_cell_area: 171658.046
+    leaf_cell_count: 85383
+    register_count: 20554
+    latch_count: 0
+    synchronizer_cell_count: 56
+    reports:
+      summary_sha256: bbd5b63624a6e6011aac8264fc511fea54f1403535534d66bfa7dfe51013155d
+      qor_sha256: 9d4b9523c764ffafda15d5fab5fcbef2f165110e9cee45b766690c009a8c4201
+      setup_timing_sha256: 840e2cbb282d20ec6800addd66142d9bb4bd1f5abe7959754070a3e2271f6969
+      constraints_sha256: a13ec4e59d55f0eccef309fbbc3c2c8f314a06eefb5707b17eeac930e4a947fe
+  async512:
+    setup_wns_ns: {source: 2.96252, memory: 1.39268}
+    hold_wns_ns: {source: 0.0394817, memory: 0.0394817}
+    setup_tns_ns: 0.0
+    setup_violating_paths: 0
+    total_cell_area: 170311.288
+    leaf_cell_count: 84730
+    register_count: 20457
+    latch_count: 0
+    synchronizer_cell_count: 56
+    reports:
+      summary_sha256: 2d040e05266520fd0d0dcf1e758a449a2c9438a14928b367e1607de26a2c1230
+      qor_sha256: 763251b3bb0b0ba1bf0bbb23272416538635d7fd04db3a96eb9878c42dc18c9f
+      setup_timing_sha256: 17f29c57329d8cc1d946051aa35723096e99c74344f992c1f5926a9e2572cdf6
+      constraints_sha256: 5c924235ec2ac0138f93ec398a4d5019492b2cb7dd56511b3ba6c5dfd56990a7
+fifo_storage:
+  bits: 18948
+  model: generic_rtl_array
+  area_included: true
+  macro_area_included: false
+constraint_note: The constraints report includes the library default maximum-leakage-power pseudo-violation; QOR reports zero setup TNS and zero setup violating paths.
+caveat: Generic arrays synthesize into standard-cell storage. Area is not comparable to a macro-backed implementation or writer-only OOC and is not routed ASIC timing, physical design, extracted STA, or signoff.

@@ -1,6 +1,44 @@
 kind: evidence_manifest
 schema_version: 1.0.0
 evidence:
+  - id: slvc_dma_rx_payload_cdc_regression_summary
+    path: evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml
+    type: modelsim_questa_dual_clock_rx_backend_regression_summary
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
+    claims:
+      - slvc_dma_rx_payload_cdc_regression
+      - slvc_dma_rx_payload_cdc_ideal_throughput
+    sha256: null
+    public: true
+  - id: slvc_dma_rx_payload_cdc_fpga_ooc_summary
+    path: evidence/slvc_dma_rx_payload_cdc_fpga_ooc_summary.yaml
+    type: vivado_dual_clock_rx_backend_ooc_timing_utilization_cdc
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: Vivado 2018.3
+    claims:
+      - slvc_dma_rx_payload_cdc_fpga_ooc_200m
+      - slvc_dma_rx_payload_cdc_same_clock_bypass
+    sha256: null
+    public: true
+  - id: slvc_dma_rx_payload_cdc_dc_ooc_summary
+    path: evidence/slvc_dma_rx_payload_cdc_dc_ooc_summary.yaml
+    type: design_compiler_dual_clock_rx_backend_ooc_timing_area
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: Design Compiler O-2018.06-SP1
+    claims:
+      - slvc_dma_rx_payload_cdc_dc_ooc_200m
+    sha256: null
+    public: true
+  - id: slvc_dma_rx_payload_cdc_contract
+    path: evidence/slvc_dma_rx_payload_cdc_contract.yaml
+    type: structural_cdc_reset_contract
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: RTL inspection / simulation assertions / Vivado CDC
+    claims:
+      - slvc_dma_rx_payload_cdc_contract
+    sha256: null
+    public: true
   - id: slvc_dma_rtl_comment_only_equivalence
     path: evidence/slvc_dma_rtl_comment_only_equivalence.yaml
     type: comments_only_token_equivalence

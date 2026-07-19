@@ -11,10 +11,13 @@
   VLAN、IPv6、options、fragment、UDP checksum 或 FCS handling。
 - adapter-only DC OOC 不等于完整 DMA ASIC synthesis、physical implementation、
   signoff、board-level 10G 或 lossless UDP evidence。
-- 可选 512-bit RX payload master 是同频、64-byte 对齐的开发 profile；尚无 AXI
-  CDC、非对齐首拍支持、TX/CQ 宽化或板级 DDR 带宽实测。
-- 其 Vivado 结果是 OOC，Design Compiler 结果是 writer-only frontend synthesis；
-  二者都不是 full-system FPGA implementation、routed ASIC timing、physical
-  design 或 signoff evidence。
-- RX-wide profile 保留破坏式同步 soft-reset 语义，不声明能够安全 drain 已经发出的
-  external AXI burst。
+- 可选 RX memory 开发 profile 仅包含同频 512、async64 和 async512；不实现任意
+  128/256-bit memory width、非对齐首拍移位、TX/CQ 宽化或多端口 striping。
+- 异步 profile 要求两个 hard reset 同时 assert，不支持任意单边 reset/recovery。
+  soft reset 会先 drain 当前集成 frame transaction；它不是通用 external AXI reset
+  protocol。
+- CDC evidence 覆盖已实现 FIFO 结构、仿真 assertion、双向 Vivado CDC report 和
+  bus skew；不等价于完整 ASIC CDC/RDC signoff 与 waiver package。
+- RX backend Vivado 结果是 OOC，Design Compiler 结果是包含 generic FIFO array 的
+  frontend OOC synthesis；它们不是完整系统 FPGA、板级 DDR、routed ASIC、SRAM
+  macro、physical design 或 signoff evidence。

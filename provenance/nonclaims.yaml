@@ -1,6 +1,30 @@
 kind: nonclaims
 schema_version: 1.0.0
 nonclaims:
+  - id: slvc_dma_rx_payload_cdc_arbitrary_width
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: Arbitrary 64/128/256/512-bit RX memory-width parameterization is not claimed.
+    reason: The implemented development profiles provide only discrete async64 and async512 memory backends plus same-clock 512.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_rx_payload_cdc_one_sided_reset
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: Arbitrary one-sided hard-reset recovery is not claimed.
+    reason: The current contract requires both asynchronous domains to assert hard reset together and deassert locally through reset synchronizers.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_rx_payload_cdc_signoff
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: Complete ASIC CDC/RDC signoff, physical implementation, and extracted STA are not claimed.
+    reason: Evidence is simulation, Vivado routed OOC CDC reporting, and Design Compiler frontend OOC synthesis with generic FIFO arrays.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_rx_payload_cdc_board_ddr
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: Board DDR throughput or lossless system operation is not claimed.
+    reason: Throughput values come from an ideal RTL memory model and OOC implementation, not a board memory controller.
+    status: not_claimed
+    public: true
   - id: slvc_dma_udp_adapter_board_integration
     profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
     statement: "Board-level MAC, PHY, Aurora, or 10G integration of the UDP adapter is not claimed."

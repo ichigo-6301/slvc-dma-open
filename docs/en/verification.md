@@ -13,6 +13,7 @@ Run `python3 flows/scripts/flowctl.py sim` with Python 3.6 or newer. The runner
 always requires ten exact frozen-core PASS markers. The default adapter-enabled
 defconfig adds four adapter markers for fourteen total. The optional RX-wide
 defconfig disables the adapter and adds two wide-backend markers for twelve
-total. Frozen release provenance remains under `provenance/` and `evidence/`;
-the wide-backend measurements are documented separately as development-profile
-results.
+total. Each dual-clock defconfig disables the adapter and adds one common CDC
+bridge marker plus two width-specific markers for thirteen total. Frozen
+release provenance remains under `provenance/` and `evidence/`; RX memory
+backend measurements are documented separately as development-profile results.

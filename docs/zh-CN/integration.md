@@ -32,6 +32,19 @@ slave 都使用 `aclk`。若 memory clock 异步，必须先增加 command、512
 和 completion CDC FIFO，不能直接连接。详见
 [wide-backend profile 指南](rx_payload_512_backend.md)。
 
+## 可选双时钟 RX Memory 边界
+
+`configs/slvc_dma_512_rx_async64_defconfig` 和
+`configs/slvc_dma_512_rx_async512_defconfig` 为开发顶层增加 `mem_clk`、
+`mem_aresetn` 和独立 RX write master。64-bit profile 使用 64-bit WDATA/8-bit
+WSTRB；512-bit profile 使用 512-bit WDATA/64-bit WSTRB。AXI AW/W/B 只在
+`mem_clk` 中生成和消费。
+
+集成方必须同时 assert `aresetn` 与 `mem_aresetn`，两个域分别同步 deassert。
+active RX memory operation 期间收到的 soft reset 会延迟到 frame completion 返回并
+释放 source 后执行。不要单独 reset 任一侧，也不要把该边界用于 TX、CQ、descriptor
+或 AXI4-Lite 跨域。详见[双时钟后端指南](rx_payload_cdc_backends.md)。
+
 ## 可选 Ethernet Packet Boundary
 
 只有上游提供带 `TKEEP`/`TLAST` 的 512-bit Ethernet II packet AXI4-Stream 时，

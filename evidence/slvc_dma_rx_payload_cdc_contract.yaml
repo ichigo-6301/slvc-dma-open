@@ -1,0 +1,51 @@
+kind: cdc_reset_contract
+schema_version: 1.0.0
+id: slvc_dma_rx_payload_cdc_contract
+profile: slvc_dma_v1_512_rx_payload_cdc_development
+source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+status: verified
+same_clock_bypass:
+  profile: same_clock_512
+  async_fifo_instances: 0
+  rx_payload_cdc_cells: 0
+channels:
+  command:
+    direction: aclk_to_mem_clk
+    depth: 4
+    fields: [destination_address, payload_length, aligned_length, channel, transaction_tag]
+  payload:
+    direction: aclk_to_mem_clk
+    depth: 32
+    width_bits: 577
+    fields: [data_512, keep_64, last]
+  completion:
+    direction: mem_clk_to_aclk
+    depth: 4
+    fields: [transaction_tag, error, error_code]
+ordering:
+  in_flight_frames: 1
+  transaction_tag_bits: 8
+  frame_release_condition: matching completion after every accepted AW/W transaction and B response completes
+  out_of_order_completion: false
+reset:
+  hard_reset:
+    assertion: asynchronous and simultaneous in both domains
+    deassertion: two-cycle synchronized independently per domain
+    one_sided_recovery: unsupported
+  soft_reset:
+    integrated_policy: quiesce_and_drain_current_frame
+    busy_request: deferred
+    memory_domain_delivery: toggle synchronized only after source-side idle
+assertions_and_checks:
+  - hard resets must assert together
+  - bridge soft reset requires idle source and memory state
+  - completion tag must match active command
+  - one command maps to one non-interleaved payload frame and one completion
+  - FIFO overflow and underflow are forbidden
+  - backpressured valid and data remain stable
+  - no stale completion survives reset and restart
+technology_binding:
+  fpga_payload_fifo: Vivado 2018.3 XPM asynchronous FIFO using block memory
+  fpga_small_fifos: generic Gray-pointer asynchronous FIFO
+  simulation_and_asic: generic Gray-pointer FIFO with RTL arrays
+caveat: The contract does not cover arbitrary one-sided reset recovery, multiple out-of-order frames, TX/CQ/descriptor CDC, or complete ASIC CDC/RDC signoff.

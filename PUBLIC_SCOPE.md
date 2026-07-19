@@ -9,6 +9,12 @@ IPv4 / UDP receive adapter, four public directed tests, and a portable
 adapter-only Design Compiler OOC entrypoint. It does not alter the frozen DMA
 core or the `v0.1.0-rc1` tag.
 
+The RX memory development branch adds optional same-clock 512, async64, and
+async512 backends, their public tests, and profile-specific Vivado/DC OOC
+entrypoints. These profiles do not change the frozen wrappers or tag and do not
+claim arbitrary memory widths, one-sided reset recovery, board DDR throughput,
+or ASIC physical signoff.
+
 It excludes Unified Lite/P0 pilot RTL, board designs, generated Xilinx IP,
 SDK applications, historical experiment reports, technology libraries, PDK
 payloads, credentials, and private development history. The optional MCF

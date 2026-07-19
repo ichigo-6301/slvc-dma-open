@@ -1,0 +1,20 @@
+kind: development_profile_provenance
+schema_version: 1.0.0
+branch: feat/rx-payload-optional-cdc
+base_commit: 4b9f4f551aaea43abe116d258306941504bdbb74
+implementation_commit: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+profiles:
+  - slvc_dma_v1_512_rx_same_clock_512
+  - slvc_dma_v1_512_rx_async64
+  - slvc_dma_v1_512_rx_async512
+frozen_release:
+  release_version: v0.1.0-rc1
+  main_commit: 6857197c46c11d8709defeb68748bebfbd708a4b
+  tag_commit: d16f7bbb2e00289383e8325a67d76557504002c0
+  changed: false
+evidence:
+  - evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml
+  - evidence/slvc_dma_rx_payload_cdc_fpga_ooc_summary.yaml
+  - evidence/slvc_dma_rx_payload_cdc_dc_ooc_summary.yaml
+  - evidence/slvc_dma_rx_payload_cdc_contract.yaml
+scope_note: These records describe optional development profiles on the named branch. They do not replace or extend the frozen RC1 evidence set.

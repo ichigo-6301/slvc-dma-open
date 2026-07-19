@@ -44,19 +44,18 @@ python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 该 profile 执行 10 项 frozen-core regression 和 2 项 wide-backend test，不启用可选
 UDP/IPv4 adapter test。
 
-## 时钟与后续 CDC
+## 时钟与 CDC Bypass
 
-当前实现要求 ingress、writer 和 dedicated AXI master 共用 `aclk`。command、
-payload 和 completion 均保留显式 valid/ready 边界，后续异步 profile 可分别插入：
+该 profile 要求 ingress、writer 和 dedicated AXI master 共用 `aclk`。其 generate
+branch 不包含 command/payload/completion FIFO 或 reset synchronizer；综合网表审计
+得到 RX payload CDC cell 数为 0。
 
-- command async FIFO；
-- 512-bit payload async FIFO；
-- completion async FIFO。
+独立 async64/async512 profile 已实现显式 command、512-bit payload 和 completion
+跨域，并把完整 AXI writer 保留在 `mem_clk`。详见
+[可选双时钟 RX Payload 后端](rx_payload_cdc_backends.md)。
 
-本轮没有实现 AXI CDC、512-to-64 转换、任意宽度 profile、非对齐首拍移位、TX/CQ
-宽化或多端口 striping。
-soft reset 沿用 core 现有的本地同步、破坏式 reset 合同；该 profile 没有为 burst
-进行中触发 reset 的情况新增 external AXI transaction-drain protocol。
+同频 soft reset 仍沿用现有本地同步、破坏式合同。不实现任意宽度 profile、非对齐
+首拍移位、TX/CQ 宽化或多端口 striping。
 
 ## 开发分支测量结果
 
@@ -71,9 +70,9 @@ outstanding 为 4。按 200 MHz 换算为 12.8 GB/s interface rate；这是 RTL/
 吞吐，不是真实 DDR 带宽实测。
 
 Vivado 2018.3 在 `xc7z100ffg900-2` 上以 5.000 ns 对 `frame_dma_rx_top` 完成布局
-布线：setup WNS `+0.059 ns`、TNS 0、hold WNS `+0.059 ns`、THS 0。资源为
-37,874 LUT、42,365 FF、44 RAMB36、3 RAMB18、0 DSP。最终最差 setup path 已回到
-已有 TX descriptor scheduler，而不是 wide writer。
+布线：setup WNS `+0.029 ns`、TNS 0、hold WNS `+0.052 ns`、THS 0。资源为
+38,595 LUT、42,492 FF、44 RAMB36、3 RAMB18、0 DSP。同频 CDC absence report 的
+RX payload CDC cell 数为 0。
 
 writer-only Design Compiler OOC 使用 O-2018.06-SP1 和 Nangate45 typical library。
 wide writer 在 5.000 ns 的 setup WNS 为 `+2.059 ns`，在 1.500 ns 为

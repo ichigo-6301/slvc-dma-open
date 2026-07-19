@@ -1,6 +1,98 @@
 kind: claims
 schema_version: 1.0.0
 claims:
+  - id: slvc_dma_rx_payload_cdc_regression
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: The same-clock 512, async64, and async512 RX memory profiles passed their configured regression sets on Windows ModelSim and Linux Questa.
+    metric: directed_regression
+    value: pass
+    unit: result
+    benchmark: "default 14 markers, same-clock 12 markers, async64 13 markers, async512 13 markers"
+    configuration: Committed-frame RX source with optional dedicated RX memory backend
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
+    evidence:
+      - slvc_dma_rx_payload_cdc_regression_summary
+    status: verified
+    caveat: Directed and deterministic random simulation is not coverage closure, formal proof, or board validation.
+    public: true
+  - id: slvc_dma_rx_payload_cdc_ideal_throughput
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: Ideal-memory tests sustained one AXI W beat per mem_clk for async64 and async512.
+    metric: ideal_model_interface_throughput
+    value: 100
+    unit: percent W-channel utilization
+    benchmark: 1 MiB transfer with ready memory model
+    configuration: "async64 8 byte/cycle; async512 64 byte/cycle; four peak outstanding"
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
+    evidence:
+      - slvc_dma_rx_payload_cdc_regression_summary
+    status: verified
+    caveat: This is RTL/model interface throughput, not a board DDR or lossless-network measurement.
+    public: true
+  - id: slvc_dma_rx_payload_cdc_fpga_ooc_200m
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: Same-clock 512, async64, and async512 RX memory profiles met routed 200 MHz setup and hold timing on xc7z100ffg900-2.
+    metric: fpga_ooc_timing
+    value: 0.028
+    unit: ns minimum WNS
+    benchmark: Vivado OOC synth, opt, place, phys-opt, and route
+    configuration: "5.000 ns aclk; asynchronous profiles also use 5.000 ns mem_clk"
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: Vivado 2018.3
+    evidence:
+      - slvc_dma_rx_payload_cdc_fpga_ooc_summary
+    status: verified
+    caveat: OOC timing is not board timing or complete CDC/RDC signoff.
+    public: true
+  - id: slvc_dma_rx_payload_cdc_same_clock_bypass
+    profile: slvc_dma_v1_512_rx_same_clock_512
+    statement: The same-clock 512 synthesized netlist contains no RX payload CDC bridge, FIFO, or reset synchronizer cells.
+    metric: unexpected_rx_payload_cdc_cell_count
+    value: 0
+    unit: cells
+    benchmark: post-synthesis hierarchical cell audit
+    configuration: DMA_RX_WIDE_PAYLOAD_PROFILE without asynchronous profile macros
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: Vivado 2018.3
+    evidence:
+      - slvc_dma_rx_payload_cdc_fpga_ooc_summary
+    status: verified
+    caveat: This claim applies only to the optional same-clock RX payload path, not other carrier CDC blocks in the source set.
+    public: true
+  - id: slvc_dma_rx_payload_cdc_dc_ooc_200m
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: Async64 and async512 RX payload CDC boundaries met 5.000 ns source and memory clock setup timing in Design Compiler OOC synthesis.
+    metric: asic_frontend_ooc_timing
+    value: 1.39268
+    unit: ns minimum setup WNS
+    benchmark: dual-clock bridge, FIFO control/storage model, serializer or writer, and completion return
+    configuration: "5.000 ns source/memory clocks, asynchronous groups, generic RTL FIFO arrays"
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: Design Compiler O-2018.06-SP1
+    evidence:
+      - slvc_dma_rx_payload_cdc_dc_ooc_summary
+    status: verified
+    caveat: Frontend OOC synthesis with generic arrays is not macro-backed area, physical implementation, extracted STA, or signoff.
+    public: true
+  - id: slvc_dma_rx_payload_cdc_contract
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: RX memory CDC crosses command, 512-bit payload, and tagged completion while keeping AXI AW/W/B in mem_clk and deferring soft reset until idle.
+    metric: structural_cdc_contract
+    value: verified
+    unit: result
+    benchmark: RTL structure, protocol assertions, regression, directional CDC reports, and bus-skew reports
+    configuration: single in-flight frame with 8-bit transaction tag
+    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    tool: RTL inspection / ModelSim / Questa / Vivado 2018.3
+    evidence:
+      - slvc_dma_rx_payload_cdc_contract
+      - slvc_dma_rx_payload_cdc_regression_summary
+      - slvc_dma_rx_payload_cdc_fpga_ooc_summary
+    status: verified
+    caveat: Arbitrary one-sided reset recovery, multiple out-of-order frames, and complete ASIC CDC/RDC signoff are not claimed.
+    public: true
   - id: slvc_dma_rtl_comment_only_equivalence
     profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
     statement: The Chinese-comment RTL source has zero functional Verilog token differences from the prior function baseline.

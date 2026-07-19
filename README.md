@@ -56,6 +56,7 @@ marker 加 4 个 adapter marker，共 14 个；使用
 - CQ body-first、owner/valid-last 发布，避免软件读取部分完成记录；
 - AXI/AXI-Stream backpressure、payload writer prefetch 和本地 soft-reset 控制；
 - 可选 carrier CDC adapter，以及用于多源汇聚的 MCF companion endpoint。
+- 可选同频 512、双时钟 64 和双时钟 512 RX memory backend。
 - 可选固定 profile 的 512-bit Ethernet II / IPv4 / UDP RX-to-SHDR64 adapter。
 
 ## 系统架构
@@ -102,17 +103,18 @@ destination port 映射为 `SHDR64.flow_id`，并继续由未修改的 DMA chann
 控制寄存器、descriptor、CQE 和 ownership 规则见
 [接口文档](docs/zh-CN/interfaces.md)；公开 RTL port list 是最终接口定义。
 
-### 可选 RX-Wide 开发 Profile
+### 可选 RX Memory 开发 Profile
 
-`configs/slvc_dma_512_rx_wide_defconfig` 选择一条默认关闭的同频 backend：它将
-已经 commit 的 RX frame 以 512-bit beat 读出，并通过 `frame_dma_rx_top` 上独立的
-512-bit AXI4 master 写入内存。冻结 wrapper、legacy 64-bit memory path、
-SHDR64/admission、CQ、TX 与 descriptor 行为均保持不变；destination address 必须
-按 64 byte 对齐。
+三条默认关闭的 profile 共用 committed-frame source 和独立 RX AXI4 边界：同频
+512、双时钟 64 和双时钟 512。异步 profile 只跨一个 command、有序 512-bit
+payload entry 和一个 tagged completion；AW/W/B 全部位于 `mem_clk`。冻结 wrapper、
+legacy 64-bit path、SHDR64/admission、CQ、TX 与 descriptor 均保持不变。
 
-新增两项 regression、routed 200 MHz OOC、理想 memory model 吞吐和 writer-only
-DC sweep 属于开发 profile evidence，不进入冻结 RC1 evidence set。详见
-[512-bit RX payload 后端指南](docs/zh-CN/rx_payload_512_backend.md)。
+同频 profile 的综合网表没有 RX payload CDC cell。两个异步 profile 均通过 13 项
+ModelSim/Questa regression、两个时钟的 200 MHz routed OOC，以及 5 ns Design
+Compiler OOC。这些是开发分支 evidence，不进入冻结 RC1 evidence set。详见
+[同频后端指南](docs/zh-CN/rx_payload_512_backend.md)和
+[双时钟后端指南](docs/zh-CN/rx_payload_cdc_backends.md)。
 
 ## 已核验结果
 
@@ -175,7 +177,7 @@ python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 python3 flows/scripts/flowctl.py adapter-dc-ooc-dry-run
 ```
 
-### 5. 可选同频 RX-Wide Profile
+### 5. 可选 RX Memory Profile
 
 ```text
 python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_wide_defconfig
@@ -183,6 +185,13 @@ python3 flows/scripts/flowctl.py show-config
 python3 flows/scripts/flowctl.py sim-dry-run
 python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
+```
+
+选择双时钟 profile 时，将 defconfig 替换为以下之一：
+
+```text
+configs/slvc_dma_512_rx_async64_defconfig
+configs/slvc_dma_512_rx_async512_defconfig
 ```
 
 公开 runner 要求 Python 3.6 或更高版本。`sim` 需要 ModelSim/Questa；
@@ -217,6 +226,7 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 - [集成指南](docs/zh-CN/integration.md)
 - [UDP/IPv4 Adapter](docs/zh-CN/udp_ipv4_adapter.md)
 - [可选 512-bit RX Payload 后端](docs/zh-CN/rx_payload_512_backend.md)
+- [可选双时钟 RX Payload 后端](docs/zh-CN/rx_payload_cdc_backends.md)
 - [模块目录](docs/zh-CN/module_catalog.md)
 - [验证](docs/zh-CN/verification.md)
 - [验证矩阵](docs/zh-CN/verification_matrix.md)
@@ -238,8 +248,8 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 - 当前公开版本不包含 P0/U5 board design、generated Xilinx IP、SDK application、
   ASIC SRAM/library、DFT、P&R 或 signoff STA。
 - 可选 adapter 不是完整 Ethernet/IP stack，不声明 board-level 或 lossless UDP。
-- 可选 RX-wide backend 是同频、64-byte 对齐的开发 profile；其 OOC 与
-  writer-only synthesis 结果不是板级 DDR、完整 DMA ASIC 或 signoff claim。
+- 可选 RX memory profile 仅支持同频 512、async64 和 async512；不声明任意位宽、
+  单边 hard-reset recovery、板级 DDR throughput、完整 DMA ASIC 实现或 signoff。
 
 详细边界以 [限制文档](docs/zh-CN/limitations.md) 和
 [公开范围](PUBLIC_SCOPE.md) 为准。

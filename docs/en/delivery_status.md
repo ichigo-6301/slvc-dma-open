@@ -5,6 +5,7 @@
 | Directed RTL regression | verified | Ten release-bound tests passed on Windows ModelSim and IC_EDA Questa. |
 | Optional adapter regression | verified | Four adapter tests passed on both simulator hosts at the repaired source commit; the 23-case matrix is `cases=23 drops=17 accepts=23`. |
 | FPGA OOC implementation | verified | Three Vivado 2018.3 strategies met 200 MHz OOC setup and hold. |
+| Optional RX memory profiles | verified development | Same-clock 512, async64, and async512 passed profile regression and routed OOC; this does not change RC1. |
 | Adapter ASIC frontend | verified | Adapter-only DC OOC met 5.000 ns; this is not full-DMA or signoff evidence. |
 | Carrier CDC | partial | Directed behavior exists; no complete CDC/RDC signoff or waiver package. |
 | Full DMA ASIC frontend | planned | A future library-bound full-DMA synthesis profile requires its own evidence. |
@@ -17,3 +18,6 @@ The physical blocker is intentionally generic. The repository does not publish
 PDK payloads, physical abstracts, tool logs, licenses, paths, or proprietary
 integration details. Recovery requires a separate prerequisite audit and new
 profile-bound evidence.
+
+The asynchronous RX memory rows have structural CDC reports and reset-contract
+tests but remain outside a complete ASIC CDC/RDC signoff and waiver package.

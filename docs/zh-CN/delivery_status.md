@@ -5,6 +5,7 @@
 | Directed RTL regression | verified | 十项 release-bound test 已在 Windows ModelSim 和 IC_EDA Questa 通过。 |
 | Optional adapter regression | verified | 四项 adapter test 已在两个 simulator host 通过；修复后的 23-case matrix 为 `cases=23 drops=17 accepts=23`。 |
 | FPGA OOC implementation | verified | 三种 Vivado 2018.3 strategy 均满足 200 MHz OOC setup/hold。 |
+| 可选 RX memory profile | verified development | 同频 512、async64 和 async512 已通过 profile regression 与 routed OOC；不改变 RC1。 |
 | Adapter ASIC frontend | verified | adapter-only DC OOC 达到 5.000 ns；不是 full-DMA 或 signoff evidence。 |
 | Carrier CDC | partial | 已有 directed behavior；尚无完整 CDC/RDC signoff 或 waiver package。 |
 | Full DMA ASIC frontend | planned | 后续 library-bound full-DMA synthesis profile 需要独立 evidence。 |
@@ -16,3 +17,6 @@
 physical blocker 有意保持通用。仓库不会公开 PDK payload、physical abstract、tool log、
 license、path 或 proprietary integration detail。恢复需要单独的 prerequisite audit 和新的
 profile-bound evidence。
+
+异步 RX memory profile 已有结构 CDC report 和 reset-contract test，但不属于完整
+ASIC CDC/RDC signoff 与 waiver package。

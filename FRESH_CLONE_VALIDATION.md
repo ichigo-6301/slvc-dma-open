@@ -9,9 +9,10 @@ Validate a fixed public commit, not a private development worktree.
 5. Run `python3 flows/scripts/flowctl.py show-config`, `sim-dry-run`, and `fpga-ooc-dry-run`.
 6. With ModelSim/Questa available, run `python3 flows/scripts/flowctl.py sim`. Always require ten frozen-core PASS markers; when the selected config enables `CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y`, also require four adapter markers, fourteen total.
 7. Optionally run `python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_core_only_defconfig`, `show-config`, and `sim-dry-run` to verify the adapter-disabled ten-marker schedule.
-8. On the RX-wide development branch, optionally select `configs/slvc_dma_512_rx_wide_defconfig`; require ten core plus two wide-backend markers, twelve total, and verify that `fpga-ooc-dry-run` selects `synth_rx_payload_512_ooc_2018_3.tcl`.
-9. With Vivado 2018.3 available, run one bounded `Explore` OOC implementation using `fpga-ooc`.
-10. Confirm `git status --short` is empty after ignored build and simulator outputs are produced.
+8. On the RX memory development branch, optionally select `configs/slvc_dma_512_rx_wide_defconfig`; require ten core plus two wide-backend markers, twelve total, and verify that `fpga-ooc-dry-run` selects `synth_rx_payload_512_ooc_2018_3.tcl`.
+9. Select `configs/slvc_dma_512_rx_async64_defconfig` and `configs/slvc_dma_512_rx_async512_defconfig` in turn; each must schedule ten core plus one common CDC and two width-specific markers, thirteen total. Dry-run must select the matching asynchronous OOC script.
+10. With Vivado 2018.3 available, run the bounded profile-specific OOC implementation using `fpga-ooc`.
+11. Confirm `git status --short` is empty after ignored build and simulator outputs are produced.
 
 The public claims are limited to the provenance-bound evidence. A fresh-clone
 smoke proves source closure, not a new board or ASIC result.

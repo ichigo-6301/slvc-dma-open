@@ -35,7 +35,34 @@ Vivado 2018.3 routed `frame_dma_rx_top` on `xc7z100ffg900-2` at 5.000 ns:
 
 | WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| +0.059 ns | 0 | +0.059 ns | 0 | 37,874 | 42,365 | 44 | 3 | 0 |
+| +0.029 ns | 0 | +0.052 ns | 0 | 38,595 | 42,492 | 44 | 3 | 0 |
+
+The same-clock synthesis audit found zero RX payload CDC cells.
+
+## Optional Dual-Clock RX Memory Profiles
+
+These branch-local results bind to the dual-clock implementation commit and do
+not modify the frozen RC1 evidence above. Each profile passed ten frozen-core
+tests plus the common CDC bridge and two width-specific tests on Windows
+ModelSim 2020.4 and Linux Questa 10.7c.
+
+| Profile | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Async64 | +0.028 ns | +0.069 ns | 39,471 | 43,586 | 52 | 4 | 0 |
+| Async512 | +0.076 ns | +0.051 ns | 39,155 | 43,306 | 52 | 4 | 0 |
+
+Both Vivado 2018.3 routed runs use 5.000 ns `aclk` and `mem_clk`, have zero
+TNS/THS, no unconstrained internal endpoint, no Critical CDC entry, and met
+their Gray-pointer bus-skew checks. The ideal-memory tests sustained 8 and 64
+byte/cycle respectively at 100% W-channel utilization.
+
+Design Compiler 5.000 ns OOC reported `+2.933/+1.686 ns` source/memory setup
+WNS for async64 and `+2.963/+1.393 ns` for async512. Generic FIFO arrays are
+included in their 171,658.05 and 170,311.29 cell-area totals. These totals are
+not macro-backed ASIC area and are not comparable to writer-only synthesis.
+See the [dual-clock backend guide](rx_payload_cdc_backends.md).
+
+## Same-Clock Writer-Only DC Sweep
 
 The writer-only Design Compiler OOC sweep used O-2018.06-SP1, Nangate45
 typical, 0.200 ns setup uncertainty, 0.050 ns hold uncertainty, and identical

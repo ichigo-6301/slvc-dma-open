@@ -1,0 +1,53 @@
+kind: fpga_ooc_summary
+schema_version: 1.0.0
+id: slvc_dma_rx_payload_cdc_fpga_ooc_summary
+profile: slvc_dma_v1_512_rx_payload_cdc_development
+source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+status: verified
+tool: Vivado 2018.3
+device: xc7z100ffg900-2
+top: frame_dma_rx_top
+clock_period_ns: {aclk: 5.000, mem_clk: 5.000}
+clock_groups: asynchronous for async64 and async512
+results:
+  same_clock_512:
+    strategy: {place: Explore, phys_opt: AggressiveExplore, route: Explore}
+    timing_ns: {wns: 0.029, tns: 0.000, whs: 0.052, ths: 0.000}
+    resources: {lut: 38595, ff: 42492, ramb36: 44, ramb18: 3, dsp: 0}
+    unexpected_rx_payload_cdc_cell_count: 0
+    reports:
+      timing_summary_sha256: 28a757c8c3001c4554adce1577a1a30f4214f543c7366a01b18d8dc8fcc7e2e7
+      utilization_sha256: f5351256688333d1aff5bc70c5b76f1de372aa9b0c2e4667a4bfdf271792b1b6
+      cdc_absence_sha256: 97e3199932005d280b3c2e280361acc2f0104736b6ef94efd9b8b619e2f8efc7
+  async64:
+    strategy: {place: Explore, phys_opt: AggressiveExplore, route: Explore}
+    timing_ns:
+      overall: {wns: 0.028, tns: 0.000, whs: 0.069, ths: 0.000}
+      aclk: {wns: 0.028, whs: 0.069}
+      mem_clk: {wns: 0.044, whs: 0.089}
+    resources: {lut: 39471, ff: 43586, ramb36: 52, ramb18: 4, dsp: 0}
+    reports:
+      timing_summary_sha256: 0766f727e1de9670ad39acd5fdbf22b1afa983569519a8fb44a69fa5b8e2a7a3
+      utilization_sha256: e7c7d2b7e216b558793f8488683cadea064e30b96759aac3b14e6ca0c1466144
+      cdc_aclk_to_mem_sha256: 7e39055a34c47c889de7bd657e4ee63653378c8685b40178ac9633ad8fbddc1f
+      cdc_mem_to_aclk_sha256: 36999a01d82af452c9d4a525ddbab31150b84299df9a2bfa54db8fbb63ab8a3c
+      bus_skew_sha256: fd897b16085f5aa39056806daca2fba7d8c9efb7c195236f500c4e8a66554cb6
+  async512:
+    strategy: {place: Explore, phys_opt: AggressiveExplore, route: Explore}
+    timing_ns:
+      overall: {wns: 0.076, tns: 0.000, whs: 0.051, ths: 0.000}
+      aclk: {wns: 0.076, whs: 0.051}
+      mem_clk: {wns: 0.392, whs: 0.094}
+    resources: {lut: 39155, ff: 43306, ramb36: 52, ramb18: 4, dsp: 0}
+    reports:
+      timing_summary_sha256: 701f9e5c27ec29bc912414de03b265ecdecf014e958ff74db0693fd7041aebe4
+      utilization_sha256: d17de9f13bab9a6ff218f1ad372529b46f26e740b5614c104091e239e7c319bb
+      cdc_aclk_to_mem_sha256: c7691e692c8008a6a86680e1a56ed10eeabbd0c0c6042b61efb691c54dbeaf26
+      cdc_mem_to_aclk_sha256: 1e39671c5bfdeaf0776b512ccca83692d8c59e98dd748e829404f4d9356dd297
+      bus_skew_sha256: f730337accd16748a151281feb0b4c793cf13e935966a01a02f1c96436e48281
+cdc_summary:
+  aclk_to_mem_clk: {cdc_3_info: 3, cdc_6_warning: 2, cdc_15_warning: 72, critical: 0}
+  mem_clk_to_aclk: {cdc_3_info: 2, cdc_6_warning: 2, cdc_15_warning: 9, critical: 0}
+  bus_skew: all constraints met
+  unconstrained_internal_endpoints: 0
+caveat: Routed OOC timing is not board timing. Vivado structural CDC warnings for recognized Gray buses and clock-enabled FIFO data remain documented; this summary is not a complete ASIC CDC/RDC signoff waiver package.

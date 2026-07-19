@@ -163,6 +163,20 @@ FSM、valid、pointer、occupancy 和 pending 控制状态，不清空大容量 
 时钟域与 Core 时钟域隔离。`dma_async_fifo` 在两侧分别维护 binary/Gray pointer，并使用
 两级同步器传递 Gray pointer。full/empty 只能由本域指针和同步后的对端指针判断。
 
+### RX Payload Memory CDC
+
+`dma_rx_payload_cdc_bridge` 不跨完整 AXI channel，而是把 committed frame 拆成一个
+command、有序 512-bit payload entry 和一个 tagged completion。先看 source-side
+`source_active_q/source_payload_done_q`，再看 memory-side `mem_active_q`，即可理解为何
+一次只允许一个 frame in flight。`dma_async_fifo_tech` 对 32-entry payload FIFO 选择
+XPM，对较浅 command/completion FIFO 使用 Gray-pointer 实现。
+
+Async64 在 `mem_clk` 中经过 `dma_rx_payload_serializer_512_to_64` 和
+`dma_axi_write_engine_64_stream`；Async512 直接复用 `dma_axi_write_engine_512`。
+`frame_dma_rx_top` 的 `async_soft_reset_pending_q` 会等待 completion 和 frame release，
+再把 idle soft reset 传给两个域。详细合同见
+[可选双时钟 RX Payload 后端](rx_payload_cdc_backends.md)。
+
 ### Aurora UFC
 
 `dma_aurora_ufc_adapter` 把一条 Core 控制消息拆成 Aurora UFC beat，并在接收侧重新组合。

@@ -49,21 +49,19 @@ python3 flows/scripts/flowctl.py fpga-ooc-dry-run
 That profile runs ten frozen-core regressions plus two wide-backend tests. It
 does not enable the optional UDP/IPv4 adapter tests.
 
-## Clocking And Future CDC
+## Clocking And CDC Bypass
 
-The current implementation assumes the ingress, writer, and dedicated AXI
-master share `aclk`. The valid/ready command, payload, and completion boundaries
-are intentionally explicit so a future asynchronous profile can insert:
+This profile assumes the ingress, writer, and dedicated AXI master share
+`aclk`. Its generate branch contains no command, payload, completion FIFO, or
+reset synchronizer; the synthesized audit reports zero RX payload CDC cells.
 
-- a command asynchronous FIFO;
-- a 512-bit payload asynchronous FIFO;
-- a completion asynchronous FIFO.
+Separate async64 and async512 profiles now implement the explicit command,
+512-bit payload, and completion crossing while keeping AXI in `mem_clk`. See
+[Optional Dual-Clock RX Payload Backends](rx_payload_cdc_backends.md).
 
-No AXI CDC, 512-to-64 conversion, arbitrary width profile, unaligned first-beat
-shifter, TX/CQ widening, or multi-port striping is implemented here.
-Soft reset is a local synchronous destructive reset, matching the existing
-core contract; this profile does not add an external AXI transaction-drain
-protocol for reset asserted while bursts are active.
+Same-clock soft reset remains the existing local synchronous destructive
+contract. Arbitrary width profiles, unaligned first-beat shifting, TX/CQ
+widening, and multi-port striping are not implemented.
 
 ## Measured Development Results
 
@@ -80,10 +78,9 @@ to the 12.8 GB/s interface rate. It is RTL/model throughput, not measured DDR
 bandwidth.
 
 Vivado 2018.3 routed `frame_dma_rx_top` for `xc7z100ffg900-2` at 5.000 ns with
-`+0.059 ns` setup WNS, zero TNS, `+0.059 ns` hold WNS, and zero THS. Routed
-utilization was 37,874 LUT, 42,365 FF, 44 RAMB36, 3 RAMB18, and 0 DSP. The final
-worst setup path is in the existing TX descriptor scheduler rather than the
-wide writer.
+`+0.029 ns` setup WNS, zero TNS, `+0.052 ns` hold WNS, and zero THS. Routed
+utilization was 38,595 LUT, 42,492 FF, 44 RAMB36, 3 RAMB18, and 0 DSP. The
+same-clock CDC absence report found zero RX payload CDC cells.
 
 Writer-only Design Compiler OOC synthesis used O-2018.06-SP1 and the Nangate45
 typical library. The wide writer closed 5.000 ns with `+2.059 ns` setup WNS and

@@ -27,6 +27,8 @@ The selected simulation runner always validates the ten frozen core tests. When
 the default adapter-enabled profile therefore requires fourteen markers. With
 the adapter disabled it requires ten. The optional RX-wide defconfig disables
 the adapter and appends two wide-backend tests, so it requires twelve markers.
+Each dual-clock RX memory defconfig appends the common CDC bridge test and two
+width-specific tests, so it requires thirteen markers.
 The runner uses tool exit status, native
 error summary, and one exact completion marker per test. It has no dependency on
 `rg`, `grep`, or another external source-search utility.
@@ -44,6 +46,24 @@ python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
 The profile adds a dedicated 512-bit AXI4 write master at `frame_dma_rx_top`.
 It remains same-clock and default-off; the frozen wrapper and legacy 64-bit
 memory path remain the default release configuration.
+
+Select either dual-clock profile with:
+
+```text
+python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_async64_defconfig
+# or: configs/slvc_dma_512_rx_async512_defconfig
+python3 flows/scripts/flowctl.py show-config
+python3 flows/scripts/flowctl.py sim-dry-run
+python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
+```
+
+These profiles add `mem_clk`/`mem_aresetn`, keep AXI AW/W/B in the memory
+domain, and cross only command, 512-bit payload, and tagged completion. The
+async64 and async512 DC commands synthesize the complete OOC bridge/writer
+boundary, including generic FIFO storage; their area is not comparable to the
+writer-only wide512 command. See
+[`docs/en/rx_payload_cdc_backends.md`](../docs/en/rx_payload_cdc_backends.md).
 
 `python3 flows/scripts/public_hygiene.py --root .` verifies the tracked public
 release checksum manifest and local Markdown links without invoking an EDA

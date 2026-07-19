@@ -15,3 +15,8 @@ The optional UDP/IPv4 adapter P0 is exported as a commit-bound preview profile,
 not as a moved or replacement RC1 tag. Its generated `release.yaml` binds the
 adapter source and delivery commits, while inherited core evidence retains its
 original fixed source references.
+
+Optional RX payload memory backends are branch-local development profiles.
+[`rx_payload_cdc_development.yaml`](rx_payload_cdc_development.yaml) binds
+their implementation commit and four evidence summaries without changing
+`release.yaml`, public `main`, or the frozen RC1 tag.

@@ -43,7 +43,11 @@ dma_async_fifo #(
     .m_rst_n(m_rst_n),
     .m_data(m_payload),
     .m_valid(m_valid),
-    .m_ready(m_ready)
+    .m_ready(m_ready),
+    .s_full(),
+    .m_empty(),
+    .s_level(),
+    .m_level()
 );
 
 endmodule

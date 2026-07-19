@@ -4,16 +4,22 @@ FLOWCTL := $(PYTHON) flows/scripts/flowctl.py --root "$(ROOT)" --config "$(ROOT)
 
 .RECIPEPREFIX := >
 .DEFAULT_GOAL := help
-.PHONY: help defconfig slvc_dma_512_defconfig slvc_dma_512_rx_wide_defconfig showconfig public-hygiene sim sim-dry-run fpga-ooc fpga-ooc-dry-run adapter-dc-ooc adapter-dc-ooc-dry-run rx-payload-writer-dc-ooc rx-payload-writer-dc-ooc-dry-run
+.PHONY: help defconfig slvc_dma_512_defconfig slvc_dma_512_rx_wide_defconfig slvc_dma_512_rx_async64_defconfig slvc_dma_512_rx_async512_defconfig showconfig public-hygiene sim sim-dry-run fpga-ooc fpga-ooc-dry-run adapter-dc-ooc adapter-dc-ooc-dry-run rx-payload-writer-dc-ooc rx-payload-writer-dc-ooc-dry-run
 
 help:
-> @printf '%s\n' 'SLVC DMA public flow' '' '  make slvc_dma_512_defconfig' '  make slvc_dma_512_rx_wide_defconfig' '  make showconfig' '  make public-hygiene' '  make sim[-dry-run]' '  make fpga-ooc[-dry-run]' '  make adapter-dc-ooc[-dry-run]' '  make rx-payload-writer-dc-ooc[-dry-run]'
+> @printf '%s\n' 'SLVC DMA public flow' '' '  make slvc_dma_512_defconfig' '  make slvc_dma_512_rx_wide_defconfig' '  make slvc_dma_512_rx_async64_defconfig' '  make slvc_dma_512_rx_async512_defconfig' '  make showconfig' '  make public-hygiene' '  make sim[-dry-run]' '  make fpga-ooc[-dry-run]' '  make adapter-dc-ooc[-dry-run]' '  make rx-payload-writer-dc-ooc[-dry-run]'
 
 defconfig slvc_dma_512_defconfig:
 > @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_defconfig"
 
 slvc_dma_512_rx_wide_defconfig:
 > @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_rx_wide_defconfig"
+
+slvc_dma_512_rx_async64_defconfig:
+> @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_rx_async64_defconfig"
+
+slvc_dma_512_rx_async512_defconfig:
+> @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_rx_async512_defconfig"
 
 showconfig:
 > @$(FLOWCTL) show-config

@@ -6,7 +6,8 @@
 // event 和 soft reset 以本地控制状态输出，避免 AXI-Lite valid 与数据面直接耦合。
 module dma_axil_regs #(
     parameter integer TX_RD_MAX_OUTSTANDING = `DMA_TX_RD_MAX_OUTSTANDING,
-    parameter integer RX_WR_MAX_OUTSTANDING = `DMA_RX_WR_MAX_OUTSTANDING
+    parameter integer RX_WR_MAX_OUTSTANDING = `DMA_RX_WR_MAX_OUTSTANDING,
+    parameter integer DEFER_BUSY_SOFT_RESET = 0
 )(
     input             clk,
     input             rstn,
@@ -246,6 +247,7 @@ reg        rd_table_req_sent_q;
 
 reg        core_busy_q;
 reg        axi_busy_q;
+reg        soft_reset_pending_q;
 reg        ufc_tx_busy_q;
 reg        ufc_tx_done_q;
 reg        ufc_tx_busy_reject_q;
@@ -421,7 +423,9 @@ task execute_global_write;
         case (off)
         `DMA_REG_GLOBAL_CTRL: begin
             if (data[`DMA_GCTRL_SOFT_RESET]) begin
-                if (core_busy_q) begin
+                if (DEFER_BUSY_SOFT_RESET) begin
+                    soft_reset_pending_q <= 1'b1;
+                end else if (core_busy_q) begin
                     global_status_sticky[`DMA_GSTATUS_RESET_REJECTED] = 1'b1;
                     global_err_cnt = global_err_cnt + 1'b1;
                     irq_status[`DMA_IRQ_POLICY_REJECT] = 1'b1;
@@ -444,7 +448,9 @@ task execute_global_write;
         `DMA_REG_INTR_COAL_CNT: intr_coal_cnt = data;
         `DMA_REG_INTR_COAL_TMR: intr_coal_timer = data;
         `DMA_REG_SOFT_RESET: if (data[0]) begin
-            if (core_busy_q) begin
+            if (DEFER_BUSY_SOFT_RESET) begin
+                soft_reset_pending_q <= 1'b1;
+            end else if (core_busy_q) begin
                 global_status_sticky[`DMA_GSTATUS_RESET_REJECTED] = 1'b1;
                 global_err_cnt = global_err_cnt + 1'b1;
                 irq_status[`DMA_IRQ_POLICY_REJECT] = 1'b1;
@@ -711,6 +717,7 @@ always @(posedge clk or negedge rstn) begin
         ev_cap_irq_mask <= 16'h0;
         ev_cap_global_header_err <= 1'b0;
         soft_reset_pulse = 1'b0;
+        soft_reset_pending_q <= 1'b0;
         ch_reset_pulse = 1'b0;
         ch_reset_ch <= 4'h0;
         reset_regs();
@@ -723,6 +730,12 @@ always @(posedge clk or negedge rstn) begin
         ufc_tx_clear_busy_reject = 1'b0;
         ufc_rx_clear_pending = 1'b0;
         ufc_rx_clear_overrun = 1'b0;
+
+        if (DEFER_BUSY_SOFT_RESET && soft_reset_pending_q && !core_busy_q) begin
+            reset_regs();
+            soft_reset_pulse = 1'b1;
+            soft_reset_pending_q <= 1'b0;
+        end
 
         case (wr_state)
         WR_IDLE: begin

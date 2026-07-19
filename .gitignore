@@ -4,6 +4,7 @@ reports/
 work/
 .config
 modelsim/work/
+modelsim/work*/
 modelsim/transcript
 modelsim/modelsim.ini
 flows/local/

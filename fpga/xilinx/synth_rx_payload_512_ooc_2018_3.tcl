@@ -9,9 +9,15 @@ if {![info exists DMA_ROOT]} {
     }
 }
 if {![info exists PART]} { set PART xc7z100ffg900-2 }
-if {![info exists PLACE_DIRECTIVE]} { set PLACE_DIRECTIVE Explore }
-if {![info exists PHYS_OPT_DIRECTIVE]} { set PHYS_OPT_DIRECTIVE Explore }
-if {![info exists ROUTE_DIRECTIVE]} { set ROUTE_DIRECTIVE Explore }
+if {![info exists PLACE_DIRECTIVE]} {
+    if {[info exists ::env(PLACE_DIRECTIVE)]} { set PLACE_DIRECTIVE $::env(PLACE_DIRECTIVE) } else { set PLACE_DIRECTIVE Explore }
+}
+if {![info exists PHYS_OPT_DIRECTIVE]} {
+    if {[info exists ::env(PHYS_OPT_DIRECTIVE)]} { set PHYS_OPT_DIRECTIVE $::env(PHYS_OPT_DIRECTIVE) } else { set PHYS_OPT_DIRECTIVE Explore }
+}
+if {![info exists ROUTE_DIRECTIVE]} {
+    if {[info exists ::env(ROUTE_DIRECTIVE)]} { set ROUTE_DIRECTIVE $::env(ROUTE_DIRECTIVE) } else { set ROUTE_DIRECTIVE Explore }
+}
 if {![info exists REPORT_TAG]} {
     if {[info exists ::env(REPORT_TAG)]} { set REPORT_TAG $::env(REPORT_TAG) } else { set REPORT_TAG current }
 }
@@ -53,6 +59,21 @@ close $fh
 read_verilog [file join $rtl_dir include dma_defs.vh]
 read_verilog $rtl_files
 synth_design -top frame_dma_rx_top -part $PART -mode out_of_context
+
+set unexpected_cdc_cells [get_cells -hierarchical -quiet -filter {
+    NAME =~ *u_rx_payload_cdc_bridge* ||
+    NAME =~ *u_rx_payload_source_reset_sync* ||
+    NAME =~ *u_rx_payload_mem_reset_sync*
+}]
+set cdc_audit_path [file join $report_dir rx_payload_512_cdc_absence.rpt]
+set cdc_audit_fp [open $cdc_audit_path w]
+puts $cdc_audit_fp "same_clock_profile=wide512"
+puts $cdc_audit_fp "unexpected_rx_payload_cdc_cell_count=[llength $unexpected_cdc_cells]"
+foreach cell $unexpected_cdc_cells { puts $cdc_audit_fp $cell }
+close $cdc_audit_fp
+if {[llength $unexpected_cdc_cells] != 0} {
+    error "same-clock 512 profile unexpectedly contains RX payload CDC cells; see $cdc_audit_path"
+}
 
 create_clock -name aclk -period 5.000 [get_ports aclk]
 create_clock -name aclk_io_launch -period 5.000

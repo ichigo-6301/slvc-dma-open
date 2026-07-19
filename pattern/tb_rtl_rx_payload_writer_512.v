@@ -121,6 +121,7 @@ dma_axi_write_engine_512 #(
     .s_payload_tdata(s_payload_tdata),
     .s_payload_tkeep(s_payload_tkeep),
     .s_payload_tlast(s_payload_tlast),
+    .s_payload_level(8'h0),
     .m_axi_awaddr(m_axi_awaddr),
     .m_axi_awlen(m_axi_awlen),
     .m_axi_awsize(m_axi_awsize),

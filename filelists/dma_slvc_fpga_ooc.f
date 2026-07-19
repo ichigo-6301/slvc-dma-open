@@ -3,9 +3,11 @@ rtl/common/dma_axis_register_slice.v
 rtl/common/dma_axis_width_pack_512.v
 rtl/common/dma_axis_skid_buffer.v
 rtl/common/dma_async_fifo.v
+rtl/common/dma_async_fifo_tech.v
 rtl/common/dma_axis_async_fifo.v
 rtl/common/dma_ctrl_msg_async_fifo.v
 rtl/common/dma_payload_beat_ram.v
+rtl/common/dma_reset_sync.v
 rtl/rx/dma_rx_parser.v
 rtl/rx/dma_rx_parser_pipe.v
 rtl/rx/dma_rx_channel_match.v
@@ -15,6 +17,9 @@ rtl/rx/dma_rx_fc_ingress_bank.v
 rtl/rx/dma_rx_fc_ctrl.v
 rtl/rx/dma_axi_write_engine.v
 rtl/rx/dma_axi_write_engine_512.v
+rtl/rx/dma_axi_write_engine_64_stream.v
+rtl/rx/dma_rx_payload_serializer_512_to_64.v
+rtl/rx/dma_rx_payload_cdc_bridge.v
 rtl/tx/dma_tx_header_builder.v
 rtl/tx/dma_axi_read_prefetch.v
 rtl/tx/dma_tx_engine.v

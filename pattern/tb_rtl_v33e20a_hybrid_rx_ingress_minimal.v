@@ -1,10 +1,20 @@
 `timescale 1ns/1ps
 `include "dma_sim_def.vh"
 
+`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+`define DMA_RX_DEDICATED_PAYLOAD_TB
+`elsif DMA_RX_MEM_ASYNC_PROFILE
+`define DMA_RX_DEDICATED_PAYLOAD_TB
+`endif
+
 module tb;
 
 reg clk;
 reg rstn;
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+reg mem_clk;
+reg mem_rstn;
+`endif
 reg [7:0] sys_mem [0:`DMA_SIM_MEM_BYTES-1];
 reg [7:0] ref_mem [0:`DMA_SIM_MEM_BYTES-1];
 reg [7:0] pkt_mem [0:`DMA_PKT_MEM_BYTES-1];
@@ -58,15 +68,20 @@ wire        m_axi_rvalid;
 wire        m_axi_rready;
 wire        irq;
 
-`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+`ifdef DMA_RX_DEDICATED_PAYLOAD_TB
 wire [31:0]  m_axi_rx_payload_awaddr;
 wire [7:0]   m_axi_rx_payload_awlen;
 wire [2:0]   m_axi_rx_payload_awsize;
 wire [1:0]   m_axi_rx_payload_awburst;
 wire         m_axi_rx_payload_awvalid;
 wire         m_axi_rx_payload_awready;
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+wire [63:0]  m_axi_rx_payload_wdata;
+wire [7:0]   m_axi_rx_payload_wstrb;
+`else
 wire [511:0] m_axi_rx_payload_wdata;
 wire [63:0]  m_axi_rx_payload_wstrb;
+`endif
 wire         m_axi_rx_payload_wlast;
 wire         m_axi_rx_payload_wvalid;
 wire         m_axi_rx_payload_wready;
@@ -80,7 +95,7 @@ reg [511:0] hold_beat;
 reg [31:0] rdata;
 integer i;
 
-`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+`ifdef DMA_RX_DEDICATED_PAYLOAD_TB
 integer wide_lengths [0:17];
 integer wide_idx;
 integer wide_len;
@@ -165,13 +180,51 @@ axi64_slave_model u_mem(
     .rready(m_axi_rready)
 );
 
-`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+  axi64_slave_model #(
+    .RANDOM_STALL(1),
+    .RANDOM_SEED(32'h6400_2301)
+) u_payload_mem (
+    .aclk(mem_clk),
+    .arstn(mem_rstn),
+    .awaddr(m_axi_rx_payload_awaddr),
+    .awlen(m_axi_rx_payload_awlen),
+    .awsize(m_axi_rx_payload_awsize),
+    .awburst(m_axi_rx_payload_awburst),
+    .awvalid(m_axi_rx_payload_awvalid),
+    .awready(m_axi_rx_payload_awready),
+    .wdata(m_axi_rx_payload_wdata),
+    .wstrb(m_axi_rx_payload_wstrb),
+    .wlast(m_axi_rx_payload_wlast),
+    .wvalid(m_axi_rx_payload_wvalid),
+    .wready(m_axi_rx_payload_wready),
+    .bresp(m_axi_rx_payload_bresp),
+    .bvalid(m_axi_rx_payload_bvalid),
+    .bready(m_axi_rx_payload_bready),
+    .araddr(32'h0),
+    .arlen(8'h0),
+    .arsize(3'd3),
+    .arburst(2'b01),
+    .arvalid(1'b0),
+    .arready(),
+    .rdata(),
+    .rresp(),
+    .rlast(),
+    .rvalid(),
+    .rready(1'b0)
+);
+`elsif DMA_RX_DEDICATED_PAYLOAD_TB
 axi512_write_slave_model #(
     .RANDOM_STALL(1),
     .RANDOM_SEED(32'h5120_2301)
 ) u_wide_mem (
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+    .aclk(mem_clk),
+    .arstn(mem_rstn),
+`else
     .aclk(clk),
     .arstn(rstn),
+`endif
     .awaddr(m_axi_rx_payload_awaddr),
     .awlen(m_axi_rx_payload_awlen),
     .awsize(m_axi_rx_payload_awsize),
@@ -255,7 +308,11 @@ frame_dma_rx_top u_dut(
     .ufc_rx_arg0(32'h0),
     .ufc_rx_arg1(32'h0),
     .irq(irq)
-`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+    ,.mem_clk(mem_clk)
+    ,.mem_aresetn(mem_rstn)
+`endif
+`ifdef DMA_RX_DEDICATED_PAYLOAD_TB
     ,.m_axi_rx_payload_awaddr(m_axi_rx_payload_awaddr)
     ,.m_axi_rx_payload_awlen(m_axi_rx_payload_awlen)
     ,.m_axi_rx_payload_awsize(m_axi_rx_payload_awsize)
@@ -274,6 +331,9 @@ frame_dma_rx_top u_dut(
 );
 
 always #5 clk = ~clk;
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+always #3.5 mem_clk = ~mem_clk;
+`endif
 
 function [31:0] ch_base;
     input [3:0] ch;
@@ -297,8 +357,15 @@ endtask
 task reset_dut;
     begin
         rstn = 1'b0;
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+        mem_rstn = 1'b0;
+`endif
         repeat (12) @(posedge clk);
         rstn = 1'b1;
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+        repeat (4) @(posedge mem_clk);
+        mem_rstn = 1'b1;
+`endif
         repeat (10) @(posedge clk);
     end
 endtask
@@ -617,12 +684,12 @@ task run_t9_reset_recovery;
     end
 endtask
 
-`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+`ifdef DMA_RX_DEDICATED_PAYLOAD_TB
 task run_t10_wide_directed_lengths;
     reg [15:0] flow_sel;
     reg [31:0] base_sel;
     begin
-        $display("WIDE512_INTEGRATION T10 directed_lengths");
+        $display("RX_PAYLOAD_INTEGRATION T10 directed_lengths");
         wide_lengths[0] = 1;
         wide_lengths[1] = 7;
         wide_lengths[2] = 8;
@@ -670,7 +737,7 @@ task run_t11_wide_mixed_stress;
     reg [31:0] base_sel;
     integer frame_idx;
     begin
-        $display("WIDE512_INTEGRATION T11 mixed_source_stress frames=256");
+        $display("RX_PAYLOAD_INTEGRATION T11 mixed_source_stress frames=256");
         fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
         stress_offset[0] = 0;
         stress_offset[1] = 0;
@@ -703,9 +770,61 @@ task run_t11_wide_mixed_stress;
 endtask
 `endif
 
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+task run_t12_async_soft_reset_drain;
+    integer reset_guard;
+    begin
+        $display("RX_PAYLOAD_INTEGRATION T12 active_soft_reset_drain");
+        fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+        fork
+            send_fc(FLOW_FRAME0, 32'd4096, 32'h0003_0000, 32'h700);
+            begin
+                wait (u_dut.pay_busy && (u_dut.wr_state == 3'd2));
+                repeat (3) @(posedge clk);
+                u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+                reset_guard = 0;
+                while (!u_dut.core_soft_reset && (reset_guard < 50000)) begin
+                    @(posedge clk);
+                    reset_guard = reset_guard + 1;
+                end
+                if (reset_guard >= 50000) begin
+                    $display("Error: deferred async soft reset never completed");
+                    $finish;
+                end
+                if (u_dut.pay_busy || (u_dut.wr_state != 3'd0)) begin
+                    $display("Error: async soft reset fired before payload drain busy=%0d wr_state=%0d",
+                             u_dut.pay_busy, u_dut.wr_state);
+                    $finish;
+                end
+            end
+        join
+
+        repeat (12) @(posedge clk);
+        check_payload(BASE_FRAME0, 32'h0003_0000, 32'd4096);
+        if (u_dut.async_bridge_protocol_error || u_dut.pay_cpl_valid ||
+            u_dut.async_writer_busy) begin
+            $display("Error: async soft reset left stale backend state protocol=%0d cpl=%0d writer=%0d",
+                     u_dut.async_bridge_protocol_error, u_dut.pay_cpl_valid,
+                     u_dut.async_writer_busy);
+            $finish;
+        end
+
+        configure_default(`DMA_RX_POL_QUEUE_WITH_FC);
+        send_fc(FLOW_STREAM, 32'd65, 32'h0003_2000, 32'h701);
+        wait_idle();
+        check_payload(BASE_STREAM, 32'h0003_2000, 32'd65);
+        expect_pool_released();
+    end
+endtask
+`endif
+
 initial begin
     clk = 1'b0;
     rstn = 1'b0;
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+    mem_clk = 1'b0;
+    mem_rstn = 1'b0;
+`endif
     clear_mem();
 
     run_t0_reset();
@@ -718,12 +837,19 @@ initial begin
     run_t7_frame_pool_drop();
     run_t8_disabled_channel();
     run_t9_reset_recovery();
-`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+`ifdef DMA_RX_DEDICATED_PAYLOAD_TB
     run_t10_wide_directed_lengths();
     run_t11_wide_mixed_stress();
 `endif
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+    run_t12_async_soft_reset_drain();
+`endif
 
-`ifdef DMA_RX_WIDE_PAYLOAD_PROFILE
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+    $display("PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1");
+`elsif DMA_RX_MEM_ASYNC512_PROFILE
+    $display("PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1");
+`elsif DMA_RX_WIDE_PAYLOAD_PROFILE
     $display("PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256");
 `else
     $display("OK: dma RTL v33e20a hybrid RX ingress minimal directed test passed.");
@@ -733,3 +859,7 @@ initial begin
 end
 
 endmodule
+
+`ifdef DMA_RX_DEDICATED_PAYLOAD_TB
+`undef DMA_RX_DEDICATED_PAYLOAD_TB
+`endif

@@ -1,2 +1,9 @@
 rtl/rx/dma_axi_write_engine.v
 rtl/rx/dma_axi_write_engine_512.v
+rtl/common/dma_async_fifo.v
+rtl/common/dma_async_fifo_tech.v
+rtl/common/dma_reset_sync.v
+rtl/rx/dma_rx_payload_cdc_bridge.v
+rtl/rx/dma_rx_payload_serializer_512_to_64.v
+rtl/rx/dma_axi_write_engine_64_stream.v
+rtl/integration/dma_rx_payload_async_ooc_top.v

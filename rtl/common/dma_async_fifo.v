@@ -17,7 +17,12 @@ module dma_async_fifo #(
     input                       m_rst_n,
     output reg [DATA_WIDTH-1:0] m_data,
     output reg                  m_valid,
-    input                       m_ready
+    input                       m_ready,
+
+    output                      s_full,
+    output                      m_empty,
+    output     [DEPTH_LOG2:0]   s_level,
+    output     [DEPTH_LOG2:0]   m_level
 );
 
 // PTR_W 多出一位用于区分环回后的 full 与 empty。
@@ -37,27 +42,41 @@ end
 
 reg [PTR_W-1:0] s_wbin;
 reg [PTR_W-1:0] s_wgray;
+(* ASYNC_REG = "TRUE" *)
 reg [PTR_W-1:0] s_rgray_sync1;
+(* ASYNC_REG = "TRUE" *)
 reg [PTR_W-1:0] s_rgray_sync2;
 
 reg [PTR_W-1:0] m_rbin;
 reg [PTR_W-1:0] m_rgray;
+(* ASYNC_REG = "TRUE" *)
 reg [PTR_W-1:0] m_wgray_sync1;
+(* ASYNC_REG = "TRUE" *)
 reg [PTR_W-1:0] m_wgray_sync2;
 
 wire [PTR_W-1:0] s_wbin_next;
 wire [PTR_W-1:0] s_wgray_next;
 wire [PTR_W-1:0] m_rbin_next;
 wire [PTR_W-1:0] m_rgray_next;
-wire             s_full;
-wire             m_empty;
 wire             s_fire;
 wire             m_can_load;
+wire [PTR_W-1:0] s_rbin_sync;
+wire [PTR_W-1:0] m_wbin_sync;
 
 function [PTR_W-1:0] bin2gray;
     input [PTR_W-1:0] value;
     begin
         bin2gray = (value >> 1) ^ value;
+    end
+endfunction
+
+function [PTR_W-1:0] gray2bin;
+    input [PTR_W-1:0] value;
+    integer gray_i;
+    begin
+        gray2bin[PTR_W-1] = value[PTR_W-1];
+        for (gray_i = PTR_W-2; gray_i >= 0; gray_i = gray_i - 1)
+            gray2bin[gray_i] = gray2bin[gray_i+1] ^ value[gray_i];
     end
 endfunction
 
@@ -68,6 +87,10 @@ assign m_rgray_next = bin2gray(m_rbin_next);
 
 assign s_full = (s_wgray_next == {~s_rgray_sync2[PTR_W-1:PTR_W-2], s_rgray_sync2[PTR_W-3:0]});
 assign m_empty = (m_rgray == m_wgray_sync2);
+assign s_rbin_sync = gray2bin(s_rgray_sync2);
+assign m_wbin_sync = gray2bin(m_wgray_sync2);
+assign s_level = s_wbin - s_rbin_sync;
+assign m_level = m_wbin_sync - m_rbin;
 assign s_ready = !s_full;
 assign s_fire = s_valid && s_ready;
 assign m_can_load = (!m_valid || m_ready) && !m_empty;

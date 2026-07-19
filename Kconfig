@@ -12,6 +12,10 @@ config SLVC_DMA_CLOCK_PERIOD_NS
   string "OOC clock period in ns"
   default "5.000"
 
+config SLVC_DMA_MEM_CLOCK_PERIOD_NS
+  string "RX memory OOC clock period in ns"
+  default "5.000"
+
 config SLVC_DMA_SIM
   bool "Run selected ModelSim regression"
   default y
@@ -24,6 +28,16 @@ config SLVC_DMA_RX_WIDE_PAYLOAD
   bool "Enable optional same-clock 512-bit RX payload AXI master profile"
   default n
   depends on SLVC_DMA_V1_512
+
+config SLVC_DMA_RX_MEM_ASYNC64
+  bool "Enable optional dual-clock 64-bit RX memory backend"
+  default n
+  depends on SLVC_DMA_V1_512 && !SLVC_DMA_RX_WIDE_PAYLOAD && !SLVC_DMA_RX_MEM_ASYNC512
+
+config SLVC_DMA_RX_MEM_ASYNC512
+  bool "Enable optional dual-clock 512-bit RX memory backend"
+  default n
+  depends on SLVC_DMA_V1_512 && !SLVC_DMA_RX_WIDE_PAYLOAD && !SLVC_DMA_RX_MEM_ASYNC64
 
 config SLVC_DMA_UDP_IPV4_ADAPTER
   bool "Enable optional 512-bit UDP/IPv4 to SHDR64 adapter tests"

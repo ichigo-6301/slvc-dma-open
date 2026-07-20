@@ -1,8 +1,9 @@
 kind: development_profile_provenance
 schema_version: 1.0.0
-branch: feat/rx-payload-optional-cdc
-base_commit: 4b9f4f551aaea43abe116d258306941504bdbb74
-implementation_commit: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+branch: fix/rx-payload-cdc-hardening
+base_commit: 79a536621706c5047582a7f4de9bdc540403d691
+implementation_commit: e97728092b5814d65338e254c8c46af57612bff6
+fpga_constraint_commit: 971feb4283d3c76556e737d2e8ec96f36e700a34
 profiles:
   - slvc_dma_v1_512_rx_same_clock_512
   - slvc_dma_v1_512_rx_async64
@@ -17,4 +18,8 @@ evidence:
   - evidence/slvc_dma_rx_payload_cdc_fpga_ooc_summary.yaml
   - evidence/slvc_dma_rx_payload_cdc_dc_ooc_summary.yaml
   - evidence/slvc_dma_rx_payload_cdc_contract.yaml
+source_closure:
+  regression: bound to implementation_commit; the FPGA constraint commit changes no RTL, testbench, or runner source
+  same_clock_fpga: measured at implementation_commit; the later constraint commit affects asynchronous OOC Tcl only
+  dc_ooc: bound to 338b392be748a62bb6a5ce8037822b6112318245; later changed files are outside the DC OOC filelist
 scope_note: These records describe optional development profiles on the named branch. They do not replace or extend the frozen RC1 evidence set.

@@ -28,9 +28,11 @@ the default adapter-enabled profile therefore requires fourteen markers. With
 the adapter disabled it requires ten. The optional RX-wide defconfig disables
 the adapter and appends two wide-backend tests, so it requires twelve markers.
 Each dual-clock RX memory defconfig appends the common CDC bridge test and two
-width-specific tests, so it requires thirteen markers.
+width-specific test commands. The integration command emits both its profile
+marker and the bounded-quiesce marker, so three commands require four RX
+markers and fourteen markers in total.
 The runner uses tool exit status, native
-error summary, and one exact completion marker per test. It has no dependency on
+error summary, and every exact marker configured for each test. It has no dependency on
 `rg`, `grep`, or another external source-search utility.
 
 Select and inspect the optional same-clock wide RX profile with:

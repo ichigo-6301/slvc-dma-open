@@ -11,7 +11,7 @@ marker per test.
 | `run_rtl_v33e19_shared_frame_pool.do` | Shared frame-pool ordering and release | `OK: dma RTL v33e19 shared frame pool test passed.` |
 | `run_rtl_v13_parser_pipeline.do` | Parser pipeline success/failure behavior | `PASS tb_rtl_v13_parser_pipeline` |
 | `run_rtl_v15_axil_read_pipeline.do` | AXI4-Lite read pipeline | `OK: dma RTL v15 AXI-Lite read pipeline test passed.` |
-| `run_rtl_v33e20a10_tx_cq_space_check_pipeline.do` | TX CQ-space decision pipeline | `PASS tb_rtl_v33e20a10_tx_cq_space_check_pipeline` |
+| `run_rtl_v33e20a10_tx_cq_space_check_pipeline.do` | TX CQ-space decisions, pending channel/descriptor suppression, and active-TX drain under quiesce | `PASS tb_rtl_v33e20a10_tx_cq_space_check_pipeline` |
 | `run_rtl_v28_tx_descriptor_queue.do` | TX descriptor queue ordering | `OK: dma RTL v28 TX descriptor queue test passed.` |
 | `run_rtl_v31_tx_desc_status_pipeline.do` | TX descriptor status readback | `SUMMARY: v31 TX descriptor status pipeline PASS` |
 | `run_rtl_v33e20a23_w_prefetch_fifo.do` | Payload W prefetch and backpressure | `OK: dma RTL v33e20a23 W prefetch FIFO test passed.` |
@@ -23,9 +23,9 @@ marker per test.
 | `run_rtl_rx_payload_writer_512_integration.do` | Fixed-ingress/shared-pool source locking and integrated wide RX writes | `PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256` |
 | `run_rtl_rx_payload_cdc_bridge.do` | Command/payload/completion CDC, tags, FIFO pressure, six clock profiles, and clock stops | `PASS tb_rtl_rx_payload_cdc_bridge frames=450 bytes=924873 source_stalls=321 fifo_empty=169 peak_payload_level=32 clock_profiles=6 clock_stops=2` |
 | `run_rtl_rx_mem_async64_backend.do` | Async64 lengths, 4 KiB split, response errors, backpressure, 2,000-frame stress, and throughput | `PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
-| `run_rtl_rx_mem_async64_integration.do` | Async64 fixed/shared source ordering and deferred soft-reset drain | `PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1` |
+| `run_rtl_rx_mem_async64_integration.do` | Async64 fixed/shared ordering and bounded quiesce/drain under RX, buffered-header, AXI/CQ, clock-stop, repeat-reset, and UFC scenarios | `PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
 | `run_rtl_rx_mem_async512_backend.do` | Async512 lengths, 4 KiB split, response errors, backpressure, 2,000-frame stress, and throughput | `PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
-| `run_rtl_rx_mem_async512_integration.do` | Async512 fixed/shared source ordering and deferred soft-reset drain | `PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1` |
+| `run_rtl_rx_mem_async512_integration.do` | Async512 fixed/shared ordering and bounded quiesce/drain under RX, buffered-header, AXI/CQ, clock-stop, repeat-reset, and UFC scenarios | `PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
 
 The first ten rows are the frozen core regression and are always required. The
 final four belong to the optional adapter P0 profile and are required only when
@@ -34,6 +34,7 @@ therefore schedules fourteen markers, while the core-only defconfig schedules
 ten. The two wide-writer rows belong to the default-off same-clock development profile;
 `configs/slvc_dma_512_rx_wide_defconfig` disables the adapter and schedules ten
 core plus two wide markers, twelve total. Each asynchronous defconfig schedules
-the ten core rows, the common CDC bridge row, and its two width-specific rows,
-thirteen total. The matrix is directed verification, not coverage closure,
+the ten core rows and three RX test commands. Because the integration command
+has two required markers, the RX portion has four markers and the full profile
+requires fourteen. The matrix is directed verification, not coverage closure,
 formal proof, or complete CDC/RDC signoff.

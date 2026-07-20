@@ -2,7 +2,7 @@ kind: cdc_reset_contract
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_contract
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+source_ref: 971feb4283d3c76556e737d2e8ec96f36e700a34
 status: verified
 same_clock_bypass:
   profile: same_clock_512
@@ -33,19 +33,58 @@ reset:
     deassertion: two-cycle synchronized independently per domain
     one_sided_recovery: unsupported
   soft_reset:
-    integrated_policy: quiesce_and_drain_current_frame
-    busy_request: deferred
-    memory_domain_delivery: toggle synchronized only after source-side idle
+    policy: bounded_quiesce_and_drain
+    request_latched: true
+    repeated_pending_requests_coalesced: true
+    blocks_new_rx_headers: true
+    drains_elastic_fifo_accepted_beats: true
+    blocks_new_tx_work: true
+    blocks_new_descriptor_work: true
+    blocks_new_ufc_work: true
+    drains_committed_rx_frames: true
+    drains_started_tx_cq_ufc_work: true
+    drains_axi_outstanding: true
+    source_idle_qualification_cycles: 2
+    memory_domain_delivery: request_toggle_with_idle_acknowledgement
+    bounded_when_clocks_running_and_downstream_eventually_ready: true
+    stopped_clock_or_permanent_backpressure: remains_pending_without_destructive_clear
+software_visibility:
+  debug_state_bits:
+    soft_reset_pending: 2
+    soft_reset_quiescing: 3
+    soft_reset_drain_done: 4
+    cdc_protocol_error: 5
+  global_status_cdc_protocol_error_bit: 13
+  cdc_error_counter: global_error_counter_once_per_rising_event
+  cdc_error_irq: existing_axi_error_irq
+  cqe_format_changed: false
+gray_bus_constraints:
+  scope: project_owned_generic_command_and_completion_fifos
+  constrained_bus_count: 4
+  constrained_source_register_count: 12
+  constrained_sync1_register_count: 12
+  max_delay_constraint_count: 4
+  bus_skew_constraint_count: 4
+  limit: min_aclk_mem_clk_period
+  xpm_payload_fifo_excluded: true
+  protected_destination_register_count: {project: 12, xpm: 56, total: 68}
+  non_gray_false_path_endpoint_count: {aclk_to_mem_clk: 73, mem_clk_to_aclk: 12}
+  clock_group_exception_count: 0
+  unconstrained_gray_bus_count: 0
+  bus_skew_violation_count: 0
+  overridden_max_delay_warning_count: 0
 assertions_and_checks:
   - hard resets must assert together
-  - bridge soft reset requires idle source and memory state
+  - bridge reset request requires idle source state
+  - memory reset acknowledgement requires idle bridge serializer and writer
   - completion tag must match active command
   - one command maps to one non-interleaved payload frame and one completion
   - FIFO overflow and underflow are forbidden
   - backpressured valid and data remain stable
   - no stale completion survives reset and restart
+  - no new header is accepted after quiesce once current-frame payload credits are exhausted
 technology_binding:
   fpga_payload_fifo: Vivado 2018.3 XPM asynchronous FIFO using block memory
-  fpga_small_fifos: generic Gray-pointer asynchronous FIFO
+  fpga_small_fifos: generic Gray-pointer asynchronous FIFO with explicit project constraints
   simulation_and_asic: generic Gray-pointer FIFO with RTL arrays
-caveat: The contract does not cover arbitrary one-sided reset recovery, multiple out-of-order frames, TX/CQ/descriptor CDC, or complete ASIC CDC/RDC signoff.
+caveat: The contract does not cover arbitrary one-sided reset recovery, permanent downstream stalls, multiple out-of-order frames, TX/CQ/descriptor CDC, or complete ASIC CDC/RDC signoff. Three async64 synchronizer-placement methodology warnings remain documented.

@@ -13,6 +13,7 @@ proof 或 CDC/RDC signoff。
 runner 始终核对 10 个 frozen-core PASS marker；默认 adapter-enabled defconfig
 再增加 4 个 adapter marker，共 14 项。可选 RX-wide defconfig 关闭 adapter，并
 增加 2 个 wide-backend marker，共 12 项。每个双时钟 defconfig 关闭 adapter，
-增加 1 个公共 CDC bridge marker 和 2 个 width-specific marker，共 13 项。冻结
+增加 1 条公共 CDC bridge command 和 2 条 width-specific command；其中 integration
+command 要求 2 个 marker，所以 RX 部分贡献 4 个 marker，完整 profile 共 14 项。冻结
 release 的 evidence/source commit 仍位于 `provenance/` 和 `evidence/`；RX memory
 backend 测量作为独立开发 profile 结果记录。

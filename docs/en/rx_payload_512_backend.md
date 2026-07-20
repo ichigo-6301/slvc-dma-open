@@ -78,8 +78,8 @@ to the 12.8 GB/s interface rate. It is RTL/model throughput, not measured DDR
 bandwidth.
 
 Vivado 2018.3 routed `frame_dma_rx_top` for `xc7z100ffg900-2` at 5.000 ns with
-`+0.029 ns` setup WNS, zero TNS, `+0.052 ns` hold WNS, and zero THS. Routed
-utilization was 38,595 LUT, 42,492 FF, 44 RAMB36, 3 RAMB18, and 0 DSP. The
+`+0.089 ns` setup WNS, zero TNS, `+0.069 ns` hold WNS, and zero THS. Routed
+utilization was 38,045 LUT, 42,514 FF, 44 RAMB36, 3 RAMB18, and 0 DSP. The
 same-clock CDC absence report found zero RX payload CDC cells.
 
 Writer-only Design Compiler OOC synthesis used O-2018.06-SP1 and the Nangate45

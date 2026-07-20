@@ -119,8 +119,8 @@ one tagged completion; AW/W/B remain entirely in `mem_clk`. The frozen wrapper,
 legacy 64-bit path, SHDR64/admission logic, CQ, TX, and descriptors are unchanged.
 
 The same-clock profile has no generated CDC cells. Both asynchronous profiles
-passed 13-test ModelSim/Questa regression, 200 MHz routed OOC for both clocks,
-and 5 ns Design Compiler OOC. These are branch-local development-profile
+passed a 13-command, 14-marker ModelSim/Questa regression, 200 MHz routed OOC
+for both clocks, and 5 ns Design Compiler OOC. These are branch-local development-profile
 results, not additions to the frozen RC1 evidence set. See the
 [same-clock backend guide](docs/en/rx_payload_512_backend.md) and
 [dual-clock backend guide](docs/en/rx_payload_cdc_backends.md).

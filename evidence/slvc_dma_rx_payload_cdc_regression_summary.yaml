@@ -2,30 +2,31 @@ kind: regression_summary
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_regression_summary
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+source_ref: e97728092b5814d65338e254c8c46af57612bff6
 status: verified
 scope: optional same-clock and dual-clock RX payload memory backends
 hosts:
   - host: Windows
     tool: ModelSim SE-64 2020.4
     results:
-      default_adapter: {required_markers: 14, result: pass, log_sha256: 46cd86741305f71d7f94b1f1fc98792480ec670de5eab452d3c862daff9c8737}
-      same_clock_512: {required_markers: 12, result: pass, log_sha256: 54bdbe47c8985dadb8025ac250fe79f4b0bd5f8b4707ee3b8a10f9619e1df75f}
-      async64: {required_markers: 13, result: pass, log_sha256: 7e22c2aaebeaed78b371385c3f4555c520c8325e259319bab12b848d47001de2}
-      async512: {required_markers: 13, result: pass, log_sha256: 7acd579b103b49889f596f30fad227f038d88973f908032095194b91ac18ad1f}
-  - host: IC_EDA Linux
+      default_adapter: {required_markers: 14, result: pass, log_sha256: 1d12fdcc2105845c3503cdfac46265bf86992dbe0ead0a2a5d31cb7febfe7611}
+      same_clock_512: {required_markers: 12, result: pass, log_sha256: 37a2908b9c90702268ba66bdb5cfa0af8ad24d894331472636d2ad87ec2bb035}
+      async64: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 60f0f8fefb35bc5d9bcad1a626ce12d8142af53ea5d0160a16266928440f970d}
+      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 2e9172429029ee81d4cda1381a0a5b223fc008deacdd008e7dcaf6894045c115}
+  - host: IC_EDA_FULL Linux
     tool: Questa Sim-64 10.7c
     results:
-      default_adapter: {required_markers: 14, result: pass, log_sha256: 1116d031283837aea2cdf2fb83ff4840578bc2006debf1f007cbbb28bd587361}
-      same_clock_512: {required_markers: 12, result: pass, log_sha256: 9f9945f8ac0c3a62cfcf3ca708b2cef01f68965fd97a2436765b7e6bdfed32d5}
-      async64: {required_markers: 13, result: pass, log_sha256: 5e0e2403ce4a324b27ee0a43aed3a7d1d3cccc725435bb69e07a41cad9760448}
-      async512: {required_markers: 13, result: pass, log_sha256: 92e8272b8241f9a32ac1240c71fbdb765e3d8183273723f8f786c064b0910ed2}
+      default_adapter: {required_markers: 14, result: pass, log_sha256: 5493551e8b9c0fb25229ef8e28a736e8af7f5b64ae07d07a780e83bd42cba498}
+      same_clock_512: {required_markers: 12, result: pass, log_sha256: e20e367f7d71ee1c0c3e9ddc6f50a248d1409ec4f04151aa356bb1fbae9b2eb0}
+      async64: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 06fb124440fe57b667684ec5ac67cdf97a68e94f4f2933101bbd797e47131592}
+      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 48829fe298ded6c982dca1b00009fe0f6c05902174a7d6c55cfd7cb8e3fd2615}
 required_new_markers:
   - PASS tb_rtl_rx_payload_cdc_bridge frames=450 bytes=924873 source_stalls=321 fifo_empty=169 peak_payload_level=32 clock_profiles=6 clock_stops=2
   - PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2
   - PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1
   - PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2
   - PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1
+  - PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header
 clock_profiles:
   - aclk_100mhz_mem_clk_200mhz
   - aclk_200mhz_mem_clk_100mhz
@@ -50,5 +51,9 @@ checks:
   - ordered non-interleaved frame payload
   - AW/W/B randomized backpressure and response errors
   - 4 KiB burst splitting and tail strobe generation
-  - deferred active soft-reset drain
+  - bounded soft-reset quiesce and drain under continuous RX traffic
+  - elastic-FIFO buffered header and payload drain
+  - active-TX drain and pending channel descriptor launch suppression
+  - memory-domain protocol-error synchronization and software-visible sticky counter IRQ mapping
+source_closure_note: The later FPGA constraint commit changes no RTL, testbench, or runner source; the regression source set is identical to source_ref.
 caveat: Directed and deterministic random simulation is not functional coverage closure, formal proof, board DDR measurement, or complete CDC/RDC signoff.

@@ -4,7 +4,7 @@ evidence:
   - id: slvc_dma_rx_payload_cdc_regression_summary
     path: evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml
     type: modelsim_questa_dual_clock_rx_backend_regression_summary
-    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    source_ref: e97728092b5814d65338e254c8c46af57612bff6
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     claims:
       - slvc_dma_rx_payload_cdc_regression
@@ -14,7 +14,7 @@ evidence:
   - id: slvc_dma_rx_payload_cdc_fpga_ooc_summary
     path: evidence/slvc_dma_rx_payload_cdc_fpga_ooc_summary.yaml
     type: vivado_dual_clock_rx_backend_ooc_timing_utilization_cdc
-    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    source_ref: 971feb4283d3c76556e737d2e8ec96f36e700a34
     tool: Vivado 2018.3
     claims:
       - slvc_dma_rx_payload_cdc_fpga_ooc_200m
@@ -24,7 +24,7 @@ evidence:
   - id: slvc_dma_rx_payload_cdc_dc_ooc_summary
     path: evidence/slvc_dma_rx_payload_cdc_dc_ooc_summary.yaml
     type: design_compiler_dual_clock_rx_backend_ooc_timing_area
-    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    source_ref: 338b392be748a62bb6a5ce8037822b6112318245
     tool: Design Compiler O-2018.06-SP1
     claims:
       - slvc_dma_rx_payload_cdc_dc_ooc_200m
@@ -33,7 +33,7 @@ evidence:
   - id: slvc_dma_rx_payload_cdc_contract
     path: evidence/slvc_dma_rx_payload_cdc_contract.yaml
     type: structural_cdc_reset_contract
-    source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+    source_ref: 971feb4283d3c76556e737d2e8ec96f36e700a34
     tool: RTL inspection / simulation assertions / Vivado CDC
     claims:
       - slvc_dma_rx_payload_cdc_contract

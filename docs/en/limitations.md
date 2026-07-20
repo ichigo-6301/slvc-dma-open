@@ -16,12 +16,17 @@
   async64, and async512. They do not implement arbitrary 128/256-bit memory
   widths, unaligned first-beat shifting, TX/CQ widening, or multi-port striping.
 - Async profiles require both hard resets to assert together. Arbitrary
-  one-sided reset and recovery are unsupported. Soft reset drains the current
-  integrated frame transaction before resetting; it is not a general external
-  AXI reset protocol.
+  one-sided reset and recovery are unsupported. Soft reset blocks new RX,
+  TX/descriptor, and UFC launches, drains already accepted work, and commits
+  only after a memory-domain acknowledgement. Bounded completion assumes both
+  clocks run and every downstream interface eventually responds; this is not a
+  general external AXI reset protocol.
 - The CDC evidence covers the implemented FIFO structures, simulation
   assertions, directional Vivado CDC reports, and bus skew. It is not a
   complete ASIC CDC/RDC signoff and waiver package.
+- The routed async64 OOC result retains three `PDRC-190` synchronizer-placement
+  warnings. Both asynchronous OOC profiles retain BRAM/reset DRC warnings from
+  the integration top. These warnings are disclosed, not waived as signoff.
 - RX backend Vivado results are OOC and Design Compiler results are frontend
   OOC synthesis with generic FIFO arrays. They are not full-system FPGA,
   board DDR, routed ASIC, SRAM-macro, physical-design, or signoff evidence.

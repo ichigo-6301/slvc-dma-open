@@ -70,8 +70,8 @@ outstanding 为 4。按 200 MHz 换算为 12.8 GB/s interface rate；这是 RTL/
 吞吐，不是真实 DDR 带宽实测。
 
 Vivado 2018.3 在 `xc7z100ffg900-2` 上以 5.000 ns 对 `frame_dma_rx_top` 完成布局
-布线：setup WNS `+0.029 ns`、TNS 0、hold WNS `+0.052 ns`、THS 0。资源为
-38,595 LUT、42,492 FF、44 RAMB36、3 RAMB18、0 DSP。同频 CDC absence report 的
+布线：setup WNS `+0.089 ns`、TNS 0、hold WNS `+0.069 ns`、THS 0。资源为
+38,045 LUT、42,514 FF、44 RAMB36、3 RAMB18、0 DSP。同频 CDC absence report 的
 RX payload CDC cell 数为 0。
 
 writer-only Design Compiler OOC 使用 O-2018.06-SP1 和 Nangate45 typical library。

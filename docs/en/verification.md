@@ -14,6 +14,8 @@ always requires ten exact frozen-core PASS markers. The default adapter-enabled
 defconfig adds four adapter markers for fourteen total. The optional RX-wide
 defconfig disables the adapter and adds two wide-backend markers for twelve
 total. Each dual-clock defconfig disables the adapter and adds one common CDC
-bridge marker plus two width-specific markers for thirteen total. Frozen
+bridge command plus two width-specific commands. The integration command has
+two required markers, so the RX portion contributes four markers and the
+profile requires fourteen total. Frozen
 release provenance remains under `provenance/` and `evidence/`; RX memory
 backend measurements are documented separately as development-profile results.

@@ -66,12 +66,29 @@ domain. The current profiles require `aresetn` and `mem_aresetn` to be asserted
 together; arbitrary one-sided hard-reset recovery is unsupported and checked
 in simulation.
 
-Soft reset is quiesce-and-drain at the integrated top. A request received while
-an asynchronous payload transaction is active is remembered, new core work is
-not reset destructively, and reset is applied only after payload transfer,
-all AXI B responses, the tagged completion, and source-side release finish.
-The resulting idle reset event is then synchronized into `mem_clk`. The bridge
-asserts if a soft reset reaches either side while its transaction state is busy.
+Soft reset is a bounded quiesce-and-drain protocol at the integrated top. The
+first request is latched and repeated writes are coalesced. Quiesce blocks new
+RX headers, TX channel or descriptor launches, and new UFC work while allowing
+an already accepted RX frame and already started TX, CQ, UFC, and AXI work to
+finish. Committed fixed-ingress and shared-pool frames continue to drain.
+
+The drain decision covers the RX and writer state machines, registered ingress
+and CQ occupancy reductions, all three CDC channels, the memory backend, AXI
+outstanding work, CQ reservations, the TX scheduler, and UFC output. Idle must
+be observed for two consecutive `aclk` cycles. The top then sends one reset
+request toggle to `mem_clk`; the memory side acknowledges it only while its
+bridge, serializer, and writer are idle. The acknowledged event commits the
+local synchronous resets in both domains and releases quiesce.
+
+Completion is bounded when both clocks continue running and every external AXI,
+CQ, and stream sink eventually accepts pending work. A stopped clock or
+permanent downstream backpressure intentionally leaves reset pending rather
+than discarding an in-flight transaction.
+
+`DEBUG_STATE[2:5]` exposes pending, quiescing, drain-done, and CDC protocol-error
+state. A CDC protocol error also sets `GLOBAL_STATUS[13]`, increments the global
+error counter once per rising event, and raises the existing AXI-error IRQ. The
+CQE format is unchanged.
 
 ## Technology Binding
 
@@ -85,15 +102,44 @@ The aggregate modeled storage is 18,948 bits. Design Compiler includes those
 generic arrays as standard-cell storage, so its area is not comparable to a
 macro-backed ASIC implementation or to the writer-only same-clock result.
 
+### Gray-Pointer Constraints
+
+The project explicitly constrains both Gray-pointer directions in each generic
+command and completion FIFO. For a 5.000 ns/5.000 ns run this produces four
+`set_max_delay -datapath_only 5.000` constraints and four `set_bus_skew 5.000`
+constraints, covering 12 source registers and 12 first-stage synchronizer
+registers. The limit is derived from `min(aclk_period, mem_clk_period)` rather
+than being fixed to 5 ns. The script fails closed if a FIFO, bus, source, or
+destination register is missing, and it verifies the routed exception and bus
+skew reports. XPM payload-FIFO crossings are deliberately excluded because
+they retain Xilinx-owned structures and constraints.
+
+Vivado does not use a blanket asynchronous clock group for these profiles:
+that exception would override the project max-delay constraints and trigger
+`TIMING-24`. Instead, the flow discovers actual non-Gray crossing endpoints
+and applies point-to-point false paths to 73 `aclk -> mem_clk` and 12
+`mem_clk -> aclk` endpoints while protecting 12 project and 56 XPM Gray
+synchronizer destinations. The methodology gate requires zero `TIMING-24`,
+`XDCB-1`, and `XDCV-1` findings. Async64 retains three documented `PDRC-190`
+synchronizer-placement warnings; async512 retains none.
+
 ## Verification And Measured Results
 
-Each asynchronous profile schedules ten frozen-core tests plus three backend
-tests. The common bridge test covers 450 frames, six clock profiles, clock
-stops, FIFO full/empty pressure, tag accounting, and 924,873 bytes. Each
-backend test covers 2,000 random frames plus directed lengths, 4 KiB splits,
-AW/W/B backpressure, response errors, reset/restart, and byte-accurate memory
-comparison. The integration test covers 18 directed lengths, 256 mixed source
-frames, and active soft-reset drain.
+Each asynchronous profile schedules ten frozen-core tests plus three RX-backend
+test commands. The integration command emits a second exact quiesce marker, so
+the runner requires four RX markers and fourteen markers in total. The common
+bridge test covers 450 frames, six clock profiles, clock stops, FIFO full/empty
+pressure, tag accounting, memory-domain protocol-error synchronization, and
+924,873 bytes. Each backend test covers 2,000 random frames plus directed
+lengths, 4 KiB splits, AW/W/B backpressure, response errors, reset/restart, and
+byte-accurate memory comparison. The integration test covers 18 directed
+lengths, 256 mixed source frames, continuous RX quiesce, fixed/shared queue
+drain, payload and CQ AW/W/B stalls, both clock stops, repeated reset requests,
+UFC drain, and a header already accepted into the elastic FIFO while the parser
+is paused by release maintenance.
+TX launch suppression, active-TX drain, and pending-descriptor suppression are
+checked by the frozen-core TX pipeline test; the integration marker itself
+covers the RX/CQ/clock/UFC scenarios listed above.
 
 The ideal 1 MiB runs measured:
 
@@ -109,22 +155,24 @@ Vivado 2018.3 routed `frame_dma_rx_top` on `xc7z100ffg900-2` with 5.000 ns
 
 | Profile | WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Same-clock 512 | +0.029 ns | 0 | +0.052 ns | 0 | 38,595 | 42,492 | 44 | 3 | 0 |
-| Async64 | +0.028 ns | 0 | +0.069 ns | 0 | 39,471 | 43,586 | 52 | 4 | 0 |
-| Async512 | +0.076 ns | 0 | +0.051 ns | 0 | 39,155 | 43,306 | 52 | 4 | 0 |
+| Same-clock 512 | +0.089 ns | 0 | +0.069 ns | 0 | 38,045 | 42,514 | 44 | 3 | 0 |
+| Async64 | +0.053 ns | 0 | +0.047 ns | 0 | 40,413 | 43,548 | 52 | 4 | 0 |
+| Async512 | +0.053 ns | 0 | +0.015 ns | 0 | 39,995 | 43,327 | 52 | 4 | 0 |
 
 The same-clock netlist audit found zero RX payload CDC cells. Both asynchronous
 profiles have no unconstrained internal endpoint or Critical CDC entry, and all
-reported Gray-pointer bus-skew constraints are met. Vivado still reports
-structural CDC warnings for recognized Gray buses and clock-enabled FIFO data;
-these are documented structures, not a blanket CDC signoff waiver.
+reported Gray-pointer bus-skew constraints are met. Three setup/hold-closed
+routed strategies were retained for each profile. Vivado still reports
+structural CDC warnings for recognized Gray buses and clock-enabled FIFO data,
+plus the async64 placement warnings noted above; these are documented
+structures, not a blanket CDC signoff waiver.
 
 Design Compiler OOC at 5.000 ns closed both asynchronous profiles:
 
 | Profile | Source WNS | Memory WNS | Hold WNS | Cell area | Registers | FIFO model |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Async64 | +2.933 ns | +1.686 ns | +0.039 ns | 171,658.05 | 20,554 | generic arrays included |
-| Async512 | +2.963 ns | +1.393 ns | +0.039 ns | 170,311.29 | 20,457 | generic arrays included |
+| Async64 | +2.953 ns | +1.686 ns | +0.039 ns | 171,845.31 | 20,560 | generic arrays included |
+| Async512 | +2.967 ns | +1.393 ns | +0.039 ns | 170,407.31 | 20,463 | generic arrays included |
 
 This is frontend OOC synthesis, not physical implementation, extracted STA,
 SRAM-macro characterization, or ASIC signoff.

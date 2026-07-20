@@ -2,7 +2,7 @@ kind: asic_frontend_ooc_summary
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_dc_ooc_summary
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: 019612c4a5911aa6cc9e93f1f310f43b031b94e0
+source_ref: 338b392be748a62bb6a5ce8037822b6112318245
 status: verified
 tool: Design Compiler O-2018.06-SP1
 top: dma_rx_payload_async_ooc_top
@@ -15,39 +15,40 @@ constraints:
   output_delay_ns: 0.500
 results:
   async64:
-    setup_wns_ns: {source: 2.93339, memory: 1.68611}
+    setup_wns_ns: {source: 2.95271, memory: 1.68636}
     hold_wns_ns: {source: 0.0394817, memory: 0.0394817}
     setup_tns_ns: 0.0
     setup_violating_paths: 0
-    total_cell_area: 171658.046
-    leaf_cell_count: 85383
-    register_count: 20554
+    total_cell_area: 171845.310
+    leaf_cell_count: 85635
+    register_count: 20560
     latch_count: 0
-    synchronizer_cell_count: 56
+    synchronizer_cell_count: 60
     reports:
-      summary_sha256: bbd5b63624a6e6011aac8264fc511fea54f1403535534d66bfa7dfe51013155d
-      qor_sha256: 9d4b9523c764ffafda15d5fab5fcbef2f165110e9cee45b766690c009a8c4201
-      setup_timing_sha256: 840e2cbb282d20ec6800addd66142d9bb4bd1f5abe7959754070a3e2271f6969
-      constraints_sha256: a13ec4e59d55f0eccef309fbbc3c2c8f314a06eefb5707b17eeac930e4a947fe
+      summary_sha256: 4b81da94398fd3ff658cf2b262350e322ace247086da33172759b099422c2abd
+      qor_sha256: 5b5ab93acef98abf66244752d4c15dad13f83bd1e8df8f077cc9cf0fa4d27a5a
+      setup_timing_sha256: 441c7214df2e1103c024631af5f03673749fee0538453275ab70ce0e220cd6ba
+      constraints_sha256: ad7b0533710a2b4f8c96b1e4271d63c8ee37a5e6c2fd353af419d6ecf946f7ab
   async512:
-    setup_wns_ns: {source: 2.96252, memory: 1.39268}
+    setup_wns_ns: {source: 2.96693, memory: 1.39268}
     hold_wns_ns: {source: 0.0394817, memory: 0.0394817}
     setup_tns_ns: 0.0
     setup_violating_paths: 0
-    total_cell_area: 170311.288
-    leaf_cell_count: 84730
-    register_count: 20457
+    total_cell_area: 170407.314
+    leaf_cell_count: 84835
+    register_count: 20463
     latch_count: 0
-    synchronizer_cell_count: 56
+    synchronizer_cell_count: 60
     reports:
-      summary_sha256: 2d040e05266520fd0d0dcf1e758a449a2c9438a14928b367e1607de26a2c1230
-      qor_sha256: 763251b3bb0b0ba1bf0bbb23272416538635d7fd04db3a96eb9878c42dc18c9f
-      setup_timing_sha256: 17f29c57329d8cc1d946051aa35723096e99c74344f992c1f5926a9e2572cdf6
-      constraints_sha256: 5c924235ec2ac0138f93ec398a4d5019492b2cb7dd56511b3ba6c5dfd56990a7
+      summary_sha256: 3b81d200e3c801efb4860c825888a91cf406a455daffcdb768fbfbe05525075d
+      qor_sha256: f93ad381fb7068453a511bd1234e487cc87f60aaa7864ba43dc53cc003777f04
+      setup_timing_sha256: a2d4c9a9a83c682dc2d55ffc2592115a91033a2a9e48c7623239878d6ccd17fa
+      constraints_sha256: be36085df9a49ac235b6c7d011eb53f265bcdad7b81124e5543380656d243aaf
 fifo_storage:
   bits: 18948
   model: generic_rtl_array
   area_included: true
   macro_area_included: false
-constraint_note: The constraints report includes the library default maximum-leakage-power pseudo-violation; QOR reports zero setup TNS and zero setup violating paths.
+source_closure_note: The later AXI-Lite debug-mirror and Vivado constraint commits are outside dma_rx_payload_writer_dc_ooc.f; every DC OOC source blob at the FPGA evidence commit is identical to source_ref.
+constraint_note: The constraints report includes the library default maximum-leakage-power pseudo-violation; QOR reports zero setup TNS and zero setup violating paths for both clock groups.
 caveat: Generic arrays synthesize into standard-cell storage. Area is not comparable to a macro-backed implementation or writer-only OOC and is not routed ASIC timing, physical design, extracted STA, or signoff.

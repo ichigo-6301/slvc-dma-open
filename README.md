@@ -110,8 +110,8 @@ destination port 映射为 `SHDR64.flow_id`，并继续由未修改的 DMA chann
 payload entry 和一个 tagged completion；AW/W/B 全部位于 `mem_clk`。冻结 wrapper、
 legacy 64-bit path、SHDR64/admission、CQ、TX 与 descriptor 均保持不变。
 
-同频 profile 的综合网表没有 RX payload CDC cell。两个异步 profile 均通过 13 项
-ModelSim/Questa regression、两个时钟的 200 MHz routed OOC，以及 5 ns Design
+同频 profile 的综合网表没有 RX payload CDC cell。两个异步 profile 均通过 13 条
+command、14 个 marker 的 ModelSim/Questa regression、两个时钟的 200 MHz routed OOC，以及 5 ns Design
 Compiler OOC。这些是开发分支 evidence，不进入冻结 RC1 evidence set。详见
 [同频后端指南](docs/zh-CN/rx_payload_512_backend.md)和
 [双时钟后端指南](docs/zh-CN/rx_payload_cdc_backends.md)。

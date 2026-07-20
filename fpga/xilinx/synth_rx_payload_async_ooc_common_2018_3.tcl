@@ -82,9 +82,6 @@ create_clock -name aclk -period $ACLK_PERIOD [get_ports aclk]
 create_clock -name mem_clk -period $MEM_CLK_PERIOD [get_ports mem_clk]
 create_clock -name aclk_io_launch -period $ACLK_PERIOD
 create_clock -name mem_clk_io_launch -period $MEM_CLK_PERIOD
-set_clock_groups -asynchronous \
-    -group [get_clocks {aclk aclk_io_launch}] \
-    -group [get_clocks {mem_clk mem_clk_io_launch}]
 set gray_constraint_limit [expr {min($ACLK_PERIOD, $MEM_CLK_PERIOD)}]
 set gray_constraint_manifest [file join $report_dir rx_payload_${ASYNC_PROFILE}_gray_constraints.yaml]
 source [file join $DMA_ROOT fpga xilinx constrain_rx_payload_gray_buses_2018_3.tcl]
@@ -152,5 +149,8 @@ dma_finalize_rx_payload_gray_manifest \
 report_high_fanout_nets -timing -load_types -max_nets 100 \
     -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_high_fanout.rpt]
 report_drc -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_drc.rpt]
-report_methodology -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_methodology.rpt]
+set methodology_report [file join $report_dir rx_payload_${ASYNC_PROFILE}_methodology.rpt]
+report_methodology -file $methodology_report
+dma_finalize_rx_payload_gray_methodology \
+    $gray_constraint_manifest $methodology_report
 puts "RX payload $ASYNC_PROFILE OOC implementation complete. Reports: $report_dir"

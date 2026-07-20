@@ -51,6 +51,40 @@ proc dma_gray_source_cells {destination_cells bus_name} {
     return [lsort -unique $result]
 }
 
+proc dma_cross_clock_endpoint_pins {
+    source_clock destination_clock excluded_cells
+} {
+    set excluded_names {}
+    foreach cell $excluded_cells {
+        lappend excluded_names [get_property NAME $cell]
+    }
+
+    set paths [get_timing_paths -quiet \
+        -from [get_clocks $source_clock] \
+        -to [get_clocks $destination_clock] \
+        -max_paths 100000 -nworst 1]
+    if {[llength $paths] == 0} {
+        error "No timed paths matched $source_clock->$destination_clock"
+    }
+
+    set result {}
+    foreach path $paths {
+        set endpoint_pin [get_pins -quiet [get_property ENDPOINT_PIN $path]]
+        if {[llength $endpoint_pin] != 1} {
+            error "$source_clock->$destination_clock: expected one endpoint pin"
+        }
+        set endpoint_cell [get_cells -of_objects $endpoint_pin]
+        if {[llength $endpoint_cell] != 1} {
+            error "$source_clock->$destination_clock: expected one endpoint cell"
+        }
+        if {[lsearch -exact $excluded_names \
+                [get_property NAME $endpoint_cell]] < 0} {
+            lappend result $endpoint_pin
+        }
+    }
+    return [lsort -unique $result]
+}
+
 proc dma_constrain_rx_payload_gray_buses {limit_ns manifest_path profile_name} {
     if {$limit_ns <= 0.0} {
         error "Gray bus constraint limit must be positive, got $limit_ns"
@@ -65,6 +99,7 @@ proc dma_constrain_rx_payload_gray_buses {limit_ns manifest_path profile_name} {
     set constrained_bus_count 0
     set source_register_count 0
     set destination_register_count 0
+    set project_gray_destinations {}
 
     foreach fifo $generic_fifos {
         set fifo_name [get_property NAME $fifo]
@@ -101,10 +136,36 @@ proc dma_constrain_rx_payload_gray_buses {limit_ns manifest_path profile_name} {
             incr constrained_bus_count
             incr source_register_count [llength $sources]
             incr destination_register_count [llength $destinations]
+            lappend project_gray_destinations {*}$destinations
             lappend records [list $fifo_name $direction_name \
                                   [llength $sources] [llength $destinations]]
         }
     }
+
+    set project_gray_destinations [lsort -unique $project_gray_destinations]
+    set xpm_gray_destinations [get_cells -quiet -hier -filter {
+        NAME =~ *dest_graysync_ff_reg*
+    }]
+    if {[llength $xpm_gray_destinations] == 0} {
+        error "No XPM Gray synchronizer destinations matched"
+    }
+    set protected_gray_destinations [lsort -unique [concat \
+        $project_gray_destinations $xpm_gray_destinations]]
+
+    # Keep Gray source-to-sync1 paths under their max-delay constraints. Cut
+    # only actual non-Gray crossing endpoints so broad clock-group or
+    # all-register exceptions cannot override those bounds or replicate into
+    # unrelated single-domain logic.
+    set aclk_to_mem_false_endpoints [dma_cross_clock_endpoint_pins \
+        aclk mem_clk $protected_gray_destinations]
+    set mem_to_aclk_false_endpoints [dma_cross_clock_endpoint_pins \
+        mem_clk aclk $protected_gray_destinations]
+    if {[llength $aclk_to_mem_false_endpoints] == 0 ||
+        [llength $mem_to_aclk_false_endpoints] == 0} {
+        error "Point-to-point CDC false-path endpoint set is empty"
+    }
+    set_false_path -from [get_clocks aclk] -to $aclk_to_mem_false_endpoints
+    set_false_path -from [get_clocks mem_clk] -to $mem_to_aclk_false_endpoints
 
     set manifest [open $manifest_path w]
     puts $manifest "schema_version: 1"
@@ -117,9 +178,17 @@ proc dma_constrain_rx_payload_gray_buses {limit_ns manifest_path profile_name} {
     puts $manifest "set_max_delay_constraint_count: $constrained_bus_count"
     puts $manifest "set_bus_skew_constraint_count: $constrained_bus_count"
     puts $manifest "unconstrained_gray_bus_count: 0"
+    puts $manifest "clock_crossing_constraint_mode: point_to_point_false_paths"
+    puts $manifest "project_gray_destination_register_count: [llength $project_gray_destinations]"
+    puts $manifest "xpm_gray_destination_register_count: [llength $xpm_gray_destinations]"
+    puts $manifest "protected_gray_destination_register_count: [llength $protected_gray_destinations]"
+    puts $manifest "aclk_to_mem_false_path_endpoint_count: [llength $aclk_to_mem_false_endpoints]"
+    puts $manifest "mem_to_aclk_false_path_endpoint_count: [llength $mem_to_aclk_false_endpoints]"
     puts $manifest "reported_max_delay_constraint_count: pending_route"
     puts $manifest "reported_bus_skew_constraint_count: pending_route"
     puts $manifest "bus_skew_violation_count: pending_route"
+    puts $manifest "overridden_max_delay_warning_count: pending_methodology"
+    puts $manifest "suboptimal_sync_chain_warning_count: pending_methodology"
     puts $manifest "buses:"
     foreach record $records {
         lassign $record fifo_name direction_name source_count destination_count
@@ -193,4 +262,36 @@ proc dma_finalize_rx_payload_gray_manifest {
         error "Gray bus-skew report contains $violation_count violation(s)"
     }
     puts "PASS tb_rtl_rx_payload_gray_constraint_manifest violations=0"
+}
+
+proc dma_finalize_rx_payload_gray_methodology {manifest_path methodology_report} {
+    if {![file exists $methodology_report] || [file size $methodology_report] == 0} {
+        error "Gray methodology report is missing or empty: $methodology_report"
+    }
+    set report [open $methodology_report r]
+    set report_text [read $report]
+    close $report
+
+    set overridden_count [regexp -all -line \
+        {^TIMING-24#[0-9]+ Warning} $report_text]
+    set placement_warning_count [regexp -all -line \
+        {^PDRC-190#[0-9]+ Warning} $report_text]
+
+    set manifest [open $manifest_path r]
+    set manifest_text [read $manifest]
+    close $manifest
+    regsub {overridden_max_delay_warning_count: pending_methodology} \
+        $manifest_text \
+        "overridden_max_delay_warning_count: $overridden_count" manifest_text
+    regsub {suboptimal_sync_chain_warning_count: pending_methodology} \
+        $manifest_text \
+        "suboptimal_sync_chain_warning_count: $placement_warning_count" manifest_text
+    set manifest [open $manifest_path w]
+    puts -nonewline $manifest $manifest_text
+    close $manifest
+
+    if {$overridden_count != 0} {
+        error "Methodology report contains $overridden_count overridden max-delay warning(s)"
+    }
+    puts "PASS tb_rtl_rx_payload_gray_methodology overridden_max_delay=0"
 }

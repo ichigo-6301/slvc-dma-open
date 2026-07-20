@@ -2,9 +2,10 @@ kind: asic_frontend_ooc_summary
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_dc_ooc_summary
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: 338b392be748a62bb6a5ce8037822b6112318245
+source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
 status: verified
 tool: Design Compiler O-2018.06-SP1
+library_profile: Nangate45 typical standard-cell DB
 top: dma_rx_payload_async_ooc_top
 clock_period_ns: {source: 5.000, memory: 5.000}
 clock_groups: asynchronous
@@ -15,40 +16,44 @@ constraints:
   output_delay_ns: 0.500
 results:
   async64:
-    setup_wns_ns: {source: 2.95271, memory: 1.68636}
+    setup_wns_ns: {source: 2.95840, memory: 1.68604}
     hold_wns_ns: {source: 0.0394817, memory: 0.0394817}
     setup_tns_ns: 0.0
     setup_violating_paths: 0
-    total_cell_area: 171845.310
-    leaf_cell_count: 85635
+    total_cell_area: 171707.522
+    leaf_cell_count: 85403
     register_count: 20560
     latch_count: 0
     synchronizer_cell_count: 60
     reports:
-      summary_sha256: 4b81da94398fd3ff658cf2b262350e322ace247086da33172759b099422c2abd
-      qor_sha256: 5b5ab93acef98abf66244752d4c15dad13f83bd1e8df8f077cc9cf0fa4d27a5a
-      setup_timing_sha256: 441c7214df2e1103c024631af5f03673749fee0538453275ab70ce0e220cd6ba
-      constraints_sha256: ad7b0533710a2b4f8c96b1e4271d63c8ee37a5e6c2fd353af419d6ecf946f7ab
+      summary_sha256: da7e1c81d22c27012444ac67642523a1b17d29a53e8270e7fe8d777fd4bec8e8
+      qor_sha256: e29a3a9017e3a63bc7ca303419d955f9fc8a02e8c76cdff09be3eb9f795f456f
+      setup_timing_sha256: ff032ef64beae140dda4a99c07ae84d3cbdd544610d7b8db9425baf3caec2b0e
+      constraints_sha256: a1bd273773523b857481b0edc1314a98abd56114eff252cacaff5f898a5c0054
   async512:
-    setup_wns_ns: {source: 2.96693, memory: 1.39268}
+    setup_wns_ns: {source: 3.01077, memory: 1.39268}
     hold_wns_ns: {source: 0.0394817, memory: 0.0394817}
     setup_tns_ns: 0.0
     setup_violating_paths: 0
-    total_cell_area: 170407.314
-    leaf_cell_count: 84835
+    total_cell_area: 170410.506
+    leaf_cell_count: 84837
     register_count: 20463
     latch_count: 0
     synchronizer_cell_count: 60
     reports:
-      summary_sha256: 3b81d200e3c801efb4860c825888a91cf406a455daffcdb768fbfbe05525075d
-      qor_sha256: f93ad381fb7068453a511bd1234e487cc87f60aaa7864ba43dc53cc003777f04
-      setup_timing_sha256: a2d4c9a9a83c682dc2d55ffc2592115a91033a2a9e48c7623239878d6ccd17fa
-      constraints_sha256: be36085df9a49ac235b6c7d011eb53f265bcdad7b81124e5543380656d243aaf
+      summary_sha256: f5e51e9293d88445fc3f82cfbcebe9242a1dba171ecdb0066bea832cc01278bd
+      qor_sha256: 306b1b23f4a395fbb34fc8c04fff425f7f3c85579eaae269a0fa6fec98e38eec
+      setup_timing_sha256: a02db1964a71f87e268e2d6cf52722c548017f6c27f8da99dad79c7f6e188356
+      constraints_sha256: 2703dcd74b4e0c253d7d47d692de17eb86e1d08c3042e48bb23093f4ca0b7884
 fifo_storage:
   bits: 18948
   model: generic_rtl_array
   area_included: true
   macro_area_included: false
-source_closure_note: The later AXI-Lite debug-mirror and Vivado constraint commits are outside dma_rx_payload_writer_dc_ooc.f; every DC OOC source blob at the FPGA evidence commit is identical to source_ref.
+resource_regression:
+  baseline_ref: 79a536621706c5047582a7f4de9bdc540403d691
+  async64: {area_delta: 49.472, area_delta_percent: 0.0288, register_delta: 6, register_delta_percent: 0.0292, soft_targets_met: true}
+  async512: {area_delta: 99.216, area_delta_percent: 0.0583, register_delta: 6, register_delta_percent: 0.0293, soft_targets_met: true}
+source_closure_note: The later checkpoint-reroute and evidence commits are outside dma_rx_payload_writer_dc_ooc.f; DC results are bound to the exact RTL source_ref.
 constraint_note: The constraints report includes the library default maximum-leakage-power pseudo-violation; QOR reports zero setup TNS and zero setup violating paths for both clock groups.
 caveat: Generic arrays synthesize into standard-cell storage. Area is not comparable to a macro-backed implementation or writer-only OOC and is not routed ASIC timing, physical design, extracted STA, or signoff.

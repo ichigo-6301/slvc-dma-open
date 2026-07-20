@@ -2,7 +2,7 @@ kind: cdc_reset_contract
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_contract
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: 971feb4283d3c76556e737d2e8ec96f36e700a34
+source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
 status: verified
 same_clock_bypass:
   profile: same_clock_512
@@ -58,6 +58,14 @@ software_visibility:
   cdc_error_counter: global_error_counter_once_per_rising_event
   cdc_error_irq: existing_axi_error_irq
   cqe_format_changed: false
+protocol_error_detection:
+  source_payload_window: valid is legal only after command acceptance and through the accepted TLAST beat
+  payload_without_command: valid-attempt sticky detection
+  payload_after_tlast: valid-attempt sticky detection
+  completion_without_command: memory-domain valid-attempt sticky detection
+  duplicate_completion: memory-domain valid-attempt sticky detection
+  legal_active_frame_backpressure: valid may remain asserted and stable without error
+  directed_cases: 5
 gray_bus_constraints:
   scope: project_owned_generic_command_and_completion_fifos
   constrained_bus_count: 4
@@ -78,6 +86,8 @@ assertions_and_checks:
   - bridge reset request requires idle source state
   - memory reset acknowledgement requires idle bridge serializer and writer
   - completion tag must match active command
+  - payload valid outside the active command-to-TLAST window raises a sticky error without entering the FIFO
+  - completion valid without an active command raises a sticky error without entering the FIFO
   - one command maps to one non-interleaved payload frame and one completion
   - FIFO overflow and underflow are forbidden
   - backpressured valid and data remain stable

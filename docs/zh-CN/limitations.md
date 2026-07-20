@@ -22,6 +22,9 @@
 - Async64 routed OOC 保留 3 个 `PDRC-190` synchronizer-placement warning；两个
   异步 OOC profile 都保留 integration top 的 BRAM/reset DRC warning。这些 warning
   被明确披露，不能作为 signoff waiver。
+- Async64 在 4 条实测 routing strategy 中有 2 条达到 200 MHz，通过裕量仅为
+  `+0.004 ns` 和 `+0.003 ns`；另两条分别失败 `0.019 ns` 和 `0.004 ns`。该敏感性
+  被保留为 evidence，不通过只筛选有利 run 隐藏。
 - RX backend Vivado 结果是 OOC，Design Compiler 结果是包含 generic FIFO array 的
   frontend OOC synthesis；它们不是完整系统 FPGA、板级 DDR、routed ASIC、SRAM
   macro、physical design 或 signoff evidence。

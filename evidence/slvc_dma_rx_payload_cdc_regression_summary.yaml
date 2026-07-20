@@ -2,26 +2,26 @@ kind: regression_summary
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_regression_summary
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: e97728092b5814d65338e254c8c46af57612bff6
+source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
 status: verified
 scope: optional same-clock and dual-clock RX payload memory backends
 hosts:
   - host: Windows
     tool: ModelSim SE-64 2020.4
     results:
-      default_adapter: {required_markers: 14, result: pass, log_sha256: 1d12fdcc2105845c3503cdfac46265bf86992dbe0ead0a2a5d31cb7febfe7611}
-      same_clock_512: {required_markers: 12, result: pass, log_sha256: 37a2908b9c90702268ba66bdb5cfa0af8ad24d894331472636d2ad87ec2bb035}
-      async64: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 60f0f8fefb35bc5d9bcad1a626ce12d8142af53ea5d0160a16266928440f970d}
-      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 2e9172429029ee81d4cda1381a0a5b223fc008deacdd008e7dcaf6894045c115}
+      default_adapter: {required_markers: 14, result: pass, log_sha256: 263bd00e9b39afd5400c824ba714b5df84eaaef39c3efc595ef34e8761e998d2}
+      same_clock_512: {required_markers: 12, result: pass, log_sha256: f0434288d873beb97860b45014bb23ae142a846967bc58e15a474d2e66c1464b}
+      async64: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 15c57689d1682feb65039cb5a51f9d06c22d1faeff2c706c8b7e0311835c0f87}
+      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 3abdfa85fbcddc303e371db61bb55a34bfa8bd1e63290ffbe7ee28e850f991fb}
   - host: IC_EDA_FULL Linux
     tool: Questa Sim-64 10.7c
     results:
-      default_adapter: {required_markers: 14, result: pass, log_sha256: 5493551e8b9c0fb25229ef8e28a736e8af7f5b64ae07d07a780e83bd42cba498}
-      same_clock_512: {required_markers: 12, result: pass, log_sha256: e20e367f7d71ee1c0c3e9ddc6f50a248d1409ec4f04151aa356bb1fbae9b2eb0}
-      async64: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 06fb124440fe57b667684ec5ac67cdf97a68e94f4f2933101bbd797e47131592}
-      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 48829fe298ded6c982dca1b00009fe0f6c05902174a7d6c55cfd7cb8e3fd2615}
+      default_adapter: {required_markers: 14, result: pass, log_sha256: 3a89139cb76935978b81e7d1ea4913137eb6490395c92c23d24dfd4c0dfdfa54}
+      same_clock_512: {required_markers: 12, result: pass, log_sha256: 1aa8c0f2f358972af5372a946912c5de06939d0fd0425e361ec596a1150c7476}
+      async64: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 4cffd527f4edc9c4ae3a564b2a76aac8b3ed4432148cc5ee8bbd3aa9e8c5da91}
+      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: eabc6c87029c08228a92a4fe01dfec0d136a16d9c143ccbccb00afc3e328c7c8}
 required_new_markers:
-  - PASS tb_rtl_rx_payload_cdc_bridge frames=450 bytes=924873 source_stalls=321 fifo_empty=169 peak_payload_level=32 clock_profiles=6 clock_stops=2
+  - PASS tb_rtl_rx_payload_cdc_bridge frames=452 bytes=925001 source_stalls=327 fifo_empty=169 peak_payload_level=32 clock_profiles=6 clock_stops=2 protocol_error_cases=5
   - PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2
   - PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1
   - PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2
@@ -36,12 +36,25 @@ clock_profiles:
   - non_integer_clock_ratio_with_random_phase
 clock_stop_cases: [source_clock_stop, memory_clock_stop]
 stress:
-  bridge_frames: 450
-  bridge_bytes: 924873
+  bridge_frames: 452
+  bridge_bytes: 925001
+  bridge_random_frames: 400
   backend_random_frames_per_profile: 2000
   integration_mixed_frames_per_profile: 256
   payload_fifo_peak_entries: 32
+protocol_error_reachability:
+  directed_case_count: 5
+  cases:
+    - payload_without_command
+    - payload_after_tlast
+    - completion_without_command
+    - duplicate_completion
+    - memory_backend_error
+  valid_attempt_detection: true
+  legal_active_frame_backpressure_false_positive_count: 0
+  software_visibility: global_status_sticky_global_error_counter_axi_error_irq
 throughput_ideal_memory:
+  same_clock_512: {bytes: 1048576, bytes_per_cycle: 64, w_utilization_percent: 100, peak_outstanding: 4}
   async64: {bytes: 1048576, bytes_per_mem_cycle: 8, w_utilization_percent: 100, peak_outstanding: 4}
   async512: {bytes: 1048576, bytes_per_mem_cycle: 64, w_utilization_percent: 100, peak_outstanding: 4}
 checks:
@@ -53,7 +66,9 @@ checks:
   - 4 KiB burst splitting and tail strobe generation
   - bounded soft-reset quiesce and drain under continuous RX traffic
   - elastic-FIFO buffered header and payload drain
-  - active-TX drain and pending channel descriptor launch suppression
+  - active-TX drain followed by exactly one local soft reset
+  - sustained pending-descriptor suppression and clean TX restart
+  - attempt-level source and memory protocol-error reachability
   - memory-domain protocol-error synchronization and software-visible sticky counter IRQ mapping
-source_closure_note: The later FPGA constraint commit changes no RTL, testbench, or runner source; the regression source set is identical to source_ref.
+source_closure_note: The later checkpoint-reroute and evidence commits change no RTL, testbench, or simulation-runner behavior; regression source remains exactly source_ref.
 caveat: Directed and deterministic random simulation is not functional coverage closure, formal proof, board DDR measurement, or complete CDC/RDC signoff.

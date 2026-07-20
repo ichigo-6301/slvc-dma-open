@@ -51,22 +51,36 @@ quiesce marker, so each async profile requires 14 markers from 13 commands.
 
 | Profile | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Async64 | +0.053 ns | +0.047 ns | 40,413 | 43,548 | 52 | 4 | 0 |
-| Async512 | +0.053 ns | +0.015 ns | 39,995 | 43,327 | 52 | 4 | 0 |
+| Async64 | +0.004 ns | +0.054 ns | 40,402 | 43,551 | 52 | 4 | 0 |
+| Async512 | +0.060 ns | +0.058 ns | 40,020 | 43,316 | 52 | 4 | 0 |
 
 Both Vivado 2018.3 routed runs use 5.000 ns `aclk` and `mem_clk`, have zero
 TNS/THS, no unconstrained internal endpoint, no Critical CDC entry, and met
-their Gray-pointer bus-skew checks. Three setup/hold-closed routed strategies
-were retained per profile: async64 WNS `+0.053/+0.057/+0.082 ns` and async512
-WNS `+0.053/+0.074/+0.028 ns`. The Vivado flow uses point-to-point exceptions
+their Gray-pointer bus-skew checks. Async512 retained three setup/hold-closed
+strategies with WNS `+0.060/+0.084/+0.081 ns`. Async64 passed Explore and
+NoTimingRelaxation with WNS `+0.004/+0.003 ns`; two additional sensitivity
+reroutes missed setup by `-0.019 ns` and `-0.004 ns` and are not presented as
+passing results. The Vivado flow uses point-to-point exceptions
 for actual non-Gray crossings; it does not use a blanket asynchronous clock
 group that would override the four project Gray max-delay constraints. The
 ideal-memory tests sustained 8 and 64 byte/cycle respectively at 100%
-W-channel utilization.
+W-channel utilization. The same-clock 512 test independently sustained
+64 byte/cycle at 100% W-channel utilization and four peak outstanding bursts.
 
-Design Compiler 5.000 ns OOC reported `+2.953/+1.686 ns` source/memory setup
-WNS for async64 and `+2.967/+1.393 ns` for async512. Generic FIFO arrays are
-included in their 171,845.31 and 170,407.31 cell-area totals. These totals are
+The selected worst setup paths belong to the same-clock reset distribution,
+the async64 memory-writer issue/address planner, and the async512 RX/flow-control
+resume calculation. Neither quiesce nor CDC protocol-error detection appears in
+those selected critical paths. Relative to the `79a5366` resource baseline,
+async64 and async512 LUT use increased by 2.36% and 2.21%, exceeding the 2%
+soft target; BRAM and DSP use did not increase. The final attempt-level error
+checks account for only 2 and 6 bridge-hierarchy LUTs respectively versus the
+preceding routed reports.
+
+Design Compiler 5.000 ns OOC reported `+2.958/+1.686 ns` source/memory setup
+WNS for async64 and `+3.011/+1.393 ns` for async512. Generic FIFO arrays are
+included in their 171,707.52 and 170,410.51 cell-area totals. Relative to the
+development baseline, area increased by 0.029% and 0.058%, and register count
+increased by 0.029% in each profile. These totals are
 not macro-backed ASIC area and are not comparable to writer-only synthesis.
 See the [dual-clock backend guide](rx_payload_cdc_backends.md).
 

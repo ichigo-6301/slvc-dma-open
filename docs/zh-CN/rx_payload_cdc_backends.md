@@ -77,6 +77,13 @@ toggle；memory 侧只在 bridge、serializer 和 writer 均 idle 时返回 ackn
 CDC protocol error 还会置位 `GLOBAL_STATUS[13]`、对每个上升事件将 global error
 counter 增加一次，并触发现有 AXI-error IRQ；CQE 格式不变。
 
+protocol error 在 valid 尝试边界检测，而不是只在 valid/ready 握手后检测。payload
+位于已接受 command 到 TLAST 之外、或 memory completion 没有 active command 时，
+ready 会被刻意拉低，因此 fire 条件无法观察违规。active frame 在合法 backpressure
+下保持 payload valid/data 稳定不会报错。定向测试覆盖 payload-without-command、
+payload-after-TLAST、completion-without-command、duplicate completion 和
+memory-backend error。
+
 ## 技术映射
 
 `dma_async_fifo_tech` 是统一边界。Vivado OOC 对 32-entry payload FIFO 选择 XPM，
@@ -103,25 +110,35 @@ false path，同时保护 12 个项目 Gray 和 56 个 XPM Gray synchronizer des
 methodology gate 要求 `TIMING-24`、`XDCB-1` 和 `XDCV-1` 全部为 0。Async64 保留
 3 个已记录的 `PDRC-190` synchronizer-placement warning，Async512 为 0。
 
+每个异步 profile 的双向 `report_cdc` 将 3/5 个 `CDC-3` 分类为合法两级单 bit
+toggle/status/reset 或单 bit Gray synchronizer；双向各 2 个 `CDC-6` 是受项目
+max-delay/bus-skew 约束覆盖的 4 条 Gray-pointer bus；双向 72/9 个 `CDC-15`
+是只在同步 pointer ownership 后采样的 generic FIFO data word。后者属于预期的
+clock-enabled FIFO data 结构，但仍保留为非 signoff caveat。XPM payload FIFO
+保留 Xilinx 自有 pointer/reset 结构与约束，项目脚本不会重复约束。Critical CDC
+为 0，但该分类不等价于完整 CDC/RDC waiver package。
+
 ## 验证与测量结果
 
 每个异步 profile 调度 10 项 frozen-core test 和 3 条 RX backend test command。
 integration command 会输出第二个精确 quiesce marker，因此 runner 要求 4 个 RX marker、
-总计 14 个 marker。公共 bridge test 覆盖 450 个 frame、6 种 clock profile、clock stop、
-FIFO full/empty 压力、tag 计账、memory-domain protocol-error 同步和 924,873 byte。
+总计 14 个 marker。公共 bridge test 覆盖 452 个 frame、6 种 clock profile、clock stop、
+FIFO full/empty 压力、tag 计账、5 个可达 protocol-error 场景和 925,001 byte。
 每个 backend test 覆盖 2,000 个随机 frame，以及定向长度、4 KiB 拆分、AW/W/B
 backpressure、response error、reset/restart 和 byte-accurate memory comparison。
 integration test 覆盖 18 个定向长度、256 个混合 source frame、持续 RX quiesce、
 fixed/shared queue drain、payload/CQ AW/W/B stall、两个 clock stop、重复 reset、
 UFC drain，以及 release maintenance 暂停 parser 时已经进入 elastic FIFO 的 header。
-frozen-core TX pipeline test 另行检查 TX launch suppression、active-TX
-drain 与 pending-descriptor suppression；integration marker 本身只声明前述
+frozen-core TX pipeline test 另行检查 TX launch suppression、active-TX drain、
+drain 后恰好一次本地 reset、持续 pending-descriptor suppression 和干净重启；
+integration marker 本身只声明前述
 RX/CQ/clock/UFC 场景。
 
 理想 1 MiB 测试结果：
 
 | Profile | AXI byte/cycle | W 利用率 | Peak outstanding | 200 MHz interface rate |
 | --- | ---: | ---: | ---: | ---: |
+| 同频 512 | 64 | 100% | 4 | 12.8 GB/s |
 | Async64 | 8 | 100% | 4 | 1.6 GB/s |
 | Async512 | 64 | 100% | 4 | 12.8 GB/s |
 
@@ -133,12 +150,14 @@ Vivado 2018.3 在 `xc7z100ffg900-2` 上以 5.000 ns `aclk` 和 `mem_clk` 完成
 | Profile | WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 同频 512 | +0.089 ns | 0 | +0.069 ns | 0 | 38,045 | 42,514 | 44 | 3 | 0 |
-| Async64 | +0.053 ns | 0 | +0.047 ns | 0 | 40,413 | 43,548 | 52 | 4 | 0 |
-| Async512 | +0.053 ns | 0 | +0.015 ns | 0 | 39,995 | 43,327 | 52 | 4 | 0 |
+| Async64 | +0.004 ns | 0 | +0.054 ns | 0 | 40,402 | 43,551 | 52 | 4 | 0 |
+| Async512 | +0.060 ns | 0 | +0.058 ns | 0 | 40,020 | 43,316 | 52 | 4 | 0 |
 
 同频 netlist audit 的 RX payload CDC cell 数为 0。两个异步 profile 均无未约束内部
 endpoint、无 Critical CDC entry，所有 Gray-pointer bus-skew constraint 均通过。
-每个 profile 均保留三条 setup/hold 收敛的 routed strategy。Vivado 仍会对已识别的
+同频 512 和 Async512 各保留三条 setup/hold 收敛 strategy。Async64 在 4 条实测
+strategy 中有 2 条以 `+0.004/+0.003 ns` WNS 通过，另两条分别失败
+`0.019/0.004 ns`，并保留为敏感性 evidence。Vivado 仍会对已识别的
 Gray bus 和 clock-enabled FIFO data 报结构型 CDC warning，Async64 另有上文所述
 placement warning；这些是已记录结构，不等价于 blanket CDC signoff waiver。
 
@@ -146,8 +165,8 @@ Design Compiler 5.000 ns OOC 结果：
 
 | Profile | Source WNS | Memory WNS | Hold WNS | Cell area | Register | FIFO model |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Async64 | +2.953 ns | +1.686 ns | +0.039 ns | 171,845.31 | 20,560 | 已计入 generic array |
-| Async512 | +2.967 ns | +1.393 ns | +0.039 ns | 170,407.31 | 20,463 | 已计入 generic array |
+| Async64 | +2.958 ns | +1.686 ns | +0.039 ns | 171,707.52 | 20,560 | 已计入 generic array |
+| Async512 | +3.011 ns | +1.393 ns | +0.039 ns | 170,410.51 | 20,463 | 已计入 generic array |
 
 这是 frontend OOC synthesis，不是 physical implementation、extracted STA、SRAM macro
 characterization 或 ASIC signoff。

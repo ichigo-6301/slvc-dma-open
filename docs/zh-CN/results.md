@@ -49,20 +49,31 @@ profile 从 13 条 command 要求 14 个 marker。
 
 | Profile | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Async64 | +0.053 ns | +0.047 ns | 40,413 | 43,548 | 52 | 4 | 0 |
-| Async512 | +0.053 ns | +0.015 ns | 39,995 | 43,327 | 52 | 4 | 0 |
+| Async64 | +0.004 ns | +0.054 ns | 40,402 | 43,551 | 52 | 4 | 0 |
+| Async512 | +0.060 ns | +0.058 ns | 40,020 | 43,316 | 52 | 4 | 0 |
 
 两个 Vivado 2018.3 routed run 均使用 5.000 ns `aclk`/`mem_clk`，TNS/THS 为 0，
 无未约束 internal endpoint、无 Critical CDC entry，并通过 Gray-pointer bus-skew
-检查。每个 profile 均保留三条 setup/hold 收敛策略：async64 WNS 为
-`+0.053/+0.057/+0.082 ns`，async512 为 `+0.053/+0.074/+0.028 ns`。Vivado
+检查。Async512 的三条 setup/hold 收敛策略 WNS 为
+`+0.060/+0.084/+0.081 ns`。Async64 的 Explore 和 NoTimingRelaxation 以
+`+0.004/+0.003 ns` 通过；另外两条敏感性 reroute 分别为 `-0.019 ns` 和
+`-0.004 ns`，不作为通过结果。Vivado
 flow 只对实际非 Gray crossing 使用 point-to-point exception，不使用会覆盖 4 条
 项目 Gray max-delay constraint 的 blanket asynchronous clock group。理想 memory
-test 分别持续输出 8 和 64 byte/cycle，W-channel 利用率 100%。
+test 分别持续输出 8 和 64 byte/cycle，W-channel 利用率 100%；同频 512 test
+也独立达到 64 byte/cycle、100% W-channel 利用率和 4 个 peak outstanding。
+
+选定 worst setup path 分别属于同频 reset distribution、async64 memory-writer
+issue/address planner，以及 async512 RX/FC resume calculation；quiesce 与 CDC
+protocol-error detection 均未进入这些关键路径。相对 `79a5366` 资源基线，async64
+和 async512 LUT 分别增加 2.36% 和 2.21%，超过 2% 软目标，但 BRAM/DSP 未增加。
+最终 attempt-level error check 相对前一版 routed report 只在 bridge hierarchy
+增加 2 LUT 和 6 LUT。
 
 Design Compiler 5.000 ns OOC 中，async64 source/memory setup WNS 为
-`+2.953/+1.686 ns`，async512 为 `+2.967/+1.393 ns`。generic FIFO array 已计入
-171,845.31 和 170,407.31 cell-area total；这些数值不是 macro-backed ASIC area，
+`+2.958/+1.686 ns`，async512 为 `+3.011/+1.393 ns`。generic FIFO array 已计入
+171,707.52 和 170,410.51 cell-area total。相对开发基线，两者 area 分别增加
+0.029% 和 0.058%，register 均增加约 0.029%；这些数值不是 macro-backed ASIC area，
 也不能与 writer-only 综合直接比较。详见[双时钟后端指南](rx_payload_cdc_backends.md)。
 
 ## 同频 Writer-Only DC Sweep

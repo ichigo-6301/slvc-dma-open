@@ -9,7 +9,7 @@ claims:
     unit: result
     benchmark: "default 14 markers, same-clock 12 markers, async64 14 markers from 13 commands, async512 14 markers from 13 commands"
     configuration: Committed-frame RX source with optional dedicated RX memory backend
-    source_ref: e97728092b5814d65338e254c8c46af57612bff6
+    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_rx_payload_cdc_regression_summary
@@ -18,13 +18,13 @@ claims:
     public: true
   - id: slvc_dma_rx_payload_cdc_ideal_throughput
     profile: slvc_dma_v1_512_rx_payload_cdc_development
-    statement: Ideal-memory tests sustained one AXI W beat per mem_clk for async64 and async512.
+    statement: Ideal-memory tests sustained one AXI W beat per clock for same-clock 512, async64, and async512.
     metric: ideal_model_interface_throughput
     value: 100
     unit: percent W-channel utilization
     benchmark: 1 MiB transfer with ready memory model
-    configuration: "async64 8 byte/cycle; async512 64 byte/cycle; four peak outstanding"
-    source_ref: e97728092b5814d65338e254c8c46af57612bff6
+    configuration: "same-clock 512 and async512 64 byte/cycle; async64 8 byte/cycle; four peak outstanding"
+    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_rx_payload_cdc_regression_summary
@@ -35,16 +35,16 @@ claims:
     profile: slvc_dma_v1_512_rx_payload_cdc_development
     statement: Same-clock 512, async64, and async512 RX memory profiles met routed 200 MHz setup and hold timing on xc7z100ffg900-2.
     metric: fpga_ooc_timing
-    value: 0.028
+    value: 0.003
     unit: ns minimum WNS
     benchmark: Vivado OOC synth, opt, place, phys-opt, and route
-    configuration: "5.000 ns aclk/mem_clk; three routed strategies per profile; point-to-point non-Gray CDC exceptions; explicit Gray max-delay and bus-skew constraints"
-    source_ref: 971feb4283d3c76556e737d2e8ec96f36e700a34
+    configuration: "5.000 ns aclk/mem_clk; same-clock and async512 passed three strategies; async64 passed two of four measured strategies; point-to-point non-Gray CDC exceptions; explicit Gray max-delay and bus-skew constraints"
+    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
     tool: Vivado 2018.3
     evidence:
       - slvc_dma_rx_payload_cdc_fpga_ooc_summary
     status: verified
-    caveat: OOC timing is not board timing or complete CDC/RDC signoff; documented OOC BRAM/reset and async64 synchronizer-placement warnings remain.
+    caveat: OOC timing is not board timing or complete CDC/RDC signoff; two async64 sensitivity reroutes missed setup by 0.019 ns and 0.004 ns, and documented OOC BRAM/reset and synchronizer-placement warnings remain.
     public: true
   - id: slvc_dma_rx_payload_cdc_same_clock_bypass
     profile: slvc_dma_v1_512_rx_same_clock_512
@@ -54,7 +54,7 @@ claims:
     unit: cells
     benchmark: post-synthesis hierarchical cell audit
     configuration: DMA_RX_WIDE_PAYLOAD_PROFILE without asynchronous profile macros
-    source_ref: e97728092b5814d65338e254c8c46af57612bff6
+    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
     tool: Vivado 2018.3
     evidence:
       - slvc_dma_rx_payload_cdc_fpga_ooc_summary
@@ -69,7 +69,7 @@ claims:
     unit: ns minimum setup WNS
     benchmark: dual-clock bridge, FIFO control/storage model, serializer or writer, and completion return
     configuration: "5.000 ns source/memory clocks, asynchronous groups, generic RTL FIFO arrays"
-    source_ref: 338b392be748a62bb6a5ce8037822b6112318245
+    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
     tool: Design Compiler O-2018.06-SP1
     evidence:
       - slvc_dma_rx_payload_cdc_dc_ooc_summary
@@ -84,7 +84,7 @@ claims:
     unit: result
     benchmark: RTL structure, protocol assertions, regression, directional CDC reports, and bus-skew reports
     configuration: single in-flight frame with 8-bit transaction tag
-    source_ref: 971feb4283d3c76556e737d2e8ec96f36e700a34
+    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
     tool: RTL inspection / ModelSim / Questa / Vivado 2018.3
     evidence:
       - slvc_dma_rx_payload_cdc_contract

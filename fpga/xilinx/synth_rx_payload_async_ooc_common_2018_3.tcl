@@ -85,6 +85,13 @@ create_clock -name mem_clk_io_launch -period $MEM_CLK_PERIOD
 set_clock_groups -asynchronous \
     -group [get_clocks {aclk aclk_io_launch}] \
     -group [get_clocks {mem_clk mem_clk_io_launch}]
+set gray_constraint_limit [expr {min($ACLK_PERIOD, $MEM_CLK_PERIOD)}]
+set gray_constraint_manifest [file join $report_dir rx_payload_${ASYNC_PROFILE}_gray_constraints.yaml]
+source [file join $DMA_ROOT fpga xilinx constrain_rx_payload_gray_buses_2018_3.tcl]
+set gray_constraint_result [dma_constrain_rx_payload_gray_buses \
+    $gray_constraint_limit $gray_constraint_manifest $ASYNC_PROFILE]
+set gray_constraint_bus_count [lindex $gray_constraint_result 0]
+set gray_fifo_cells [dma_generic_gray_fifo_cells]
 set_property HD.CLK_SRC BUFGCTRL_X0Y0 [get_ports aclk]
 set_property HD.CLK_SRC BUFGCTRL_X0Y1 [get_ports mem_clk]
 set_false_path -from [get_ports {aresetn mem_aresetn tx_axis_aresetn}]
@@ -133,7 +140,15 @@ report_cdc -details -from [get_clocks aclk] -to [get_clocks mem_clk] \
     -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_cdc_aclk_to_mem.rpt]
 report_cdc -details -from [get_clocks mem_clk] -to [get_clocks aclk] \
     -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_cdc_mem_to_aclk.rpt]
-report_bus_skew -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_bus_skew.rpt]
+set gray_bus_skew_report [file join $report_dir rx_payload_${ASYNC_PROFILE}_bus_skew.rpt]
+set gray_exception_report [file join $report_dir rx_payload_${ASYNC_PROFILE}_exceptions.rpt]
+report_bus_skew -warn_on_violation -cells $gray_fifo_cells -file $gray_bus_skew_report
+report_exceptions -write_valid_exceptions -file $gray_exception_report
+report_exceptions -coverage \
+    -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_exception_coverage.rpt]
+dma_finalize_rx_payload_gray_manifest \
+    $gray_constraint_manifest $gray_bus_skew_report $gray_exception_report \
+    $gray_constraint_bus_count $gray_constraint_limit
 report_high_fanout_nets -timing -load_types -max_nets 100 \
     -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_high_fanout.rpt]
 report_drc -file [file join $report_dir rx_payload_${ASYNC_PROFILE}_drc.rpt]

@@ -132,6 +132,9 @@ wire s_cpl_fire = s_cpl_valid && s_cpl_ready;
 wire m_cmd_fire = m_cmd_valid && m_cmd_ready;
 wire m_cpl_fire = m_cpl_valid && m_cpl_ready;
 wire completion_tag_mismatch = (cpl_tag_raw != active_tag_q);
+wire source_payload_outside_frame = s_payload_tvalid &&
+                                    (!source_active_q || source_payload_done_q);
+wire mem_completion_outside_frame = m_cpl_valid && !mem_active_q;
 
 assign cmd_s_data = {next_tag_q, s_cmd_channel, s_cmd_aligned_len,
                      s_cmd_len, s_cmd_addr};
@@ -258,9 +261,13 @@ always @(posedge s_clk or negedge s_rst_n) begin
                 next_tag_q <= next_tag_q + 1'b1;
             end
 
+            // Payload valid is legal while backpressured only inside the
+            // command-to-TLAST window. Outside that window ready is low, so a
+            // fire-qualified check could never observe the protocol attempt.
+            if (source_payload_outside_frame)
+                source_protocol_error_q <= 1'b1;
+
             if (s_payload_fire) begin
-                if (!source_active_q || source_payload_done_q)
-                    source_protocol_error_q <= 1'b1;
                 if (s_payload_tlast)
                     source_payload_done_q <= 1'b1;
             end
@@ -303,6 +310,11 @@ always @(posedge m_clk or negedge m_rst_n) begin
         end else begin
             if (m_protocol_error)
                 mem_protocol_error_q <= 1'b1;
+            // The completion producer must not present a result without an
+            // active command. m_cpl_ready is intentionally low in that state,
+            // therefore the violation must be detected from valid itself.
+            if (mem_completion_outside_frame)
+                mem_protocol_error_q <= 1'b1;
             if (m_cmd_fire) begin
                 if (mem_active_q)
                     mem_protocol_error_q <= 1'b1;
@@ -310,8 +322,6 @@ always @(posedge m_clk or negedge m_rst_n) begin
                 mem_active_tag_q <= m_cmd_tag;
             end
             if (m_cpl_fire) begin
-                if (!mem_active_q)
-                    mem_protocol_error_q <= 1'b1;
                 mem_active_q <= 1'b0;
             end
         end

@@ -77,6 +77,7 @@ integer cpl_delay_q = 0;
 integer random_seed = 32'h4c44_4321;
 integer ratio_case;
 integer random_frame;
+integer protocol_error_case_count = 0;
 reg mem_frame_active = 1'b0;
 reg [7:0] expected_source_tag = 8'h0;
 reg [7:0] expected_mem_tag = 8'h0;
@@ -207,6 +208,13 @@ task apply_hard_reset;
         m_protocol_error = 1'b0;
         s_rst_n = 1'b0;
         m_rst_n = 1'b0;
+        expected_source_tag = 8'h0;
+        prev_cmd_wgray = 3'h0;
+        prev_payload_wgray = 8'h0;
+        prev_cpl_rgray = 3'h0;
+        prev_cmd_rgray = 3'h0;
+        prev_payload_rgray = 8'h0;
+        prev_cpl_wgray = 3'h0;
         repeat (6) @(posedge s_clk);
         repeat (6) @(posedge m_clk);
         @(negedge s_clk);
@@ -216,6 +224,127 @@ task apply_hard_reset;
         repeat (8) @(posedge s_clk);
         if (s_cpl_valid || s_busy || s_protocol_error)
             fail("hard reset exposed stale source-domain state");
+    end
+endtask
+
+task expect_protocol_error;
+    input [8*80-1:0] case_name;
+    integer guard;
+    begin
+        guard = 0;
+        while (!s_protocol_error && (guard < 64)) begin
+            @(posedge s_clk);
+            guard = guard + 1;
+        end
+        if (!s_protocol_error)
+            fail({"protocol error was not observed: ", case_name});
+        else begin
+            protocol_error_case_count = protocol_error_case_count + 1;
+            $display("CDC_BRIDGE_PROTOCOL_ERROR case=%0s", case_name);
+        end
+    end
+endtask
+
+task inject_payload_without_command;
+    begin
+        @(negedge s_clk);
+        s_payload_tdata = 512'h0123;
+        s_payload_tkeep = 64'hffff_ffff_ffff_ffff;
+        s_payload_tlast = 1'b1;
+        s_payload_tvalid = 1'b1;
+        repeat (3) begin
+            @(posedge s_clk);
+            #1;
+            if (s_payload_tready)
+                fail("payload without command was accepted");
+        end
+        expect_protocol_error("payload_without_command");
+        if (m_payload_tvalid || (u_dut.payload_fifo_s_level != 0))
+            fail("payload without command entered the payload FIFO");
+        @(negedge s_clk);
+        s_payload_tvalid = 1'b0;
+        s_payload_tlast = 1'b0;
+        s_payload_tkeep = 64'h0;
+    end
+endtask
+
+task send_frame_with_payload_after_tlast;
+    input integer id;
+    integer lane;
+    reg [511:0] data_value;
+    begin
+        @(negedge s_clk);
+        s_cmd_addr = 32'h0010_0000 + id * 32'h2000;
+        s_cmd_len = 32'd64;
+        s_cmd_aligned_len = 32'd64;
+        s_cmd_channel = id[3:0];
+        s_cmd_valid = 1'b1;
+        while (!s_cmd_ready)
+            @(negedge s_clk);
+        @(negedge s_clk);
+        s_cmd_valid = 1'b0;
+        command_count = command_count + 1;
+
+        data_value = 512'h0;
+        for (lane = 0; lane < 64; lane = lane + 1)
+            data_value[lane*8 +: 8] = pattern_byte(id, lane);
+        s_payload_tdata = data_value;
+        s_payload_tkeep = 64'hffff_ffff_ffff_ffff;
+        s_payload_tlast = 1'b1;
+        s_payload_tvalid = 1'b1;
+        while (!s_payload_tready)
+            @(negedge s_clk);
+        @(negedge s_clk);
+        source_payload_bytes = source_payload_bytes + 64;
+        payload_frame_count = payload_frame_count + 1;
+
+        s_payload_tdata = ~data_value;
+        s_payload_tlast = 1'b0;
+        repeat (3) begin
+            @(posedge s_clk);
+            #1;
+            if (s_payload_tready)
+                fail("payload after TLAST was accepted");
+        end
+        expect_protocol_error("payload_after_tlast");
+        @(negedge s_clk);
+        s_payload_tvalid = 1'b0;
+        s_payload_tkeep = 64'h0;
+
+        s_cpl_ready = 1'b1;
+        while (!s_cpl_valid)
+            @(posedge s_clk);
+        if (s_cpl_error || (s_cpl_error_code != 0))
+            fail("payload-after-TLAST case changed the valid completion");
+        if (s_cpl_tag != expected_source_tag)
+            fail("payload-after-TLAST completion tag mismatch");
+        expected_source_tag = expected_source_tag + 1'b1;
+        @(negedge s_clk);
+        s_cpl_ready = 1'b0;
+        completion_count = completion_count + 1;
+        while (s_busy)
+            @(posedge s_clk);
+    end
+endtask
+
+task inject_completion_without_command;
+    input [8*80-1:0] case_name;
+    begin
+        @(negedge m_clk);
+        m_cpl_error = 1'b0;
+        m_cpl_error_code = 4'h0;
+        m_cpl_valid = 1'b1;
+        repeat (3) begin
+            @(posedge m_clk);
+            #1;
+            if (m_cpl_ready)
+                fail("completion without command was accepted");
+        end
+        expect_protocol_error(case_name);
+        if (u_dut.cpl_fifo_s_level != 0)
+            fail("completion without command entered the completion FIFO");
+        @(negedge m_clk);
+        m_cpl_valid = 1'b0;
     end
 endtask
 
@@ -442,6 +571,22 @@ initial begin
 
     while (s_busy || m_cpl_valid)
         @(posedge s_clk);
+
+    $display("CDC_BRIDGE_PHASE protocol_error_reachability");
+    apply_hard_reset();
+    inject_payload_without_command();
+
+    apply_hard_reset();
+    send_frame_with_payload_after_tlast(command_count);
+
+    apply_hard_reset();
+    inject_completion_without_command("completion_without_command");
+
+    apply_hard_reset();
+    send_frame(command_count, 64);
+    inject_completion_without_command("duplicate_completion");
+
+    apply_hard_reset();
     $display("CDC_BRIDGE_PHASE memory_protocol_error_visibility");
     @(negedge m_clk);
     m_protocol_error = 1'b1;
@@ -450,6 +595,10 @@ initial begin
     repeat (6) @(posedge s_clk);
     if (!s_protocol_error)
         fail("memory-domain protocol error was not synchronized to source");
+    else begin
+        protocol_error_case_count = protocol_error_case_count + 1;
+        $display("CDC_BRIDGE_PROTOCOL_ERROR case=memory_backend_error");
+    end
 
     s_reset_request = 1'b1;
     @(posedge s_clk);
@@ -473,14 +622,16 @@ initial begin
         fail("payload FIFO full backpressure was not exercised");
     if (peak_payload_level < 24)
         fail("payload FIFO near-full level was not exercised");
+    if (protocol_error_case_count != 5)
+        fail("directed protocol-error case count mismatch");
     if (s_protocol_error)
         fail("bridge protocol error asserted");
 
     if (errors != 0)
         $fatal(1, "tb_rtl_rx_payload_cdc_bridge failed errors=%0d", errors);
-    $display("PASS tb_rtl_rx_payload_cdc_bridge frames=%0d bytes=%0d source_stalls=%0d fifo_empty=%0d peak_payload_level=%0d clock_profiles=6 clock_stops=2",
+    $display("PASS tb_rtl_rx_payload_cdc_bridge frames=%0d bytes=%0d source_stalls=%0d fifo_empty=%0d peak_payload_level=%0d clock_profiles=6 clock_stops=2 protocol_error_cases=%0d",
              command_count, source_payload_bytes, source_stall_cycles,
-             fifo_empty_cycles, peak_payload_level);
+             fifo_empty_cycles, peak_payload_level, protocol_error_case_count);
     $finish;
 end
 

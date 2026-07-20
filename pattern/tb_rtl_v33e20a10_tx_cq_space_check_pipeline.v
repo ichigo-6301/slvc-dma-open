@@ -27,6 +27,7 @@ reg [7:0] pkt_mem [0:`DMA_PKT_MEM_BYTES-1];
 reg global_enable = 1'b0;
 reg tx_enable = 1'b0;
 reg quiesce = 1'b0;
+reg soft_reset = 1'b0;
 reg [MAX_CH*32-1:0] tx_ctrl_flat = {(MAX_CH*32){1'b0}};
 reg [MAX_CH*32-1:0] tx_cfg_flat = {(MAX_CH*32){1'b0}};
 reg [MAX_CH*32-1:0] tx_base_l_flat = {(MAX_CH*32){1'b0}};
@@ -121,6 +122,8 @@ reg       last_desc_evt_clear_busy_log = 1'b0;
 reg [511:0] held_tx_data = 512'h0;
 integer event_before = 0;
 integer tx_wait_guard = 0;
+integer soft_reset_pulse_count = 0;
+integer soft_reset_pulse_before = 0;
 
 axi64_slave_model u_mem (
     .aclk(clk),
@@ -155,7 +158,7 @@ axi64_slave_model u_mem (
 dma_tx_engine u_dut (
     .clk(clk),
     .rstn(rstn),
-    .soft_reset(1'b0),
+    .soft_reset(soft_reset),
     .quiesce(quiesce),
     .global_enable(global_enable),
     .tx_enable(tx_enable),
@@ -247,7 +250,10 @@ always @(posedge clk or negedge rstn) begin
         last_desc_evt_inc_err <= 1'b0;
         last_desc_evt_update_status <= 1'b0;
         last_desc_evt_clear_busy_log <= 1'b0;
+        soft_reset_pulse_count <= 0;
     end else begin
+        if (soft_reset)
+            soft_reset_pulse_count <= soft_reset_pulse_count + 1;
         if (cq_reserve_inc)
             reserve_pulse_count <= reserve_pulse_count + 1;
         if (event_valid) begin
@@ -388,6 +394,7 @@ task clear_inputs;
         global_enable = 1'b0;
         tx_enable = 1'b0;
         quiesce = 1'b0;
+        soft_reset = 1'b0;
         tx_ctrl_flat = {(MAX_CH*32){1'b0}};
         tx_cfg_flat = {(MAX_CH*32){1'b0}};
         tx_base_l_flat = {(MAX_CH*32){1'b0}};
@@ -704,6 +711,44 @@ initial begin
                 "T14 exactly one accepted TX completion");
     expect_true(!tx_desc_ctx_req,
                 "T14 descriptor launch remains suppressed after drain");
+
+    soft_reset_pulse_before = soft_reset_pulse_count;
+    @(negedge clk);
+    soft_reset = 1'b1;
+    @(negedge clk);
+    soft_reset = 1'b0;
+    wait_cycles(3);
+    expect_eq32(soft_reset_pulse_count, soft_reset_pulse_before + 1,
+                "T14 exactly one local soft reset");
+    expect_eq4(u_dut.state, ST_IDLE, "T14 soft reset returns idle");
+    expect_true(drain_idle, "T14 remains drain idle after soft reset");
+    repeat (6) begin
+        @(posedge clk);
+        #1;
+        expect_true(!tx_desc_ctx_req,
+                    "T14 sustained descriptor demand remains suppressed");
+    end
+
+    @(negedge clk);
+    tx_desc_enable_flat[CH1] = 1'b0;
+    tx_desc_ready_flat[CH1] = 1'b0;
+    quiesce = 1'b0;
+    event_before = event_count;
+    prep_start_setup(CH0, 1'b0, 32'd64, 32'h0000_2800,
+                     32'd0, 32'd0, 32'd0, 32'd0);
+    tx_wait_guard = 0;
+    while (!tx_axis_tvalid && (tx_wait_guard < 200)) begin
+        @(posedge clk);
+        tx_wait_guard = tx_wait_guard + 1;
+    end
+    if (tx_wait_guard >= 200)
+        fail("T14 clean restart TX launch timeout");
+    @(negedge clk);
+    tx_axis_tready = 1'b1;
+    wait_event_count(event_before + 1, 200);
+    wait_state(ST_IDLE, 40);
+    expect_eq32(event_count, event_before + 1,
+                "T14 clean restart completion");
 
     $display("PASS tb_rtl_v33e20a10_tx_cq_space_check_pipeline");
     $finish;

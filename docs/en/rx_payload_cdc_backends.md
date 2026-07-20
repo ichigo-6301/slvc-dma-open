@@ -53,6 +53,16 @@ to 16 beats per burst, splits at 4 KiB boundaries, supports four ordered
 outstanding responses, and sustains one 64-bit W beat per `mem_clk` when the
 memory model is ready.
 
+Its AW planner has one registered candidate stage containing valid, address,
+and beat count (41 bits total). The planner fills that stage only after source
+credit, plan-queue space, outstanding space, and the 4 KiB-limited burst length
+are known. AXI AW outputs load only from the registered candidate; issue address,
+remaining beats, plan-queue state, outstanding count, and source reservation
+advance only on `AWVALID && AWREADY`. A stalled AW therefore remains stable.
+The simple refill policy inserts one planner interval per burst, while the
+16-beat bursts and four outstanding slots preserve continuous ideal-model W
+traffic.
+
 Async512 reuses `dma_axi_write_engine_512` in `mem_clk`. It emits `AWSIZE=6`,
 uses 64-byte-aligned destinations, and preserves the same burst, response, and
 completion rules. It may issue AW before a complete payload burst has reached
@@ -146,13 +156,18 @@ classification is not a complete CDC/RDC waiver package.
 ## Verification And Measured Results
 
 Each asynchronous profile schedules ten frozen-core tests plus three RX-backend
-test commands. The integration command emits a second exact quiesce marker, so
-the runner requires four RX markers and fourteen markers in total. The common
+test commands. The integration command emits a second exact quiesce marker.
+Async64 also emits an exact AW-planner marker from the backend command, so its
+RX portion requires five markers and the full profile requires fifteen.
+Async512 still requires four RX markers and fourteen total. The common
 bridge test covers 452 frames, six clock profiles, clock stops, FIFO full/empty
 pressure, tag accounting, five reachable protocol-error cases, and 925,001
-bytes. Each backend test covers 2,000 random frames plus directed
-lengths, 4 KiB splits, AW/W/B backpressure, response errors, reset/restart, and
-byte-accurate memory comparison. The integration test covers 18 directed
+bytes. Each backend test covers 2,000 random frames plus directed lengths,
+4 KiB splits, AW/W/B backpressure, response errors, reset/restart, and
+byte-accurate memory comparison. Async64 adds 21 directed lengths, 4 KiB
+offsets `000/f80/fc0/ff0/ff8`, AWREADY stalls of 1/2/7/31 cycles, source-credit
+zero/short/exact/surplus cases, and simultaneous AW/B/source/plan-pop events.
+The integration test covers 18 directed
 lengths, 256 mixed source frames, continuous RX quiesce, fixed/shared queue
 drain, payload and CQ AW/W/B stalls, both clock stops, repeated reset requests,
 UFC drain, and a header already accepted into the elastic FIFO while the parser
@@ -170,7 +185,9 @@ The ideal 1 MiB runs measured:
 | Async64 | 8 | 100% | 4 | 1.6 GB/s |
 | Async512 | 64 | 100% | 4 | 12.8 GB/s |
 
-These are RTL/model interface rates, not board DDR measurements.
+Async64 issued 8,192 sixteen-beat bursts and observed 8,192 planner-bubble
+cycles without a W-channel bubble. These are RTL/model interface rates, not
+board DDR measurements.
 
 Vivado 2018.3 routed `frame_dma_rx_top` on `xc7z100ffg900-2` with 5.000 ns
 `aclk` and `mem_clk`:
@@ -178,15 +195,21 @@ Vivado 2018.3 routed `frame_dma_rx_top` on `xc7z100ffg900-2` with 5.000 ns
 | Profile | WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Same-clock 512 | +0.089 ns | 0 | +0.069 ns | 0 | 38,045 | 42,514 | 44 | 3 | 0 |
-| Async64 | +0.004 ns | 0 | +0.054 ns | 0 | 40,402 | 43,551 | 52 | 4 | 0 |
+| Async64 | +0.109 ns | 0 | +0.065 ns | 0 | 39,554 | 43,562 | 52 | 4 | 0 |
 | Async512 | +0.060 ns | 0 | +0.058 ns | 0 | 40,020 | 43,316 | 52 | 4 | 0 |
 
 The same-clock netlist audit found zero RX payload CDC cells. Both asynchronous
 profiles have no unconstrained internal endpoint or Critical CDC entry, and all
 reported Gray-pointer bus-skew constraints are met. Same-clock 512 and async512
-retained three setup/hold-closed strategies. Async64 passed two of four measured
-strategies with `+0.004/+0.003 ns` WNS; the other two missed setup by
-`0.019/0.004 ns` and remain explicit sensitivity evidence. Vivado still reports
+retain their three source-identical setup/hold-closed strategies; they were not
+rerouted for the async64-only edit. Async64 closed all four newly measured
+strategies with WNS `+0.138/+0.122/+0.109/+0.223 ns`, TNS/THS zero, and minimum
+WHS `+0.065 ns`. Its pre-pipeline `+0.004/+0.003/-0.019/-0.004 ns` matrix remains
+explicit baseline evidence. The former
+`issue_beats_left_q -> m_axi_awaddr/CE` path is absent from all optimized
+top-100 reports; the selected global worst path is now ingress payload-RAM
+address routing. A planner-internal path remains noncritical at `+0.268 ns`.
+Vivado still reports
 structural CDC warnings for recognized Gray buses and clock-enabled FIFO data,
 plus the async64 placement warnings noted above; these are documented
 structures, not a blanket CDC signoff waiver.
@@ -195,9 +218,12 @@ Design Compiler OOC at 5.000 ns closed both asynchronous profiles:
 
 | Profile | Source WNS | Memory WNS | Hold WNS | Cell area | Registers | FIFO model |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Async64 | +2.958 ns | +1.686 ns | +0.039 ns | 171,707.52 | 20,560 | generic arrays included |
+| Async64 | +2.948 ns | +1.682 ns | +0.039 ns | 172,104.93 | 20,602 | generic arrays included |
 | Async512 | +3.011 ns | +1.393 ns | +0.039 ns | 170,410.51 | 20,463 | generic arrays included |
 
+Async64 was recompiled and remains setup/hold clean with no latches; its area
+and register count increased by 0.231% and 0.204% versus the immediate
+pre-pipeline result. Async512 is source-identical and retains its earlier run.
 This is frontend OOC synthesis, not physical implementation, extracted STA,
 SRAM-macro characterization, or ASIC signoff.
 
@@ -207,5 +233,8 @@ SRAM-macro characterization, or ASIC signoff.
 - Frames complete in order; multiple-frame out-of-order completion is absent.
 - Async512 addresses must be 64-byte aligned; Async64 addresses must be
   8-byte aligned.
+- The registered async64 planner permits one AW planning interval per burst;
+  100% W utilization is measured for the ideal 1 MiB workload, not guaranteed
+  for every memory-latency or short-transfer pattern.
 - One-sided hard-reset recovery, arbitrary memory widths, unaligned first-beat
   shifting, multi-port striping, and board DDR throughput are not claimed.

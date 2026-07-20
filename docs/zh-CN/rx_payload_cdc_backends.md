@@ -48,6 +48,14 @@ Async64 在 CDC 之后执行 `512 -> 64` serializer。它生成 `AWSIZE=3`，单
 最多 16 beat，在 4 KiB 边界拆分，最多维护 4 个有序 response；memory model ready
 时可持续每个 `mem_clk` 输出一个 64-bit W beat。
 
+其 AW planner 增加一级由 valid、address 和 beat count 组成的 registered candidate，
+共 41 bit。只有 source credit、plan queue 空间、outstanding 空间和 4 KiB 限制后的
+burst 长度均确定后，planner 才装载 candidate；AXI AW 输出只从该寄存级装载。
+issue address、剩余 beat、plan queue、outstanding 和 source reservation 仅在
+`AWVALID && AWREADY` 时推进，因此 AW stall 期间输出保持稳定。简单 refill 策略会让
+每个 burst 出现一个 planner 间隔，但 16-beat burst 和 4 个 outstanding slot 可在
+理想 memory model 下维持连续 W traffic。
+
 Async512 在 `mem_clk` 中复用 `dma_axi_write_engine_512`，生成 `AWSIZE=6`，要求
 64-byte 对齐，并保持相同 burst、response 和 completion 规则。该 profile 允许完整
 payload burst 到达 read side 之前先发 AW；W 仍严格服从 valid/ready。这样切断了
@@ -121,11 +129,16 @@ clock-enabled FIFO data 结构，但仍保留为非 signoff caveat。XPM payload
 ## 验证与测量结果
 
 每个异步 profile 调度 10 项 frozen-core test 和 3 条 RX backend test command。
-integration command 会输出第二个精确 quiesce marker，因此 runner 要求 4 个 RX marker、
-总计 14 个 marker。公共 bridge test 覆盖 452 个 frame、6 种 clock profile、clock stop、
+integration command 会输出第二个精确 quiesce marker。Async64 backend command 还会
+输出独立 AW-planner marker，因此 RX 部分要求 5 个 marker、完整 profile 要求 15 个；
+Async512 仍为 4 个 RX marker、总计 14 个。公共 bridge test 覆盖 452 个 frame、
+6 种 clock profile、clock stop、
 FIFO full/empty 压力、tag 计账、5 个可达 protocol-error 场景和 925,001 byte。
 每个 backend test 覆盖 2,000 个随机 frame，以及定向长度、4 KiB 拆分、AW/W/B
 backpressure、response error、reset/restart 和 byte-accurate memory comparison。
+Async64 还覆盖 21 个定向长度、`000/f80/fc0/ff0/ff8` 五种 4 KiB offset、
+AWREADY 连续 stall 1/2/7/31 周期、source-credit 为 zero/short/exact/surplus，以及
+AW/B/source/plan-pop 同周期事件。
 integration test 覆盖 18 个定向长度、256 个混合 source frame、持续 RX quiesce、
 fixed/shared queue drain、payload/CQ AW/W/B stall、两个 clock stop、重复 reset、
 UFC drain，以及 release maintenance 暂停 parser 时已经进入 elastic FIFO 的 header。
@@ -142,7 +155,8 @@ RX/CQ/clock/UFC 场景。
 | Async64 | 8 | 100% | 4 | 1.6 GB/s |
 | Async512 | 64 | 100% | 4 | 12.8 GB/s |
 
-这些是 RTL/model interface rate，不是板级 DDR 实测。
+Async64 发出 8,192 个 16-beat burst，并观察到 8,192 个 planner bubble cycle，
+但 W channel 无 bubble。这些是 RTL/model interface rate，不是板级 DDR 实测。
 
 Vivado 2018.3 在 `xc7z100ffg900-2` 上以 5.000 ns `aclk` 和 `mem_clk` 完成
 `frame_dma_rx_top` routed OOC：
@@ -150,14 +164,18 @@ Vivado 2018.3 在 `xc7z100ffg900-2` 上以 5.000 ns `aclk` 和 `mem_clk` 完成
 | Profile | WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 同频 512 | +0.089 ns | 0 | +0.069 ns | 0 | 38,045 | 42,514 | 44 | 3 | 0 |
-| Async64 | +0.004 ns | 0 | +0.054 ns | 0 | 40,402 | 43,551 | 52 | 4 | 0 |
+| Async64 | +0.109 ns | 0 | +0.065 ns | 0 | 39,554 | 43,562 | 52 | 4 | 0 |
 | Async512 | +0.060 ns | 0 | +0.058 ns | 0 | 40,020 | 43,316 | 52 | 4 | 0 |
 
 同频 netlist audit 的 RX payload CDC cell 数为 0。两个异步 profile 均无未约束内部
 endpoint、无 Critical CDC entry，所有 Gray-pointer bus-skew constraint 均通过。
-同频 512 和 Async512 各保留三条 setup/hold 收敛 strategy。Async64 在 4 条实测
-strategy 中有 2 条以 `+0.004/+0.003 ns` WNS 通过，另两条分别失败
-`0.019/0.004 ns`，并保留为敏感性 evidence。Vivado 仍会对已识别的
+同频 512 和 Async512 保留三条 source-identical setup/hold 收敛 strategy；本轮
+async64-only 修改没有重新 route 这两个 profile。Async64 新测的四条 strategy 全部
+收敛，WNS 为 `+0.138/+0.122/+0.109/+0.223 ns`，TNS/THS 为 0，最小 WHS
+`+0.065 ns`。流水化前的 `+0.004/+0.003/-0.019/-0.004 ns` 仍作为 baseline
+evidence 保留。原 `issue_beats_left_q -> m_axi_awaddr/CE` 路径已从优化后全部
+top-100 report 消失；全局最差路径转移到 ingress payload RAM address route，planner
+内部路径以 `+0.268 ns` 保持非关键。Vivado 仍会对已识别的
 Gray bus 和 clock-enabled FIFO data 报结构型 CDC warning，Async64 另有上文所述
 placement warning；这些是已记录结构，不等价于 blanket CDC signoff waiver。
 
@@ -165,16 +183,20 @@ Design Compiler 5.000 ns OOC 结果：
 
 | Profile | Source WNS | Memory WNS | Hold WNS | Cell area | Register | FIFO model |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Async64 | +2.958 ns | +1.686 ns | +0.039 ns | 171,707.52 | 20,560 | 已计入 generic array |
+| Async64 | +2.948 ns | +1.682 ns | +0.039 ns | 172,104.93 | 20,602 | 已计入 generic array |
 | Async512 | +3.011 ns | +1.393 ns | +0.039 ns | 170,410.51 | 20,463 | 已计入 generic array |
 
-这是 frontend OOC synthesis，不是 physical implementation、extracted STA、SRAM macro
-characterization 或 ASIC signoff。
+Async64 已重新 compile，setup/hold 无违例且 latch 为 0；相对流水化前结果，area
+增加 0.231%，register 增加 0.204%。Async512 source-identical，保留已有 run。
+这是 frontend OOC synthesis，不是 physical implementation、extracted STA、SRAM
+macro characterization 或 ASIC signoff。
 
 ## 明确限制
 
 - TX、CQ、descriptor 和 AXI4-Lite traffic 仍位于原时钟域；
 - frame 按顺序完成，不支持多 frame 乱序 completion；
 - Async512 地址要求 64-byte 对齐，Async64 至少 8-byte 对齐；
+- registered Async64 planner 允许每个 burst 有一个 AW planning 间隔；100% W 利用率
+  是理想 1 MiB workload 的实测结果，不保证任意 memory latency 或短传输模式；
 - 不声明单边 hard-reset recovery、任意 memory width、非对齐首拍移位、多端口
   striping 或板级 DDR throughput。

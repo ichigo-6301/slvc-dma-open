@@ -21,7 +21,7 @@ release-bound runner 要求每个测试同时给出 native zero-error summary �
 | `run_rtl_rx_payload_writer_512.do` | Wide writer 长度、burst boundary、error、随机 stall、stress 与理想 model throughput | `PASS tb_rtl_rx_payload_writer_512 cases=2028` |
 | `run_rtl_rx_payload_writer_512_integration.do` | Fixed-ingress/shared-pool source lock 与集成 wide RX write | `PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256` |
 | `run_rtl_rx_payload_cdc_bridge.do` | Command/payload/completion CDC、tag、FIFO 压力、6 种 clock profile、clock stop 和 5 个可达 protocol-error 场景 | `PASS tb_rtl_rx_payload_cdc_bridge frames=452 bytes=925001 source_stalls=327 fifo_empty=169 peak_payload_level=32 clock_profiles=6 clock_stops=2 protocol_error_cases=5` |
-| `run_rtl_rx_mem_async64_backend.do` | Async64 长度、4 KiB 拆分、response error、backpressure、2,000-frame stress 和 throughput | `PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
+| `run_rtl_rx_mem_async64_backend.do` | Async64 长度、4 KiB 拆分、response error、1/2/7/31-cycle AW stall、source-credit 边界、同周期事件、2,000-frame stress 和 throughput | `PASS tb_rtl_async64_aw_planner candidate_stage=1 aw_stalls=1,2,7,31 source_credit=0,short,exact,surplus four_k_offsets=000,f80,fc0,ff0,ff8`<br/>`PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
 | `run_rtl_rx_mem_async64_integration.do` | Async64 fixed/shared 顺序，以及 RX、buffered header、AXI/CQ、clock stop、重复 reset 与 UFC 场景下的有界 quiesce/drain | `PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
 | `run_rtl_rx_mem_async512_backend.do` | Async512 长度、4 KiB 拆分、response error、backpressure、2,000-frame stress 和 throughput | `PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
 | `run_rtl_rx_mem_async512_integration.do` | Async512 fixed/shared 顺序，以及 RX、buffered header、AXI/CQ、clock stop、重复 reset 与 UFC 场景下的有界 quiesce/drain | `PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
@@ -32,6 +32,6 @@ release-bound runner 要求每个测试同时给出 native zero-error summary �
 verification。两项 wide-writer test 属于默认关闭的同频开发 profile；
 `configs/slvc_dma_512_rx_wide_defconfig` 关闭 adapter，并调度 10 项 core 加 2 项
 wide marker，共 12 项。每个异步 defconfig 调度 10 项 core 和 3 条 RX test command；
-其中 integration command 要求两个 marker，所以 RX 部分共 4 个 marker，完整 profile
-总计要求 14 个。该矩阵不等价于 coverage closure、formal proof 或完整 CDC/RDC
-signoff。
+integration command 要求两个 marker。Async64 backend command 还要求 AW-planner
+marker，因此 RX 部分共 5 个、完整 profile 共 15 个；Async512 仍为 4 个 RX marker、
+总计 14 个。该矩阵不等价于 coverage closure、formal proof 或完整 CDC/RDC signoff。

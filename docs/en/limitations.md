@@ -27,10 +27,12 @@
 - The routed async64 OOC result retains three `PDRC-190` synchronizer-placement
   warnings. Both asynchronous OOC profiles retain BRAM/reset DRC warnings from
   the integration top. These warnings are disclosed, not waived as signoff.
-- Async64 passed two of four measured routing strategies at 200 MHz. The two
-  passing runs have only `+0.004 ns` and `+0.003 ns` setup margin; two other
-  directives missed setup by `0.019 ns` and `0.004 ns`. This sensitivity is
-  retained as evidence rather than hidden by selecting only favorable runs.
+- The pipelined Async64 writer passed all four measured routing strategies at
+  200 MHz with minimum WNS `+0.109 ns`. The pre-pipeline two-pass/two-fail
+  matrix remains retained as baseline evidence rather than being overwritten.
+  One registered AW-planning interval per burst is permitted; the measured
+  ideal 1 MiB workload still sustains 100% W utilization, but this is not a
+  guarantee for every memory-latency or short-transfer pattern.
 - RX backend Vivado results are OOC and Design Compiler results are frontend
   OOC synthesis with generic FIFO arrays. They are not full-system FPGA,
   board DDR, routed ASIC, SRAM-macro, physical-design, or signoff evidence.

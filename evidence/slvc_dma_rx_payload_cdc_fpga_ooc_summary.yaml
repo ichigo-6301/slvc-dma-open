@@ -2,7 +2,7 @@ kind: fpga_ooc_summary
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_fpga_ooc_summary
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+source_ref: 2a3faf3ae07cb17020ce2808f8720b0276f9a9a3
 flow_ref: 133457ebc429610471a070f39786dc5e81ad6bd5
 status: verified
 tool: Vivado 2018.3
@@ -12,7 +12,8 @@ clock_period_ns: {aclk: 5.000, mem_clk: 5.000}
 clocking: async profiles use point-to-point non-Gray CDC exceptions; no blanket asynchronous clock group overrides project Gray-bus constraints
 results:
   same_clock_512:
-    source_closure: The changed CDC bridge is removed by the same-clock generate bypass; the new synthesis audit found zero bridge, FIFO, or reset-synchronizer cells.
+    measurement_source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+    source_closure: The only functional RTL delta is instantiated only by async64. The same-clock elaborated source is unchanged at source_ref, so the existing routed result is retained rather than presented as a new run.
     strategies:
       - {place: Explore, phys_opt: AggressiveExplore, route: Explore, wns: 0.089, tns: 0.000, whs: 0.069, ths: 0.000, result: pass, timing_summary_sha256: 0bab71419bbbba4b3a39761b6ba4a80d918ce8bcb36bbe7a942ae2572f1c4a67}
       - {route: NoTimingRelaxation, wns: 0.088, tns: 0.000, whs: 0.069, ths: 0.000, result: pass, timing_summary_sha256: a17b9d2b3f0c089f36256940d9ae30d106906a1647d38ccedbf982a8121ebb73}
@@ -30,32 +31,62 @@ results:
       utilization_sha256: 9d71c91fad3c281d70ae54f8275c083e314b4d788d807e57cae3b07e29c56882
       cdc_absence_sha256: 97e3199932005d280b3c2e280361acc2f0104736b6ef94efd9b8b619e2f8efc7
   async64:
-    passing_strategies:
-      - {place: ExtraNetDelay_high, phys_opt: AggressiveExplore, route: Explore, wns: 0.004, tns: 0.000, whs: 0.054, ths: 0.000, result: pass, timing_summary_sha256: 45931a1fb1de9d63c1ff6c2a03e7f417619e46c0f70fdc590f4ce7a53c4b2600}
-      - {route: NoTimingRelaxation, wns: 0.003, tns: 0.000, whs: 0.054, ths: 0.000, result: pass, timing_summary_sha256: 3e2e907615deea85aa407a7b9e769dd9ed5f1cc2b47ee12bfa9efb79c6701dd5}
-    sensitivity_runs:
-      - {route: HigherDelayCost, wns: -0.019, tns: -0.081, whs: 0.056, ths: 0.000, result: fail_setup, timing_summary_sha256: df884483d4e3f48d492f177a571d2c69c193b608b3f9be1c32a32976481c0859}
-      - {route: MoreGlobalIterations, wns: -0.004, tns: -0.031, whs: 0.056, ths: 0.000, result: fail_setup, timing_summary_sha256: b4dbbc597fc4e8a25ad628a2c9b4bfa908a115a6340bb3bc7ab2b89e5b5bf8e5}
+    baseline_before_aw_pipeline:
+      source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+      passing_strategies:
+        - {place: ExtraNetDelay_high, phys_opt: AggressiveExplore, route: Explore, wns: 0.004, tns: 0.000, whs: 0.054, ths: 0.000, result: pass, timing_summary_sha256: 45931a1fb1de9d63c1ff6c2a03e7f417619e46c0f70fdc590f4ce7a53c4b2600}
+        - {route: NoTimingRelaxation, wns: 0.003, tns: 0.000, whs: 0.054, ths: 0.000, result: pass, timing_summary_sha256: 3e2e907615deea85aa407a7b9e769dd9ed5f1cc2b47ee12bfa9efb79c6701dd5}
+      sensitivity_runs:
+        - {route: HigherDelayCost, wns: -0.019, tns: -0.081, whs: 0.056, ths: 0.000, result: fail_setup, timing_summary_sha256: df884483d4e3f48d492f177a571d2c69c193b608b3f9be1c32a32976481c0859}
+        - {route: MoreGlobalIterations, wns: -0.004, tns: -0.031, whs: 0.056, ths: 0.000, result: fail_setup, timing_summary_sha256: b4dbbc597fc4e8a25ad628a2c9b4bfa908a115a6340bb3bc7ab2b89e5b5bf8e5}
+      resources: {lut: 40402, ff: 43551, ramb36: 52, ramb18: 4, dsp: 0}
+      critical_path: {source: "u_payload_writer_async64/issue_beats_left_q_reg[8]", destination: "u_payload_writer_async64/m_axi_awaddr_reg[11]/CE", selected_report_slack_ns: 0.003, worst_strategy_wns_ns: -0.019}
+    measurement_worktree_ref: 18db34bf010ba48428fea5955ac42454e92f60a1
+    rtl_source_ref: 2a3faf3ae07cb17020ce2808f8720b0276f9a9a3
+    strategies:
+      - {place: ExtraNetDelay_high, phys_opt: AggressiveExplore, route: Explore, wns: 0.138, tns: 0.000, whs: 0.067, ths: 0.000, result: pass, timing_summary_sha256: c53a9bf97a061d7f96f3cc09b602538c844bbda1777f0972d41305a31ed6ae8b}
+      - {route: NoTimingRelaxation, wns: 0.122, tns: 0.000, whs: 0.065, ths: 0.000, result: pass, timing_summary_sha256: fcb29b26537a4aed3f79fab679a75249ffd47221f389cfca4c4ec66ca10c33ad}
+      - {route: HigherDelayCost, wns: 0.109, tns: 0.000, whs: 0.066, ths: 0.000, result: pass, timing_summary_sha256: cf9b45173b56287a2ed6e46b9a7a882d47f3f550fb568005a01a8d7552ba42d4}
+      - {route: MoreGlobalIterations, wns: 0.223, tns: 0.000, whs: 0.065, ths: 0.000, result: pass, timing_summary_sha256: 1ab97be1058405c2def2776c953e7a7ba03c2923fc8ece8d9640b8bd6e2abca5}
     timing_ns:
-      overall: {wns: 0.004, tns: 0.000, whs: 0.054, ths: 0.000}
-      aclk: {wns: 0.102, whs: 0.054}
-      mem_clk: {wns: 0.004, whs: 0.094}
-    resources: {lut: 40402, ff: 43551, ramb36: 52, ramb18: 4, dsp: 0}
+      strategy_pass_count: 4
+      strategy_total_count: 4
+      worst_wns: 0.109
+      best_wns: 0.223
+      worst_whs: 0.065
+      tns: 0.000
+      ths: 0.000
+    resources: {lut: 39554, ff: 43562, ramb36: 52, ramb18: 4, dsp: 0}
     critical_path:
-      path_group: mem_clk
-      source: u_payload_writer_async64/issue_beats_left_q_reg[8]
-      destination: u_payload_writer_async64/m_axi_awaddr_reg[11]/CE
-      ownership: asynchronous 64-bit writer issue and 4-KiB address planning
+      path_group: aclk
+      source: "u_ingress_queue/payload_ram_rd_addr_q_reg[4]_rep__0"
+      destination: "u_ingress_queue/u_payload_ram/mem_reg_21/ADDRBWRADDR[8]"
+      logic_levels: 0
+      data_path_delay_ns: 4.381
+      ownership: ingress payload RAM address routing
       quiesce_logic_present: false
       protocol_error_logic_present: false
+    planner_internal_path:
+      strategy: MoreGlobalIterations
+      source: "u_payload_writer_async64/issue_beats_left_q_reg[22]"
+      destination: u_payload_writer_async64/aw_candidate_valid_q_reg/D
+      slack_ns: 0.268
+      logic_levels: 15
+      data_path_delay_ns: 4.702
+      logic_delay_ns: 1.565
+      route_delay_ns: 3.137
+      global_worst_path: false
+      original_aw_output_path_present_in_top100: false
     reports:
-      utilization_sha256: f8cd9302d2e10a756c1c01acf57ec2db70120b870d6b3845cb1961c485ceddcd
-      cdc_aclk_to_mem_sha256: 3929b6de1f6609dde12bb790026cfce4d0535ad6dea678d5676f6c954da67c12
-      cdc_mem_to_aclk_sha256: 3c084b5223c7cab14b5fe79a35b7381784b57c10dc70872b880286885c849360
-      bus_skew_sha256: 6a10031be6d02513b63d20a86129c387f1961acde169b0d64bace284f4283163
+      utilization_sha256: 933c9b3d3531890b981a8391b22876d52ae16453afdb2bbed29475f6834db7cc
+      cdc_aclk_to_mem_sha256: f7d3fdd08c1221b002f73987b9f7f5ec33dcbf1795458849b340bf5755e55d8d
+      cdc_mem_to_aclk_sha256: 1dcf90ec63ca2af7e6b59e81808cb0fc033da4ee54d3670aa895c111b59e99ae
+      bus_skew_sha256: aaf069648527610688a9b4b0089d9db89521d0e028cfabf34184823b73324483
       gray_constraints_sha256: 545c4b66b53b813b70224b3aff828705d428bf89542534e7012888be6451722c
-      methodology_sha256: a3203215e966a3af5b1d25d727b64a6ff6db41107e559fefddbc9a2122d9058c
+      methodology_sha256: d249d5198b524ece1e66076a52012da5939020a54ef48ba77549d479d794de8a
   async512:
+    measurement_source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+    source_closure: The edited 64-bit writer may be analyzed by a shared filelist but is not elaborated or instantiated by async512. Its elaborated source is unchanged at source_ref, so the existing routed result is retained rather than presented as a new run.
     strategies:
       - {place: Explore, phys_opt: AggressiveExplore, route: Explore, wns: 0.060, tns: 0.000, whs: 0.058, ths: 0.000, result: pass, timing_summary_sha256: 132419862cccc7a79bb6c7474f7b2a32d15a52bace28bcdca65ede7a2059aba8}
       - {route: NoTimingRelaxation, wns: 0.084, tns: 0.000, whs: 0.058, ths: 0.000, result: pass, timing_summary_sha256: 8fa1f667911783e1859247b71b4fafdec8e927a525fa9f3841fb55466bcfdd27}
@@ -106,10 +137,21 @@ constraint_audit:
 resource_regression:
   baseline_ref: 79a536621706c5047582a7f4de9bdc540403d691
   same_clock_512: {lut_delta: -550, lut_delta_percent: -1.4251, ff_delta: 22, ff_delta_percent: 0.0518, bram_delta: 0, dsp_delta: 0}
-  async64: {lut_delta: 931, lut_delta_percent: 2.3587, ff_delta: -35, ff_delta_percent: -0.0803, bram_delta: 0, dsp_delta: 0, lut_soft_target_met: false}
+  async64_before_aw_pipeline: {lut_delta: 931, lut_delta_percent: 2.3587, ff_delta: -35, ff_delta_percent: -0.0803, bram_delta: 0, dsp_delta: 0, lut_soft_target_met: false}
+  async64: {lut_delta: 83, lut_delta_percent: 0.2103, ff_delta: -24, ff_delta_percent: -0.0551, bram_delta: 0, dsp_delta: 0, lut_soft_target_met: true}
   async512: {lut_delta: 865, lut_delta_percent: 2.2092, ff_delta: 10, ff_delta_percent: 0.0231, bram_delta: 0, dsp_delta: 0, lut_soft_target_met: false}
-  attribution: The soft-target excess is dominated by top-level reset/status visibility, AXI-Lite mirrors, and channel-control packing introduced by the hardening series. The final attempt-level protocol checks add only 2 async64 and 6 async512 bridge-hierarchy LUTs versus the preceding routed reports, with zero bridge FF increase; routed hierarchy totals are non-additive because Vivado combines LUTs across boundaries.
+  attribution: The registered async64 AW candidate reduced the routed LUT total below the original development baseline soft target. Async512 retains the earlier 2.21% LUT increase from top-level reset/status visibility, AXI-Lite mirrors, and channel-control packing; routed hierarchy totals are non-additive because Vivado combines LUTs across boundaries.
+  async64_aw_planner_iteration:
+    baseline_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+    implementation_ref: 2a3faf3ae07cb17020ce2808f8720b0276f9a9a3
+    lut_delta: -848
+    lut_delta_percent: -2.0989
+    ff_delta: 11
+    ff_delta_percent: 0.0253
+    bram_delta: 0
+    dsp_delta: 0
+    soft_targets_met: true
 flow_markers:
   - PASS tb_rtl_rx_payload_gray_constraint_manifest violations=0
   - PASS tb_rtl_rx_payload_gray_methodology overridden_max_delay=0
-caveat: Routed OOC timing is not board timing. Async64 passed two of four measured routing strategies; HigherDelayCost and MoreGlobalIterations missed setup by 0.019 ns and 0.004 ns respectively and remain explicit sensitivity results. Structural CDC warnings, three async64 synchronizer-placement warnings, and OOC BRAM/reset DRC warnings remain documented; this is not a complete ASIC CDC/RDC signoff waiver package.
+caveat: Routed OOC timing is not board timing. The pre-pipeline async64 failures remain recorded beside the four setup/hold-closed optimized runs. Structural CDC warnings, three async64 synchronizer-placement warnings, and OOC BRAM/reset DRC warnings remain documented; this is not a complete ASIC CDC/RDC signoff waiver package.

@@ -22,7 +22,7 @@ marker per test.
 | `run_rtl_rx_payload_writer_512.do` | Wide writer lengths, burst boundaries, errors, random stalls, stress, and ideal-model throughput | `PASS tb_rtl_rx_payload_writer_512 cases=2028` |
 | `run_rtl_rx_payload_writer_512_integration.do` | Fixed-ingress/shared-pool source locking and integrated wide RX writes | `PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256` |
 | `run_rtl_rx_payload_cdc_bridge.do` | Command/payload/completion CDC, tags, FIFO pressure, six clock profiles, clock stops, and five reachable protocol-error cases | `PASS tb_rtl_rx_payload_cdc_bridge frames=452 bytes=925001 source_stalls=327 fifo_empty=169 peak_payload_level=32 clock_profiles=6 clock_stops=2 protocol_error_cases=5` |
-| `run_rtl_rx_mem_async64_backend.do` | Async64 lengths, 4 KiB split, response errors, backpressure, 2,000-frame stress, and throughput | `PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
+| `run_rtl_rx_mem_async64_backend.do` | Async64 lengths, 4 KiB split, response errors, 1/2/7/31-cycle AW stalls, source-credit boundaries, simultaneous events, 2,000-frame stress, and throughput | `PASS tb_rtl_async64_aw_planner candidate_stage=1 aw_stalls=1,2,7,31 source_credit=0,short,exact,surplus four_k_offsets=000,f80,fc0,ff0,ff8`<br/>`PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
 | `run_rtl_rx_mem_async64_integration.do` | Async64 fixed/shared ordering and bounded quiesce/drain under RX, buffered-header, AXI/CQ, clock-stop, repeat-reset, and UFC scenarios | `PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
 | `run_rtl_rx_mem_async512_backend.do` | Async512 lengths, 4 KiB split, response errors, backpressure, 2,000-frame stress, and throughput | `PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
 | `run_rtl_rx_mem_async512_integration.do` | Async512 fixed/shared ordering and bounded quiesce/drain under RX, buffered-header, AXI/CQ, clock-stop, repeat-reset, and UFC scenarios | `PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
@@ -34,7 +34,9 @@ therefore schedules fourteen markers, while the core-only defconfig schedules
 ten. The two wide-writer rows belong to the default-off same-clock development profile;
 `configs/slvc_dma_512_rx_wide_defconfig` disables the adapter and schedules ten
 core plus two wide markers, twelve total. Each asynchronous defconfig schedules
-the ten core rows and three RX test commands. Because the integration command
-has two required markers, the RX portion has four markers and the full profile
-requires fourteen. The matrix is directed verification, not coverage closure,
-formal proof, or complete CDC/RDC signoff.
+the ten core rows and three RX test commands. The integration command has two
+required markers. Async64 additionally requires the AW-planner marker from its
+backend command, so its RX portion has five markers and its full profile has
+fifteen; async512 remains four RX markers and fourteen total. The matrix is
+directed verification, not coverage closure, formal proof, or complete CDC/RDC
+signoff.

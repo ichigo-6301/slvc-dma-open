@@ -2,10 +2,11 @@ kind: asic_frontend_ooc_summary
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_dc_ooc_summary
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+source_ref: 2a3faf3ae07cb17020ce2808f8720b0276f9a9a3
 status: verified
 tool: Design Compiler O-2018.06-SP1
 library_profile: Nangate45 typical standard-cell DB
+library_sha256: 3faa4f55eeaf1df072a98ec7bab34307e0d14183aae09897e26f0a2e97711167
 top: dma_rx_payload_async_ooc_top
 clock_period_ns: {source: 5.000, memory: 5.000}
 clock_groups: asynchronous
@@ -16,21 +17,33 @@ constraints:
   output_delay_ns: 0.500
 results:
   async64:
-    setup_wns_ns: {source: 2.95840, memory: 1.68604}
+    baseline_before_aw_pipeline:
+      source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+      setup_wns_ns: {source: 2.95840, memory: 1.68604}
+      total_cell_area: 171707.522
+      leaf_cell_count: 85403
+      register_count: 20560
+    measurement_worktree_ref: 18db34bf010ba48428fea5955ac42454e92f60a1
+    rtl_source_ref: 2a3faf3ae07cb17020ce2808f8720b0276f9a9a3
+    setup_wns_ns: {source: 2.94806, memory: 1.68188}
     hold_wns_ns: {source: 0.0394817, memory: 0.0394817}
     setup_tns_ns: 0.0
     setup_violating_paths: 0
-    total_cell_area: 171707.522
-    leaf_cell_count: 85403
-    register_count: 20560
+    hold_tns_ns: 0.0
+    hold_violating_paths: 0
+    total_cell_area: 172104.926
+    leaf_cell_count: 85672
+    register_count: 20602
     latch_count: 0
     synchronizer_cell_count: 60
     reports:
-      summary_sha256: da7e1c81d22c27012444ac67642523a1b17d29a53e8270e7fe8d777fd4bec8e8
-      qor_sha256: e29a3a9017e3a63bc7ca303419d955f9fc8a02e8c76cdff09be3eb9f795f456f
-      setup_timing_sha256: ff032ef64beae140dda4a99c07ae84d3cbdd544610d7b8db9425baf3caec2b0e
-      constraints_sha256: a1bd273773523b857481b0edc1314a98abd56114eff252cacaff5f898a5c0054
+      summary_sha256: c246fbb8c40bce76804d69a87fd901f6e009c5d484eaedbc9f081c0ca7e48ac0
+      qor_sha256: 780bac6522f717a6290a64567f1dccb142776c491382682b8caf366fa957b5a0
+      setup_timing_sha256: 9d1c6672df9d65c86570397b9c5c6c3268ad38aa9becf135f376ff3229ce527b
+      constraints_sha256: a707c2d5c0ead477595679c7a75718b1f43fc69b286cb8f648106f157c8c19f0
   async512:
+    measurement_source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+    source_closure: The edited 64-bit writer is analyzed by the shared OOC filelist but is not elaborated or instantiated by async512. Its elaborated design is unchanged at source_ref, so the existing result is retained rather than presented as a new run.
     setup_wns_ns: {source: 3.01077, memory: 1.39268}
     hold_wns_ns: {source: 0.0394817, memory: 0.0394817}
     setup_tns_ns: 0.0
@@ -52,8 +65,10 @@ fifo_storage:
   macro_area_included: false
 resource_regression:
   baseline_ref: 79a536621706c5047582a7f4de9bdc540403d691
-  async64: {area_delta: 49.472, area_delta_percent: 0.0288, register_delta: 6, register_delta_percent: 0.0292, soft_targets_met: true}
+  async64_before_aw_pipeline: {area_delta: 49.472, area_delta_percent: 0.0288, register_delta: 6, register_delta_percent: 0.0292, soft_targets_met: true}
+  async64: {area_delta: 446.876, area_delta_percent: 0.2603, register_delta: 48, register_delta_percent: 0.2335, soft_targets_met: true}
   async512: {area_delta: 99.216, area_delta_percent: 0.0583, register_delta: 6, register_delta_percent: 0.0293, soft_targets_met: true}
-source_closure_note: The later checkpoint-reroute and evidence commits are outside dma_rx_payload_writer_dc_ooc.f; DC results are bound to the exact RTL source_ref.
+  async64_aw_planner_iteration: {baseline_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23, area_delta: 397.404, area_delta_percent: 0.2314, leaf_cell_delta: 269, register_delta: 42, register_delta_percent: 0.2043, source_wns_delta_ns: -0.01034, memory_wns_delta_ns: -0.00416, soft_targets_met: true}
+source_closure_note: Async64 was recompiled from the RTL-identical OOC source at rtl_source_ref. The changed file is not instantiated in async512, so its earlier elaboration-identical result is retained with an explicit measurement_source_ref.
 constraint_note: The constraints report includes the library default maximum-leakage-power pseudo-violation; QOR reports zero setup TNS and zero setup violating paths for both clock groups.
 caveat: Generic arrays synthesize into standard-cell storage. Area is not comparable to a macro-backed implementation or writer-only OOC and is not routed ASIC timing, physical design, extracted STA, or signoff.

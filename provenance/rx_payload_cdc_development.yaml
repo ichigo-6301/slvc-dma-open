@@ -1,8 +1,10 @@
 kind: development_profile_provenance
 schema_version: 1.0.0
-branch: fix/rx-payload-cdc-hardening
-base_commit: 79a536621706c5047582a7f4de9bdc540403d691
-implementation_commit: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+branch: fix/async64-aw-planner-pipeline
+base_commit: 89fc2e024b7d6eb98b73ef97b96b711a66937f3f
+cdc_hardening_commit: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+implementation_commit: 2a3faf3ae07cb17020ce2808f8720b0276f9a9a3
+regression_commit: 18db34bf010ba48428fea5955ac42454e92f60a1
 fpga_constraint_commit: 971feb4283d3c76556e737d2e8ec96f36e700a34
 reroute_flow_commit: 133457ebc429610471a070f39786dc5e81ad6bd5
 profiles:
@@ -20,8 +22,9 @@ evidence:
   - evidence/slvc_dma_rx_payload_cdc_dc_ooc_summary.yaml
   - evidence/slvc_dma_rx_payload_cdc_contract.yaml
 source_closure:
-  regression: bound to implementation_commit; later flow and evidence commits change no RTL, testbench, or runner behavior
-  same_clock_fpga: re-synthesized at implementation_commit and proved the asynchronous bridge, FIFO, and reset synchronizers absent
-  async_fpga: synthesized and placed at implementation_commit; independent reroutes use reroute_flow_commit
-  dc_ooc: compiled from the exact implementation_commit OOC filelist
+  regression: all four profiles reran at regression_commit; the async64 profile requires fifteen exact markers and the other marker counts are unchanged
+  same_clock_fpga: the async64-only RTL edit is absent from this profile, so the existing cdc_hardening_commit routed result remains source-identical
+  async64_fpga: synthesized, placed, and routed in four strategies from RTL-identical implementation_commit inputs; the run worktree was regression_commit
+  async512_fpga: the edited 64-bit writer may be analyzed by a shared filelist but is not elaborated or instantiated, so the existing cdc_hardening_commit routed result remains elaboration-identical
+  dc_ooc: async64 was recompiled from implementation_commit RTL-identical inputs; async512 retains its cdc_hardening_commit result because the changed analyzed file is not elaborated or instantiated in that profile
 scope_note: These records describe optional development profiles on the named branch. They do not replace or extend the frozen RC1 evidence set.

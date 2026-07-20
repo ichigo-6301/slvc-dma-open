@@ -43,44 +43,53 @@ WNS of `+0.089`, `+0.088`, and `+0.144 ns` respectively.
 
 ## Optional Dual-Clock RX Memory Profiles
 
-These branch-local results bind to the dual-clock implementation commit and do
-not modify the frozen RC1 evidence above. Each profile passed ten frozen-core
-tests plus the common CDC bridge and two width-specific commands on Windows
-ModelSim 2020.4 and Linux Questa 10.7c. Each integration command emits a second
-quiesce marker, so each async profile requires 14 markers from 13 commands.
+These branch-local results do not modify the frozen RC1 evidence above. Both
+profiles passed ten frozen-core tests plus the common CDC bridge and two
+width-specific commands on Windows ModelSim 2020.4 and Linux Questa 10.7c.
+Each integration command emits a second quiesce marker. Async64 now also
+requires a dedicated AW-candidate marker from its backend command, so it
+requires 15 markers from 13 commands; async512 remains 14 from 13.
 
 | Profile | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Async64 | +0.004 ns | +0.054 ns | 40,402 | 43,551 | 52 | 4 | 0 |
+| Async64 | +0.109 ns | +0.065 ns | 39,554 | 43,562 | 52 | 4 | 0 |
 | Async512 | +0.060 ns | +0.058 ns | 40,020 | 43,316 | 52 | 4 | 0 |
 
 Both Vivado 2018.3 routed runs use 5.000 ns `aclk` and `mem_clk`, have zero
 TNS/THS, no unconstrained internal endpoint, no Critical CDC entry, and met
 their Gray-pointer bus-skew checks. Async512 retained three setup/hold-closed
-strategies with WNS `+0.060/+0.084/+0.081 ns`. Async64 passed Explore and
-NoTimingRelaxation with WNS `+0.004/+0.003 ns`; two additional sensitivity
-reroutes missed setup by `-0.019 ns` and `-0.004 ns` and are not presented as
-passing results. The Vivado flow uses point-to-point exceptions
+strategies with WNS `+0.060/+0.084/+0.081 ns`. After inserting one registered
+AW-plan candidate stage, Async64 closed all four measured strategies with WNS
+`+0.138/+0.122/+0.109/+0.223 ns` and minimum WHS `+0.065 ns`. The earlier
+pre-pipeline results (`+0.004/+0.003/-0.019/-0.004 ns`) remain in evidence as
+the timing baseline rather than being overwritten. The Vivado flow uses point-to-point exceptions
 for actual non-Gray crossings; it does not use a blanket asynchronous clock
 group that would override the four project Gray max-delay constraints. The
 ideal-memory tests sustained 8 and 64 byte/cycle respectively at 100%
-W-channel utilization. The same-clock 512 test independently sustained
-64 byte/cycle at 100% W-channel utilization and four peak outstanding bursts.
+W-channel utilization. Async64 issued 8,192 sixteen-beat bursts for the 1 MiB
+test and observed 8,192 planner-bubble cycles; four outstanding bursts hid
+those AW intervals from the W channel. The same-clock 512 test independently
+sustained 64 byte/cycle at 100% W-channel utilization and four peak outstanding
+bursts.
 
 The selected worst setup paths belong to the same-clock reset distribution,
-the async64 memory-writer issue/address planner, and the async512 RX/flow-control
-resume calculation. Neither quiesce nor CDC protocol-error detection appears in
-those selected critical paths. Relative to the `79a5366` resource baseline,
-async64 and async512 LUT use increased by 2.36% and 2.21%, exceeding the 2%
-soft target; BRAM and DSP use did not increase. The final attempt-level error
-checks account for only 2 and 6 bridge-hierarchy LUTs respectively versus the
-preceding routed reports.
+the async64 ingress payload-RAM address route, and the async512 RX/flow-control
+resume calculation. The original `issue_beats_left_q -> m_axi_awaddr/CE` path
+is absent from every optimized top-100 report. A planner-internal path from
+`issue_beats_left_q` to `aw_candidate_valid_q` remains visible below the global
+worst path at `+0.268 ns` in MoreGlobalIterations. Neither quiesce nor CDC
+protocol-error detection appears in these paths. Relative to the `79a5366`
+resource baseline, current async64 LUT use is up 0.21% while async512 remains up
+2.21%; BRAM and DSP are unchanged. Relative to the immediate pre-pipeline
+async64 result, the routed design uses 848 fewer LUTs and 11 more FFs.
 
-Design Compiler 5.000 ns OOC reported `+2.958/+1.686 ns` source/memory setup
-WNS for async64 and `+3.011/+1.393 ns` for async512. Generic FIFO arrays are
-included in their 171,707.52 and 170,410.51 cell-area totals. Relative to the
-development baseline, area increased by 0.029% and 0.058%, and register count
-increased by 0.029% in each profile. These totals are
+Design Compiler 5.000 ns OOC recompiled async64 and reported
+`+2.948/+1.682 ns` source/memory setup WNS, `+0.039 ns` hold WNS, zero setup
+violations, 172,104.93 cell area, 20,602 registers, and zero latches. This is a
+0.231% area and 0.204% register increase versus the immediate pre-pipeline
+async64 result. Async512 source is unchanged and retains its existing
+`+3.011/+1.393 ns`, 170,410.51-area result rather than being presented as a
+new run. Generic FIFO arrays are included in both totals. These totals are
 not macro-backed ASIC area and are not comparable to writer-only synthesis.
 See the [dual-clock backend guide](rx_payload_cdc_backends.md).
 

@@ -7,9 +7,9 @@ claims:
     metric: directed_regression
     value: pass
     unit: result
-    benchmark: "default 14 markers, same-clock 12 markers, async64 14 markers from 13 commands, async512 14 markers from 13 commands"
+    benchmark: "default 14 markers, same-clock 12 markers, async64 15 markers from 13 commands, async512 14 markers from 13 commands"
     configuration: Committed-frame RX source with optional dedicated RX memory backend
-    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+    source_ref: 18db34bf010ba48428fea5955ac42454e92f60a1
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_rx_payload_cdc_regression_summary
@@ -24,7 +24,7 @@ claims:
     unit: percent W-channel utilization
     benchmark: 1 MiB transfer with ready memory model
     configuration: "same-clock 512 and async512 64 byte/cycle; async64 8 byte/cycle; four peak outstanding"
-    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+    source_ref: 18db34bf010ba48428fea5955ac42454e92f60a1
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_rx_payload_cdc_regression_summary
@@ -35,16 +35,16 @@ claims:
     profile: slvc_dma_v1_512_rx_payload_cdc_development
     statement: Same-clock 512, async64, and async512 RX memory profiles met routed 200 MHz setup and hold timing on xc7z100ffg900-2.
     metric: fpga_ooc_timing
-    value: 0.003
+    value: 0.060
     unit: ns minimum WNS
     benchmark: Vivado OOC synth, opt, place, phys-opt, and route
-    configuration: "5.000 ns aclk/mem_clk; same-clock and async512 passed three strategies; async64 passed two of four measured strategies; point-to-point non-Gray CDC exceptions; explicit Gray max-delay and bus-skew constraints"
-    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+    configuration: "5.000 ns aclk/mem_clk; async64 passed four of four newly measured strategies; source-identical same-clock and async512 retain three passing strategies; point-to-point non-Gray CDC exceptions; explicit Gray max-delay and bus-skew constraints"
+    source_ref: 2a3faf3ae07cb17020ce2808f8720b0276f9a9a3
     tool: Vivado 2018.3
     evidence:
       - slvc_dma_rx_payload_cdc_fpga_ooc_summary
     status: verified
-    caveat: OOC timing is not board timing or complete CDC/RDC signoff; two async64 sensitivity reroutes missed setup by 0.019 ns and 0.004 ns, and documented OOC BRAM/reset and synchronizer-placement warnings remain.
+    caveat: OOC timing is not board timing or complete CDC/RDC signoff; the pre-pipeline async64 two-pass/two-fail matrix remains baseline evidence, and documented OOC BRAM/reset and synchronizer-placement warnings remain.
     public: true
   - id: slvc_dma_rx_payload_cdc_same_clock_bypass
     profile: slvc_dma_v1_512_rx_same_clock_512
@@ -68,8 +68,8 @@ claims:
     value: 1.39268
     unit: ns minimum setup WNS
     benchmark: dual-clock bridge, FIFO control/storage model, serializer or writer, and completion return
-    configuration: "5.000 ns source/memory clocks, asynchronous groups, generic RTL FIFO arrays"
-    source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+    configuration: "5.000 ns source/memory clocks, asynchronous groups, generic RTL FIFO arrays; async64 recompiled and async512 retained through exact source closure"
+    source_ref: 2a3faf3ae07cb17020ce2808f8720b0276f9a9a3
     tool: Design Compiler O-2018.06-SP1
     evidence:
       - slvc_dma_rx_payload_cdc_dc_ooc_summary

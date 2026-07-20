@@ -2,26 +2,27 @@ kind: regression_summary
 schema_version: 1.0.0
 id: slvc_dma_rx_payload_cdc_regression_summary
 profile: slvc_dma_v1_512_rx_payload_cdc_development
-source_ref: d0de7b99064a42fe5bfec83f95f49405ccdaee23
+source_ref: 18db34bf010ba48428fea5955ac42454e92f60a1
 status: verified
 scope: optional same-clock and dual-clock RX payload memory backends
 hosts:
   - host: Windows
     tool: ModelSim SE-64 2020.4
     results:
-      default_adapter: {required_markers: 14, result: pass, log_sha256: 263bd00e9b39afd5400c824ba714b5df84eaaef39c3efc595ef34e8761e998d2}
-      same_clock_512: {required_markers: 12, result: pass, log_sha256: f0434288d873beb97860b45014bb23ae142a846967bc58e15a474d2e66c1464b}
-      async64: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 15c57689d1682feb65039cb5a51f9d06c22d1faeff2c706c8b7e0311835c0f87}
-      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 3abdfa85fbcddc303e371db61bb55a34bfa8bd1e63290ffbe7ee28e850f991fb}
+      default_adapter: {required_markers: 14, result: pass, log_sha256: 9e171aa32edc178543091f615bc6b81f23ade0585806aef184d5e6f3c8f878b5}
+      same_clock_512: {required_markers: 12, result: pass, log_sha256: 6dd4b3677ee40587e509efd6c79e87b655a86a879c884fcbe77efd34523a3dbd}
+      async64: {scheduled_tests: 13, required_markers: 15, result: pass, log_sha256: 430e54dbaa7024033ff771795444fe6380ff396d3b50186d8c87b4f4e18c58cb}
+      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 854d88ae359c3800878fd38f472f6c64c2f20146720fd9c0c783ee314fb19cbc}
   - host: IC_EDA_FULL Linux
     tool: Questa Sim-64 10.7c
     results:
-      default_adapter: {required_markers: 14, result: pass, log_sha256: 3a89139cb76935978b81e7d1ea4913137eb6490395c92c23d24dfd4c0dfdfa54}
-      same_clock_512: {required_markers: 12, result: pass, log_sha256: 1aa8c0f2f358972af5372a946912c5de06939d0fd0425e361ec596a1150c7476}
-      async64: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: 4cffd527f4edc9c4ae3a564b2a76aac8b3ed4432148cc5ee8bbd3aa9e8c5da91}
-      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: eabc6c87029c08228a92a4fe01dfec0d136a16d9c143ccbccb00afc3e328c7c8}
+      default_adapter: {required_markers: 14, result: pass, log_sha256: d89636ddd49a2249b2797f1a76c88aae9389e984d2110b2e7ef96ac4a3061e85}
+      same_clock_512: {required_markers: 12, result: pass, log_sha256: 8fa307d9106f31ee876459616b2d40fcc3c2b20e4aafc80e51494031ae2a25d4}
+      async64: {scheduled_tests: 13, required_markers: 15, result: pass, log_sha256: 1dcc946d5992081e0c8bc96dc1a23714e5b04479f1b88000ae2f29bce094e3df}
+      async512: {scheduled_tests: 13, required_markers: 14, result: pass, log_sha256: a869a5796b6a98dce13e98d79e7039bcbbf62d60da0b7a62065bd0d2f3328728}
 required_new_markers:
   - PASS tb_rtl_rx_payload_cdc_bridge frames=452 bytes=925001 source_stalls=327 fifo_empty=169 peak_payload_level=32 clock_profiles=6 clock_stops=2 protocol_error_cases=5
+  - PASS tb_rtl_async64_aw_planner candidate_stage=1 aw_stalls=1,2,7,31 source_credit=0,short,exact,surplus four_k_offsets=000,f80,fc0,ff0,ff8
   - PASS tb_rtl_rx_mem_async64_backend stress_frames=2000 clock_profiles=6 clock_stops=2
   - PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1
   - PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2
@@ -42,6 +43,8 @@ stress:
   backend_random_frames_per_profile: 2000
   integration_mixed_frames_per_profile: 256
   payload_fifo_peak_entries: 32
+  async64_directed_lengths: 21
+  async64_aw_stability_checks: 11723
 protocol_error_reachability:
   directed_case_count: 5
   cases:
@@ -55,7 +58,7 @@ protocol_error_reachability:
   software_visibility: global_status_sticky_global_error_counter_axi_error_irq
 throughput_ideal_memory:
   same_clock_512: {bytes: 1048576, bytes_per_cycle: 64, w_utilization_percent: 100, peak_outstanding: 4}
-  async64: {bytes: 1048576, bytes_per_mem_cycle: 8, w_utilization_percent: 100, peak_outstanding: 4}
+  async64: {bytes: 1048576, bytes_per_mem_cycle: 8, w_utilization_percent: 100, peak_outstanding: 4, aw_bursts: 8192, aw_beats: 131072, average_burst_beats: 16, planner_bubble_cycles: 8192, aw_wait_cycles: 122825}
   async512: {bytes: 1048576, bytes_per_mem_cycle: 64, w_utilization_percent: 100, peak_outstanding: 4}
 checks:
   - byte-accurate memory scoreboard
@@ -70,5 +73,33 @@ checks:
   - sustained pending-descriptor suppression and clean TX restart
   - attempt-level source and memory protocol-error reachability
   - memory-domain protocol-error synchronization and software-visible sticky counter IRQ mapping
-source_closure_note: The later checkpoint-reroute and evidence commits change no RTL, testbench, or simulation-runner behavior; regression source remains exactly source_ref.
+  - registered async64 AW candidate and stable AWADDR/AWLEN/AWSIZE/AWBURST under 1/2/7/31-cycle backpressure
+  - async64 source-credit zero, short, exact, and surplus boundaries without duplicate reservation
+  - async64 simultaneous AW/B, AW/source, AW/plan-pop, source/B, and final-W/B events
+async64_aw_planner:
+  implementation:
+    candidate_pipeline_stages: 1
+    candidate_registers: [aw_candidate_valid_q, aw_candidate_addr_q, aw_candidate_beats_q]
+    candidate_register_bits: 41
+    issue_state_updates_only_on_aw_fire: true
+    plan_queue_push_only_on_aw_fire: true
+    completion_requires_candidate_empty: true
+  directed:
+    aw_stall_cycles: [1, 2, 7, 31]
+    source_credit_cases: [zero, short, exact, surplus]
+    source_credit_observations: {zero_wait: 4, short_wait: 47, exact: 309, surplus: 41328}
+    four_k_offsets_hex: [000, f80, fc0, ff0, ff8]
+    aw_stability_checks: 11723
+    simultaneous_event_classes: [aw_and_b, aw_and_source, aw_and_plan_pop, source_and_b, final_w_and_b]
+  throughput:
+    bytes: 1048576
+    bytes_per_mem_cycle: 8
+    w_utilization_percent: 100
+    peak_outstanding: 4
+    aw_bursts: 8192
+    aw_beats: 131072
+    average_burst_beats: 16
+    planner_bubble_cycles: 8192
+    aw_wait_cycles: 122825
+source_closure_note: The final evidence and checksum commit changes no RTL, testbench, or simulation-runner behavior; regression source remains exactly source_ref.
 caveat: Directed and deterministic random simulation is not functional coverage closure, formal proof, board DDR measurement, or complete CDC/RDC signoff.

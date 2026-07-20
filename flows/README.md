@@ -29,8 +29,10 @@ the adapter disabled it requires ten. The optional RX-wide defconfig disables
 the adapter and appends two wide-backend tests, so it requires twelve markers.
 Each dual-clock RX memory defconfig appends the common CDC bridge test and two
 width-specific test commands. The integration command emits both its profile
-marker and the bounded-quiesce marker, so three commands require four RX
-markers and fourteen markers in total.
+marker and the bounded-quiesce marker. Async64's backend command additionally
+emits the registered AW-planner marker, so its three RX commands require five
+RX markers and fifteen markers in total. Async512's three commands require four
+RX markers and fourteen total.
 The runner uses tool exit status, native
 error summary, and every exact marker configured for each test. It has no dependency on
 `rg`, `grep`, or another external source-search utility.

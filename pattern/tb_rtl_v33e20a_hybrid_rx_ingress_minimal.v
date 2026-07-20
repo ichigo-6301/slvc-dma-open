@@ -11,9 +11,11 @@ module tb;
 
 reg clk;
 reg rstn;
+reg clk_enable;
 `ifdef DMA_RX_MEM_ASYNC_PROFILE
 reg mem_clk;
 reg mem_rstn;
+reg mem_clk_enable;
 `endif
 reg [7:0] sys_mem [0:`DMA_SIM_MEM_BYTES-1];
 reg [7:0] ref_mem [0:`DMA_SIM_MEM_BYTES-1];
@@ -47,13 +49,16 @@ wire [2:0]  m_axi_awsize;
 wire [1:0]  m_axi_awburst;
 wire        m_axi_awvalid;
 wire        m_axi_awready;
+wire        m_axi_awready_raw;
 wire [63:0] m_axi_wdata;
 wire [7:0]  m_axi_wstrb;
 wire        m_axi_wlast;
 wire        m_axi_wvalid;
 wire        m_axi_wready;
+wire        m_axi_wready_raw;
 wire [1:0]  m_axi_bresp;
 wire        m_axi_bvalid;
+wire        m_axi_bvalid_raw;
 wire        m_axi_bready;
 wire [31:0] m_axi_araddr;
 wire [7:0]  m_axi_arlen;
@@ -67,6 +72,9 @@ wire        m_axi_rlast;
 wire        m_axi_rvalid;
 wire        m_axi_rready;
 wire        irq;
+wire        ufc_tx_valid_tb;
+reg         ufc_tx_ready_tb;
+wire [7:0]  ufc_tx_opcode_tb;
 
 `ifdef DMA_RX_DEDICATED_PAYLOAD_TB
 wire [31:0]  m_axi_rx_payload_awaddr;
@@ -75,6 +83,7 @@ wire [2:0]   m_axi_rx_payload_awsize;
 wire [1:0]   m_axi_rx_payload_awburst;
 wire         m_axi_rx_payload_awvalid;
 wire         m_axi_rx_payload_awready;
+wire         m_axi_rx_payload_awready_raw;
 `ifdef DMA_RX_MEM_ASYNC64_PROFILE
 wire [63:0]  m_axi_rx_payload_wdata;
 wire [7:0]   m_axi_rx_payload_wstrb;
@@ -85,8 +94,10 @@ wire [63:0]  m_axi_rx_payload_wstrb;
 wire         m_axi_rx_payload_wlast;
 wire         m_axi_rx_payload_wvalid;
 wire         m_axi_rx_payload_wready;
+wire         m_axi_rx_payload_wready_raw;
 wire [1:0]   m_axi_rx_payload_bresp;
 wire         m_axi_rx_payload_bvalid;
+wire         m_axi_rx_payload_bvalid_raw;
 wire         m_axi_rx_payload_bready;
 `endif
 
@@ -94,6 +105,23 @@ reg [511:0] header;
 reg [511:0] hold_beat;
 reg [31:0] rdata;
 integer i;
+integer observed_header_count;
+integer observed_soft_reset_count;
+reg cq_axi_aw_stall;
+reg cq_axi_w_stall;
+reg cq_axi_b_stall;
+reg payload_axi_aw_stall;
+reg payload_axi_w_stall;
+reg payload_axi_b_stall;
+
+assign m_axi_awready = m_axi_awready_raw && !cq_axi_aw_stall;
+assign m_axi_wready = m_axi_wready_raw && !cq_axi_w_stall;
+assign m_axi_bvalid = m_axi_bvalid_raw && !cq_axi_b_stall;
+`ifdef DMA_RX_DEDICATED_PAYLOAD_TB
+assign m_axi_rx_payload_awready = m_axi_rx_payload_awready_raw && !payload_axi_aw_stall;
+assign m_axi_rx_payload_wready = m_axi_rx_payload_wready_raw && !payload_axi_w_stall;
+assign m_axi_rx_payload_bvalid = m_axi_rx_payload_bvalid_raw && !payload_axi_b_stall;
+`endif
 
 `ifdef DMA_RX_DEDICATED_PAYLOAD_TB
 integer wide_lengths [0:17];
@@ -157,16 +185,16 @@ axi64_slave_model u_mem(
     .awlen(m_axi_awlen),
     .awsize(m_axi_awsize),
     .awburst(m_axi_awburst),
-    .awvalid(m_axi_awvalid),
-    .awready(m_axi_awready),
+    .awvalid(m_axi_awvalid && !cq_axi_aw_stall),
+    .awready(m_axi_awready_raw),
     .wdata(m_axi_wdata),
     .wstrb(m_axi_wstrb),
     .wlast(m_axi_wlast),
-    .wvalid(m_axi_wvalid),
-    .wready(m_axi_wready),
+    .wvalid(m_axi_wvalid && !cq_axi_w_stall),
+    .wready(m_axi_wready_raw),
     .bresp(m_axi_bresp),
-    .bvalid(m_axi_bvalid),
-    .bready(m_axi_bready),
+    .bvalid(m_axi_bvalid_raw),
+    .bready(m_axi_bready && !cq_axi_b_stall),
     .araddr(m_axi_araddr),
     .arlen(m_axi_arlen),
     .arsize(m_axi_arsize),
@@ -191,16 +219,16 @@ axi64_slave_model u_mem(
     .awlen(m_axi_rx_payload_awlen),
     .awsize(m_axi_rx_payload_awsize),
     .awburst(m_axi_rx_payload_awburst),
-    .awvalid(m_axi_rx_payload_awvalid),
-    .awready(m_axi_rx_payload_awready),
+    .awvalid(m_axi_rx_payload_awvalid && !payload_axi_aw_stall),
+    .awready(m_axi_rx_payload_awready_raw),
     .wdata(m_axi_rx_payload_wdata),
     .wstrb(m_axi_rx_payload_wstrb),
     .wlast(m_axi_rx_payload_wlast),
-    .wvalid(m_axi_rx_payload_wvalid),
-    .wready(m_axi_rx_payload_wready),
+    .wvalid(m_axi_rx_payload_wvalid && !payload_axi_w_stall),
+    .wready(m_axi_rx_payload_wready_raw),
     .bresp(m_axi_rx_payload_bresp),
-    .bvalid(m_axi_rx_payload_bvalid),
-    .bready(m_axi_rx_payload_bready),
+    .bvalid(m_axi_rx_payload_bvalid_raw),
+    .bready(m_axi_rx_payload_bready && !payload_axi_b_stall),
     .araddr(32'h0),
     .arlen(8'h0),
     .arsize(3'd3),
@@ -229,16 +257,16 @@ axi512_write_slave_model #(
     .awlen(m_axi_rx_payload_awlen),
     .awsize(m_axi_rx_payload_awsize),
     .awburst(m_axi_rx_payload_awburst),
-    .awvalid(m_axi_rx_payload_awvalid),
-    .awready(m_axi_rx_payload_awready),
+    .awvalid(m_axi_rx_payload_awvalid && !payload_axi_aw_stall),
+    .awready(m_axi_rx_payload_awready_raw),
     .wdata(m_axi_rx_payload_wdata),
     .wstrb(m_axi_rx_payload_wstrb),
     .wlast(m_axi_rx_payload_wlast),
-    .wvalid(m_axi_rx_payload_wvalid),
-    .wready(m_axi_rx_payload_wready),
+    .wvalid(m_axi_rx_payload_wvalid && !payload_axi_w_stall),
+    .wready(m_axi_rx_payload_wready_raw),
     .bresp(m_axi_rx_payload_bresp),
-    .bvalid(m_axi_rx_payload_bvalid),
-    .bready(m_axi_rx_payload_bready)
+    .bvalid(m_axi_rx_payload_bvalid_raw),
+    .bready(m_axi_rx_payload_bready && !payload_axi_b_stall)
 );
 `endif
 
@@ -295,9 +323,9 @@ frame_dma_rx_top u_dut(
     .m_axi_rlast(m_axi_rlast),
     .m_axi_rvalid(m_axi_rvalid),
     .m_axi_rready(m_axi_rready),
-    .ufc_tx_valid(),
-    .ufc_tx_ready(1'b1),
-    .ufc_tx_opcode(),
+    .ufc_tx_valid(ufc_tx_valid_tb),
+    .ufc_tx_ready(ufc_tx_ready_tb),
+    .ufc_tx_opcode(ufc_tx_opcode_tb),
     .ufc_tx_flow_id(),
     .ufc_tx_arg0(),
     .ufc_tx_arg1(),
@@ -330,10 +358,22 @@ frame_dma_rx_top u_dut(
 `endif
 );
 
-always #5 clk = ~clk;
+always #5 if (clk_enable) clk = ~clk;
 `ifdef DMA_RX_MEM_ASYNC_PROFILE
-always #3.5 mem_clk = ~mem_clk;
+always #3.5 if (mem_clk_enable) mem_clk = ~mem_clk;
 `endif
+
+always @(posedge clk or negedge rstn) begin
+    if (!rstn) begin
+        observed_header_count <= 0;
+        observed_soft_reset_count <= 0;
+    end else begin
+        if (u_dut.header_fire)
+            observed_header_count <= observed_header_count + 1;
+        if (u_dut.core_soft_reset)
+            observed_soft_reset_count <= observed_soft_reset_count + 1;
+    end
+end
 
 function [31:0] ch_base;
     input [3:0] ch;
@@ -356,6 +396,13 @@ endtask
 
 task reset_dut;
     begin
+        cq_axi_aw_stall = 1'b0;
+        cq_axi_w_stall = 1'b0;
+        cq_axi_b_stall = 1'b0;
+        payload_axi_aw_stall = 1'b0;
+        payload_axi_w_stall = 1'b0;
+        payload_axi_b_stall = 1'b0;
+        ufc_tx_ready_tb = 1'b1;
         rstn = 1'b0;
 `ifdef DMA_RX_MEM_ASYNC_PROFILE
         mem_rstn = 1'b0;
@@ -545,9 +592,16 @@ task hold_payload_and_expect_backpressure;
             if (rx_axis_tready)
                 guard = guard + 1;
         end
-        if (guard != 0) begin
-            $display("Error: no-drop oversized FRAME_SHARED payload was not backpressured");
-            $finish;
+        if (`DMA_ENABLE_RX_AXIS_SKID != 0) begin
+            if (guard != 4) begin
+                $display("Error: elastic FIFO credit bound mismatch accepted=%0d expected=4", guard);
+                $finish;
+            end
+        end else begin
+            if (guard != 0) begin
+                $display("Error: no-drop oversized FRAME_SHARED payload was not backpressured");
+                $finish;
+            end
         end
         release u_rx_axis.rx_axis_tdata;
         release u_rx_axis.rx_axis_tvalid;
@@ -768,6 +822,7 @@ task run_t11_wide_mixed_stress;
         expect_pool_released();
     end
 endtask
+
 `endif
 
 `ifdef DMA_RX_MEM_ASYNC_PROFILE
@@ -788,7 +843,21 @@ task run_t12_async_soft_reset_drain;
                     reset_guard = reset_guard + 1;
                 end
                 if (reset_guard >= 50000) begin
-                    $display("Error: deferred async soft reset never completed");
+                    $display("Error: deferred async soft reset never completed quiesce=%0d drain=%0d mem_req=%0d mem_done=%0d core_work=%0d",
+                             u_dut.soft_reset_quiesce, u_dut.soft_reset_drain_done,
+                             u_dut.soft_reset_mem_request_sent_q,
+                             u_dut.soft_reset_mem_reset_done, u_dut.core_work_busy);
+                    $display("  rx=%0d wr=%0d release=%0d ingress=%0d pay=%0d cq=%0d tx=%0d tx_idle=%0d ufc_busy=%0d ufc_valid=%0d drop_pending=%0d",
+                             u_dut.rx_state, u_dut.wr_state, u_dut.release_service_busy,
+                             u_dut.ingress_work_busy, u_dut.pay_busy, u_dut.cq_work_busy,
+                             u_dut.tx_busy, u_dut.tx_drain_idle, u_dut.ufc_tx_busy,
+                             u_dut.ufc_tx_valid, u_dut.frame_drop_pending);
+                    $display("  cq_reserved=%0d cq_dec_pending=%0d cq_credit=%0d reserve_evt=%0d return_evt=%0d bridge_busy=%0d writer_busy=%0d",
+                             u_dut.cq_reserved_count, u_dut.cq_reserve_dec_pending_cnt,
+                             u_dut.cq_cmd_credit_count,
+                             u_dut.cq_cmd_credit_reserve_evt_q,
+                             u_dut.cq_cmd_credit_return_evt_q,
+                             u_dut.async_bridge_busy, u_dut.async_writer_busy);
                     $finish;
                 end
                 if (u_dut.pay_busy || (u_dut.wr_state != 3'd0)) begin
@@ -816,14 +885,357 @@ task run_t12_async_soft_reset_drain;
         expect_pool_released();
     end
 endtask
+
+task wait_soft_reset_commit;
+    input integer max_cycles;
+    integer reset_guard;
+    begin
+        reset_guard = 0;
+        while (!u_dut.core_soft_reset && (reset_guard < max_cycles)) begin
+            @(posedge clk);
+            reset_guard = reset_guard + 1;
+        end
+        if (reset_guard >= max_cycles) begin
+            $display("Error: bounded soft reset timeout quiesce=%0d drain=%0d mem_req=%0d mem_done=%0d core_work=%0d",
+                     u_dut.soft_reset_quiesce, u_dut.soft_reset_drain_done,
+                     u_dut.soft_reset_mem_request_sent_q,
+                     u_dut.soft_reset_mem_reset_done, u_dut.core_work_busy);
+            $display("  rx=%0d wr=%0d ingress=%0d pay=%0d cq=%0d tx=%0d tx_idle=%0d ufc=%0d/%0d reserved=%0d credit=%0d bridge=%0d writer=%0d aw=%0d/%0d w=%0d/%0d b=%0d/%0d",
+                     u_dut.rx_state, u_dut.wr_state, u_dut.ingress_work_busy,
+                     u_dut.pay_busy, u_dut.cq_work_busy, u_dut.tx_busy,
+                     u_dut.tx_drain_idle, u_dut.ufc_tx_busy, u_dut.ufc_tx_valid,
+                     u_dut.cq_reserved_count, u_dut.cq_cmd_credit_count,
+                     u_dut.async_bridge_busy, u_dut.async_writer_busy,
+                     m_axi_rx_payload_awvalid, m_axi_rx_payload_awready,
+                     m_axi_rx_payload_wvalid, m_axi_rx_payload_wready,
+                     m_axi_rx_payload_bvalid, m_axi_rx_payload_bready);
+            $finish;
+        end
+    end
+endtask
+
+task release_payload_axi_forces;
+    begin
+        payload_axi_aw_stall = 1'b0;
+        payload_axi_w_stall = 1'b0;
+        payload_axi_b_stall = 1'b0;
+    end
+endtask
+
+task run_t13_async_collect_quiesce;
+    integer headers_at_quiesce;
+    integer reset_guard;
+    reg first_frame_done;
+    reg stop_pending_header;
+    reg [511:0] pending_header;
+    begin
+        $display("RX_PAYLOAD_QUIESCE T13 collect_and_continuous_rx");
+        fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+        first_frame_done = 1'b0;
+        stop_pending_header = 1'b0;
+
+        fork
+            begin
+                send_fc(FLOW_FRAME0, 32'd4096, 32'h0003_4000, 32'h710);
+                first_frame_done = 1'b1;
+            end
+            begin
+                wait (first_frame_done);
+                build_fc_header(FLOW_FRAME1, 32'd4096, 32'h711);
+                pending_header = header;
+                @(negedge clk);
+                u_rx_axis.rx_axis_tdata = pending_header;
+                u_rx_axis.rx_axis_tvalid = 1'b1;
+                while (!stop_pending_header)
+                    @(posedge clk);
+                @(negedge clk);
+                u_rx_axis.rx_axis_tvalid = 1'b0;
+                u_rx_axis.rx_axis_tdata = 512'h0;
+            end
+            begin
+                wait (u_dut.rx_state == 4'd9);
+                repeat (8) @(posedge clk);
+                u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+                wait (u_dut.soft_reset_quiesce);
+                headers_at_quiesce = observed_header_count;
+                wait_soft_reset_commit(100000);
+                if (observed_header_count != headers_at_quiesce) begin
+                    $display("Error: quiesce accepted a new RX header before reset expected=%0d actual=%0d",
+                             headers_at_quiesce, observed_header_count);
+                    $finish;
+                end
+                stop_pending_header = 1'b1;
+            end
+        join
+
+        repeat (12) @(posedge clk);
+        check_payload(BASE_FRAME0, 32'h0003_4000, 32'd4096);
+        if (u_dut.async_bridge_protocol_error || u_dut.pay_cpl_valid) begin
+            $display("Error: collect quiesce left stale CDC state protocol=%0d cpl=%0d",
+                     u_dut.async_bridge_protocol_error, u_dut.pay_cpl_valid);
+            $finish;
+        end
+
+        configure_default(`DMA_RX_POL_QUEUE_WITH_FC);
+        send_fc(FLOW_STREAM, 32'd65, 32'h0003_8000, 32'h712);
+        wait_idle();
+        check_payload(BASE_STREAM, 32'h0003_8000, 32'd65);
+        if (u_dut.async_source_cpl_tag != 8'h00) begin
+            $display("Error: first post-reset CDC completion tag was not epoch zero tag=%0d",
+                     u_dut.async_source_cpl_tag);
+            $finish;
+        end
+    end
+endtask
+
+task run_t14_async_multi_queue_backpressure;
+    integer reset_count_before;
+    begin
+        $display("RX_PAYLOAD_QUIESCE T14 fixed_shared_aw_w_b_drain");
+        fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+        payload_axi_aw_stall = 1'b1;
+        payload_axi_w_stall = 1'b1;
+        payload_axi_b_stall = 1'b1;
+
+        send_fc(FLOW_FRAME0, 32'd512, 32'h0003_a000, 32'h720);
+        send_fc(FLOW_FRAME1, 32'd512, 32'h0003_b000, 32'h721);
+        send_fc(FLOW_STREAM, 32'd512, 32'h0003_c000, 32'h722);
+        if (!u_dut.ingress_work_busy) begin
+            $display("Error: multi-queue reset setup did not retain committed ingress work");
+            $finish;
+        end
+
+        reset_count_before = observed_soft_reset_count;
+        u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+        wait (u_dut.soft_reset_quiesce);
+        repeat (20) @(posedge clk);
+        if (observed_soft_reset_count != reset_count_before) begin
+            $display("Error: reset completed while payload AW was backpressured");
+            $finish;
+        end
+
+        payload_axi_aw_stall = 1'b0;
+        wait (m_axi_rx_payload_wvalid);
+        repeat (12) @(posedge mem_clk);
+        payload_axi_w_stall = 1'b0;
+        repeat (40) @(posedge mem_clk);
+        if (u_dut.core_soft_reset) begin
+            $display("Error: reset completed before payload B responses drained");
+            $finish;
+        end
+        payload_axi_b_stall = 1'b0;
+        wait_soft_reset_commit(100000);
+        release_payload_axi_forces();
+        repeat (12) @(posedge clk);
+        check_payload(BASE_FRAME0, 32'h0003_a000, 32'd512);
+        check_payload(BASE_FRAME1, 32'h0003_b000, 32'd512);
+        check_payload(BASE_STREAM, 32'h0003_c000, 32'd512);
+    end
+endtask
+
+task run_t15_async_cq_backpressure;
+    integer reset_count_before;
+    begin
+        $display("RX_PAYLOAD_QUIESCE T15 completion_cq_aw_w_b_drain");
+        fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+        u_axil.axil_write(`DMA_REG_CQ_BASE_L, 32'h001c_0000, 4'hf);
+        u_axil.axil_write(`DMA_REG_CQ_SIZE, 32'd16, 4'hf);
+        u_axil.axil_write(`DMA_REG_CQ_RD_PTR, 32'h0, 4'hf);
+        u_axil.axil_write(ch_base(CH_FRAME0) + `DMA_CH_CTRL,
+                          (1 << `DMA_RX_CTRL_ENABLE) |
+                          (1 << `DMA_RX_CTRL_IRQ_EN) |
+                          (1 << `DMA_RX_CTRL_FC_EN) |
+                          (1 << `DMA_RX_CTRL_CPL_EN), 4'hf);
+
+        cq_axi_aw_stall = 1'b1;
+        cq_axi_w_stall = 1'b1;
+        cq_axi_b_stall = 1'b1;
+        send_fc(FLOW_FRAME0, 32'd513, 32'h0003_d000, 32'h730);
+        wait (u_dut.cq_single_busy || (u_dut.wr_state == 3'd3));
+        reset_count_before = observed_soft_reset_count;
+        u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+        wait (u_dut.soft_reset_quiesce);
+        repeat (20) @(posedge clk);
+        if (observed_soft_reset_count != reset_count_before) begin
+            $display("Error: reset completed while CQ AW was backpressured");
+            $finish;
+        end
+        cq_axi_aw_stall = 1'b0;
+        wait (m_axi_wvalid);
+        repeat (10) @(posedge clk);
+        cq_axi_w_stall = 1'b0;
+        repeat (30) @(posedge clk);
+        cq_axi_b_stall = 1'b0;
+        wait_soft_reset_commit(100000);
+        cq_axi_aw_stall = 1'b0;
+        cq_axi_w_stall = 1'b0;
+        cq_axi_b_stall = 1'b0;
+        repeat (12) @(posedge clk);
+        check_payload(BASE_FRAME0, 32'h0003_d000, 32'd513);
+    end
+endtask
+
+task run_t16_async_clock_stop_and_repeat;
+    integer reset_count_before;
+    begin
+        $display("RX_PAYLOAD_QUIESCE T16 clock_stops_and_repeated_requests");
+        fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+        @(negedge mem_clk);
+        mem_clk_enable = 1'b0;
+        reset_count_before = observed_soft_reset_count;
+        u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+        u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+        wait (u_dut.soft_reset_quiesce);
+        repeat (40) @(posedge clk);
+        if (observed_soft_reset_count != reset_count_before ||
+            u_dut.soft_reset_mem_reset_done) begin
+            $display("Error: reset completed while mem_clk was stopped");
+            $finish;
+        end
+        u_axil.axil_read(`DMA_REG_DEBUG_STATE, rdata);
+        if (!rdata[2] || !rdata[3]) begin
+            $display("Error: pending/quiescing debug status missing while mem_clk stopped debug=%08x", rdata);
+            $finish;
+        end
+        mem_clk_enable = 1'b1;
+        wait_soft_reset_commit(100000);
+        repeat (3) @(posedge clk);
+        if (observed_soft_reset_count != (reset_count_before + 1)) begin
+            $display("Error: repeated pending reset requests produced count=%0d expected=%0d",
+                     observed_soft_reset_count, reset_count_before + 1);
+            $finish;
+        end
+
+        configure_default(`DMA_RX_POL_QUEUE_WITH_FC);
+        reset_count_before = observed_soft_reset_count;
+        u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+        wait (u_dut.soft_reset_quiesce_q);
+        @(negedge clk);
+        clk_enable = 1'b0;
+        #200;
+        if (observed_soft_reset_count != reset_count_before) begin
+            $display("Error: reset completed while aclk was stopped");
+            $finish;
+        end
+        clk_enable = 1'b1;
+        wait_soft_reset_commit(100000);
+        repeat (3) @(posedge clk);
+        if (observed_soft_reset_count != (reset_count_before + 1)) begin
+            $display("Error: aclk-stop reset did not complete exactly once");
+            $finish;
+        end
+
+        reset_count_before = observed_soft_reset_count;
+        u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+        wait_soft_reset_commit(100000);
+        repeat (3) @(posedge clk);
+        if (observed_soft_reset_count != (reset_count_before + 1)) begin
+            $display("Error: reset request at completion boundary did not form one new epoch");
+            $finish;
+        end
+    end
+endtask
+
+task run_t17_async_ufc_quiesce;
+    integer reset_count_before;
+    begin
+        $display("RX_PAYLOAD_QUIESCE T17 ufc_existing_drain_and_new_launch_block");
+        fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+        ufc_tx_ready_tb = 1'b0;
+        u_axil.axil_write(`DMA_REG_GLOBAL_CTRL,
+                          (1 << `DMA_GCTRL_GLOBAL_EN) |
+                          (1 << `DMA_GCTRL_RX_EN) |
+                          (1 << `DMA_GCTRL_UFC_EN), 4'hf);
+        u_axil.axil_write(`DMA_REG_UFC_TX_OPCODE, 32'h5a, 4'hf);
+        @(negedge clk);
+        force u_dut.ufc_tx_start = 1'b1;
+        @(posedge clk);
+        #1;
+        release u_dut.ufc_tx_start;
+        wait (ufc_tx_valid_tb && u_dut.ufc_tx_busy);
+        reset_count_before = observed_soft_reset_count;
+        u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+        wait (u_dut.soft_reset_quiesce);
+        @(negedge clk);
+        force u_dut.ufc_tx_start = 1'b1;
+        @(posedge clk);
+        #1;
+        release u_dut.ufc_tx_start;
+        repeat (20) @(posedge clk);
+        if (!ufc_tx_valid_tb || (observed_soft_reset_count != reset_count_before)) begin
+            $display("Error: quiesce dropped the accepted UFC or completed reset before UFC drain");
+            $finish;
+        end
+        ufc_tx_ready_tb = 1'b1;
+        wait_soft_reset_commit(100000);
+        repeat (4) @(posedge clk);
+        if (ufc_tx_valid_tb || u_dut.ufc_tx_busy) begin
+            $display("Error: UFC state remained visible after bounded soft reset");
+            $finish;
+        end
+    end
+endtask
+
+task run_t18_async_buffered_header_drain;
+    integer quiesce_guard;
+    begin
+        $display("RX_PAYLOAD_QUIESCE T18 buffered_header_drain");
+        fresh_config(`DMA_RX_POL_QUEUE_WITH_FC);
+        force u_dut.release_service_busy = 1'b1;
+        send_fc(FLOW_STREAM, 32'd65, 32'h0003_e000, 32'h740);
+        $display("RX_PAYLOAD_QUIESCE T18 buffered count=%0d state=%0d",
+                 u_dut.g_rx_axis_skid.u_rx_axis_skid.count_q, u_dut.rx_state);
+        if ((u_dut.rx_state != 4'd0) || !u_dut.rx_front_tvalid) begin
+            $display("Error: buffered-header setup failed state=%0d front_valid=%0d",
+                     u_dut.rx_state, u_dut.rx_front_tvalid);
+            $finish;
+        end
+        u_axil.axil_write(`DMA_REG_SOFT_RESET, 32'h1, 4'hf);
+        quiesce_guard = 0;
+        while (!u_dut.soft_reset_quiesce && (quiesce_guard < 1000)) begin
+            @(posedge clk);
+            quiesce_guard = quiesce_guard + 1;
+        end
+        if (quiesce_guard >= 1000) begin
+            $display("Error: buffered-header reset request did not enter quiesce");
+            $finish;
+        end
+        $display("RX_PAYLOAD_QUIESCE T18 quiesce_entered");
+        repeat (8) @(posedge clk);
+        if (!u_dut.rx_front_tvalid || u_dut.core_soft_reset) begin
+            $display("Error: buffered frame was reset before release service drained");
+            $finish;
+        end
+        release u_dut.release_service_busy;
+        $display("RX_PAYLOAD_QUIESCE T18 release_service_resumed");
+        wait_soft_reset_commit(100000);
+        $display("RX_PAYLOAD_QUIESCE T18 reset_committed");
+        repeat (12) @(posedge clk);
+        check_payload(BASE_STREAM, 32'h0003_e000, 32'd65);
+        if (u_dut.rx_front_tvalid || u_dut.async_bridge_protocol_error) begin
+            $display("Error: buffered-header drain left stale state front=%0d protocol=%0d",
+                     u_dut.rx_front_tvalid, u_dut.async_bridge_protocol_error);
+            $finish;
+        end
+    end
+endtask
 `endif
 
 initial begin
     clk = 1'b0;
     rstn = 1'b0;
+    clk_enable = 1'b1;
+    cq_axi_aw_stall = 1'b0;
+    cq_axi_w_stall = 1'b0;
+    cq_axi_b_stall = 1'b0;
+    payload_axi_aw_stall = 1'b0;
+    payload_axi_w_stall = 1'b0;
+    payload_axi_b_stall = 1'b0;
+    ufc_tx_ready_tb = 1'b1;
 `ifdef DMA_RX_MEM_ASYNC_PROFILE
     mem_clk = 1'b0;
     mem_rstn = 1'b0;
+    mem_clk_enable = 1'b1;
 `endif
     clear_mem();
 
@@ -843,6 +1255,13 @@ initial begin
 `endif
 `ifdef DMA_RX_MEM_ASYNC_PROFILE
     run_t12_async_soft_reset_drain();
+    run_t13_async_collect_quiesce();
+    run_t14_async_multi_queue_backpressure();
+    run_t15_async_cq_backpressure();
+    run_t16_async_clock_stop_and_repeat();
+    run_t17_async_ufc_quiesce();
+    run_t18_async_buffered_header_drain();
+    $display("PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header");
 `endif
 
 `ifdef DMA_RX_MEM_ASYNC64_PROFILE

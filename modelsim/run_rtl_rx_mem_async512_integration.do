@@ -6,10 +6,12 @@ vlib work
 vmap work work
 
 vlog +define+DMA_RX_MEM_ASYNC_PROFILE +define+DMA_RX_MEM_ASYNC512_PROFILE \
+    +define+DMA_ENABLE_RX_AXIS_SKID=1 \
     +incdir+../rtl/include +incdir+../rtl +incdir+../pattern \
     ../rtl/common/dma_async_fifo.v \
     ../rtl/common/dma_async_fifo_tech.v \
     ../rtl/common/dma_reset_sync.v \
+    ../rtl/common/dma_axis_skid_buffer.v \
     ../rtl/rx/dma_rx_parser.v \
     ../rtl/rx/dma_rx_parser_pipe.v \
     ../rtl/rx/dma_rx_channel_match.v \

@@ -11,7 +11,9 @@ module dma_rx_payload_cdc_bridge #(
 )(
     input                       s_clk,
     input                       s_rst_n,
+    input                       s_reset_request,
     input                       s_soft_reset,
+    output                      s_reset_done,
 
     input                       s_cmd_valid,
     output                      s_cmd_ready,
@@ -36,6 +38,8 @@ module dma_rx_payload_cdc_bridge #(
 
     input                       m_clk,
     input                       m_rst_n,
+    input                       m_backend_busy,
+    input                       m_protocol_error,
     output                      m_soft_reset,
 
     output                      m_cmd_valid,
@@ -106,11 +110,18 @@ reg source_protocol_error_q;
 reg [TAG_WIDTH-1:0] mem_active_tag_q;
 reg mem_active_q;
 reg mem_protocol_error_q;
+reg mem_backend_busy_q;
 
 reg soft_reset_toggle_q;
+reg soft_reset_request_inflight_q;
 (* ASYNC_REG = "TRUE" *) reg soft_reset_sync1_q;
 (* ASYNC_REG = "TRUE" *) reg soft_reset_sync2_q;
 reg soft_reset_seen_q;
+reg soft_reset_ack_q;
+(* ASYNC_REG = "TRUE" *) reg soft_reset_ack_sync1_q;
+(* ASYNC_REG = "TRUE" *) reg soft_reset_ack_sync2_q;
+(* ASYNC_REG = "TRUE" *) reg mem_busy_sync1_q;
+(* ASYNC_REG = "TRUE" *) reg mem_busy_sync2_q;
 
 (* ASYNC_REG = "TRUE" *) reg mem_error_sync1_q;
 (* ASYNC_REG = "TRUE" *) reg mem_error_sync2_q;
@@ -137,14 +148,18 @@ assign s_cpl_error = completion_tag_mismatch ? 1'b1 : cpl_error_raw;
 assign s_cpl_error_code = completion_tag_mismatch ?
                           ERR_TAG_MISMATCH : cpl_error_code_raw;
 
-assign s_cmd_ready = !source_active_q && !s_soft_reset && cmd_fifo_s_ready;
+assign s_cmd_ready = !source_active_q && !soft_reset_request_inflight_q &&
+                     !s_soft_reset && cmd_fifo_s_ready;
 assign s_payload_tready = source_active_q && !source_payload_done_q &&
                           payload_fifo_s_ready;
 assign s_cpl_valid = cpl_fifo_m_valid;
 assign cpl_fifo_m_ready = s_cpl_ready;
 assign s_busy = source_active_q || s_cmd_valid || cpl_fifo_m_valid ||
-                (cmd_fifo_s_level != 0) || (payload_fifo_s_level != 0);
+                (cmd_fifo_s_level != 0) || (payload_fifo_s_level != 0) ||
+                mem_busy_sync2_q;
 assign s_protocol_error = source_protocol_error_q || mem_error_sync2_q;
+assign s_reset_done = soft_reset_request_inflight_q &&
+                      (soft_reset_ack_sync2_q == soft_reset_toggle_q);
 
 assign m_cmd_valid = cmd_fifo_m_valid && !mem_active_q && !m_soft_reset;
 assign cmd_fifo_m_ready = m_cmd_ready && !mem_active_q && !m_soft_reset;
@@ -202,18 +217,38 @@ always @(posedge s_clk or negedge s_rst_n) begin
         source_payload_done_q <= 1'b0;
         source_protocol_error_q <= 1'b0;
         soft_reset_toggle_q <= 1'b0;
+        soft_reset_request_inflight_q <= 1'b0;
+        soft_reset_ack_sync1_q <= 1'b0;
+        soft_reset_ack_sync2_q <= 1'b0;
+        mem_busy_sync1_q <= 1'b0;
+        mem_busy_sync2_q <= 1'b0;
         mem_error_sync1_q <= 1'b0;
         mem_error_sync2_q <= 1'b0;
     end else begin
+        soft_reset_ack_sync1_q <= soft_reset_ack_q;
+        soft_reset_ack_sync2_q <= soft_reset_ack_sync1_q;
+        mem_busy_sync1_q <= mem_backend_busy_q;
+        mem_busy_sync2_q <= mem_busy_sync1_q;
         mem_error_sync1_q <= mem_protocol_error_q;
         mem_error_sync2_q <= mem_error_sync1_q;
 
         if (s_soft_reset) begin
+            next_tag_q <= {TAG_WIDTH{1'b0}};
+            active_tag_q <= {TAG_WIDTH{1'b0}};
             source_active_q <= 1'b0;
             source_payload_done_q <= 1'b0;
             source_protocol_error_q <= 1'b0;
-            soft_reset_toggle_q <= ~soft_reset_toggle_q;
+            soft_reset_request_inflight_q <= 1'b0;
         end else begin
+            if (s_reset_request) begin
+                if (soft_reset_request_inflight_q || s_busy) begin
+                    source_protocol_error_q <= 1'b1;
+                end else begin
+                    soft_reset_toggle_q <= ~soft_reset_toggle_q;
+                    soft_reset_request_inflight_q <= 1'b1;
+                end
+            end
+
             if (s_cmd_fire) begin
                 if (source_active_q)
                     source_protocol_error_q <= 1'b1;
@@ -246,20 +281,28 @@ always @(posedge m_clk or negedge m_rst_n) begin
         mem_active_tag_q <= {TAG_WIDTH{1'b0}};
         mem_active_q <= 1'b0;
         mem_protocol_error_q <= 1'b0;
+        mem_backend_busy_q <= 1'b0;
         soft_reset_sync1_q <= 1'b0;
         soft_reset_sync2_q <= 1'b0;
         soft_reset_seen_q <= 1'b0;
+        soft_reset_ack_q <= 1'b0;
     end else begin
+        mem_backend_busy_q <= m_backend_busy;
         soft_reset_sync1_q <= soft_reset_toggle_q;
         soft_reset_sync2_q <= soft_reset_sync1_q;
 
         if (m_soft_reset) begin
             if (mem_active_q || cmd_fifo_m_valid || payload_fifo_m_valid ||
-                m_cpl_valid)
+                m_cpl_valid || m_backend_busy)
                 mem_protocol_error_q <= 1'b1;
+            else
+                mem_protocol_error_q <= 1'b0;
             mem_active_q <= 1'b0;
             soft_reset_seen_q <= soft_reset_sync2_q;
+            soft_reset_ack_q <= soft_reset_sync2_q;
         end else begin
+            if (m_protocol_error)
+                mem_protocol_error_q <= 1'b1;
             if (m_cmd_fire) begin
                 if (mem_active_q)
                     mem_protocol_error_q <= 1'b1;
@@ -277,12 +320,15 @@ end
 
 `ifndef SYNTHESIS
 always @(posedge s_clk) begin
-    if (s_rst_n && s_soft_reset && s_busy)
-        $fatal(1, "dma_rx_payload_cdc_bridge soft reset requires idle bridge");
+    if (s_rst_n && s_reset_request && s_busy)
+        $fatal(1, "dma_rx_payload_cdc_bridge reset request requires idle bridge");
+    if (s_rst_n && s_soft_reset && !s_reset_done)
+        $fatal(1, "dma_rx_payload_cdc_bridge reset commit requires memory acknowledgement");
 end
 always @(posedge m_clk) begin
     if (m_rst_n && m_soft_reset &&
-        (mem_active_q || cmd_fifo_m_valid || payload_fifo_m_valid || m_cpl_valid))
+        (mem_active_q || cmd_fifo_m_valid || payload_fifo_m_valid ||
+         m_cpl_valid || m_backend_busy))
         $fatal(1, "dma_rx_payload_cdc_bridge memory soft reset arrived while busy");
 end
 `endif

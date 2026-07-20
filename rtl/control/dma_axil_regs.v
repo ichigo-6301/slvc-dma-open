@@ -30,6 +30,10 @@ module dma_axil_regs #(
     input             s_axil_rready,
     input             core_busy,
     input             axi_busy,
+    input             soft_reset_ready,
+    input             soft_reset_quiescing,
+    input             soft_reset_drain_done,
+    input             cdc_protocol_error,
     input             event_valid,
     input             event_ch_valid,
     input      [3:0]  event_ch,
@@ -177,6 +181,8 @@ module dma_axil_regs #(
     input      [31:0] ufc_rx_arg0,
     input      [31:0] ufc_rx_arg1,
     input             ufc_rx_msg_event,
+    output            soft_reset_pending,
+    output reg        soft_reset_request_pulse,
     output reg        soft_reset_pulse,
     output reg        ch_reset_pulse,
     output reg [3:0]  ch_reset_ch,
@@ -248,6 +254,7 @@ reg        rd_table_req_sent_q;
 reg        core_busy_q;
 reg        axi_busy_q;
 reg        soft_reset_pending_q;
+reg        cdc_protocol_error_q;
 reg        ufc_tx_busy_q;
 reg        ufc_tx_done_q;
 reg        ufc_tx_busy_reject_q;
@@ -351,6 +358,7 @@ assign cq_size = cq_size_r;
 assign cq_wr_ptr = cq_wr_ptr_r;
 assign cq_rd_ptr = cq_rd_ptr_r;
 assign irq = irq_enable && (|(irq_status & irq_mask));
+assign soft_reset_pending = soft_reset_pending_q;
 
 task reset_regs;
     begin
@@ -424,7 +432,10 @@ task execute_global_write;
         `DMA_REG_GLOBAL_CTRL: begin
             if (data[`DMA_GCTRL_SOFT_RESET]) begin
                 if (DEFER_BUSY_SOFT_RESET) begin
-                    soft_reset_pending_q <= 1'b1;
+                    if (!soft_reset_pending_q) begin
+                        soft_reset_pending_q <= 1'b1;
+                        soft_reset_request_pulse = 1'b1;
+                    end
                 end else if (core_busy_q) begin
                     global_status_sticky[`DMA_GSTATUS_RESET_REJECTED] = 1'b1;
                     global_err_cnt = global_err_cnt + 1'b1;
@@ -449,7 +460,10 @@ task execute_global_write;
         `DMA_REG_INTR_COAL_TMR: intr_coal_timer = data;
         `DMA_REG_SOFT_RESET: if (data[0]) begin
             if (DEFER_BUSY_SOFT_RESET) begin
-                soft_reset_pending_q <= 1'b1;
+                if (!soft_reset_pending_q) begin
+                    soft_reset_pending_q <= 1'b1;
+                    soft_reset_request_pulse = 1'b1;
+                end
             end else if (core_busy_q) begin
                 global_status_sticky[`DMA_GSTATUS_RESET_REJECTED] = 1'b1;
                 global_err_cnt = global_err_cnt + 1'b1;
@@ -618,6 +632,7 @@ always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
         core_busy_q <= 1'b0;
         axi_busy_q <= 1'b0;
+        cdc_protocol_error_q <= 1'b0;
         ufc_tx_busy_q <= 1'b0;
         ufc_tx_done_q <= 1'b0;
         ufc_tx_busy_reject_q <= 1'b0;
@@ -635,6 +650,7 @@ always @(posedge clk or negedge rstn) begin
     end else begin
         core_busy_q <= core_busy;
         axi_busy_q <= axi_busy;
+        cdc_protocol_error_q <= cdc_protocol_error;
         ufc_tx_busy_q <= ufc_tx_busy;
         ufc_tx_done_q <= ufc_tx_done;
         ufc_tx_busy_reject_q <= ufc_tx_busy_reject;
@@ -664,8 +680,15 @@ always @(posedge clk or negedge rstn) begin
         global_status_mirror[5] <= (cq_size_r != 0) &&
             (((cq_wr_ptr_r + 1 >= cq_size_r) ? 32'h0 : (cq_wr_ptr_r + 1)) == cq_rd_ptr_r);
         global_status_mirror[6] <= |(irq_status & irq_mask);
-        if (HAS_DEBUG_STATUS)
-            debug_state_mirror <= {30'h0, axi_busy_q, core_busy_q};
+        if (HAS_DEBUG_STATUS) begin
+            debug_state_mirror <= 32'h0;
+            debug_state_mirror[0] <= core_busy_q;
+            debug_state_mirror[1] <= axi_busy_q;
+            debug_state_mirror[2] <= soft_reset_pending_q;
+            debug_state_mirror[3] <= soft_reset_quiescing;
+            debug_state_mirror[4] <= soft_reset_drain_done;
+            debug_state_mirror[5] <= cdc_protocol_error;
+        end
         else
             debug_state_mirror <= 32'h0;
 
@@ -716,12 +739,14 @@ always @(posedge clk or negedge rstn) begin
         ev_cap_update_wr_ptr <= 1'b0;
         ev_cap_irq_mask <= 16'h0;
         ev_cap_global_header_err <= 1'b0;
+        soft_reset_request_pulse = 1'b0;
         soft_reset_pulse = 1'b0;
         soft_reset_pending_q <= 1'b0;
         ch_reset_pulse = 1'b0;
         ch_reset_ch <= 4'h0;
         reset_regs();
     end else begin
+        soft_reset_request_pulse = 1'b0;
         soft_reset_pulse = 1'b0;
         ch_reset_pulse = 1'b0;
         ch_reset_ch <= 4'h0;
@@ -731,7 +756,7 @@ always @(posedge clk or negedge rstn) begin
         ufc_rx_clear_pending = 1'b0;
         ufc_rx_clear_overrun = 1'b0;
 
-        if (DEFER_BUSY_SOFT_RESET && soft_reset_pending_q && !core_busy_q) begin
+        if (DEFER_BUSY_SOFT_RESET && soft_reset_pending_q && soft_reset_ready) begin
             reset_regs();
             soft_reset_pulse = 1'b1;
             soft_reset_pending_q <= 1'b0;
@@ -983,6 +1008,12 @@ always @(posedge clk or negedge rstn) begin
             irq_status[`DMA_IRQ_TX_COMPLETION] <= 1'b1;
         if (tx_tbl_irq_axi_error)
             irq_status[`DMA_IRQ_AXI_ERROR] <= 1'b1;
+
+        if (!soft_reset_pulse && cdc_protocol_error && !cdc_protocol_error_q) begin
+            global_status_sticky[`DMA_GSTATUS_CDC_PROTOCOL_ERROR] <= 1'b1;
+            global_err_cnt <= global_err_cnt + 1'b1;
+            irq_status[`DMA_IRQ_AXI_ERROR] <= 1'b1;
+        end
 
         if (cq_commit_valid)
             cq_wr_ptr_r <= cq_next_ptr;

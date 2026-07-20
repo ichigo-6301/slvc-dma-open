@@ -26,6 +26,7 @@ module tb;
 
     reg core_busy = 1'b0;
     reg axi_busy = 1'b0;
+    reg cdc_protocol_error = 1'b0;
     reg event_valid = 1'b0;
     reg event_ch_valid = 1'b0;
     reg [3:0] event_ch = 4'h0;
@@ -171,6 +172,10 @@ module tb;
         .s_axil_rready(rready),
         .core_busy(core_busy),
         .axi_busy(axi_busy),
+        .soft_reset_ready(1'b1),
+        .soft_reset_quiescing(1'b0),
+        .soft_reset_drain_done(1'b1),
+        .cdc_protocol_error(cdc_protocol_error),
         .event_valid(event_valid),
         .event_ch_valid(event_ch_valid),
         .event_ch(event_ch),
@@ -318,6 +323,8 @@ module tb;
         .ufc_rx_arg0(ufc_rx_arg0),
         .ufc_rx_arg1(ufc_rx_arg1),
         .ufc_rx_msg_event(ufc_rx_msg_event),
+        .soft_reset_pending(),
+        .soft_reset_request_pulse(),
         .soft_reset_pulse(soft_reset_pulse),
         .ch_reset_pulse(ch_reset_pulse),
         .ch_reset_ch(ch_reset_ch),
@@ -635,6 +642,30 @@ module tb;
         end
         axil_read(ch0 + `DMA_CH_FRAME_CNT, rd);
         expect_eq(rd, 32'h1, "RX_CH0_FRAME_CNT");
+
+        axil_write(`DMA_REG_GLOBAL_CTRL,
+                   (32'h1 << `DMA_GCTRL_GLOBAL_EN) |
+                   (32'h1 << `DMA_GCTRL_IRQ_EN));
+        axil_write(`DMA_REG_IRQ_MASK, 32'h1 << `DMA_IRQ_AXI_ERROR);
+        @(negedge clk);
+        cdc_protocol_error = 1'b1;
+        repeat (4) @(posedge clk);
+        axil_read(`DMA_REG_GLOBAL_STATUS, rd);
+        if (!rd[`DMA_GSTATUS_CDC_PROTOCOL_ERROR])
+            fail("CDC protocol error did not set GLOBAL_STATUS sticky bit");
+        axil_read(`DMA_REG_DEBUG_STATE, rd);
+        if (!rd[5]) fail("CDC protocol error was not visible in DEBUG_STATE");
+        axil_read(`DMA_REG_ERR_CNT, rd);
+        expect_eq(rd, 32'h1, "CDC protocol error count");
+        axil_read(`DMA_REG_IRQ_STATUS, rd);
+        if (!rd[`DMA_IRQ_AXI_ERROR] || !irq)
+            fail("CDC protocol error did not raise AXI-error IRQ");
+        repeat (5) @(posedge clk);
+        axil_read(`DMA_REG_ERR_CNT, rd);
+        expect_eq(rd, 32'h1, "level-held CDC error counted once");
+        @(negedge clk);
+        cdc_protocol_error = 1'b0;
+        repeat (3) @(posedge clk);
 
         axil_read(`DMA_REG_IP_ID, rd);
         axil_read(`DMA_REG_VERSION, rd2);

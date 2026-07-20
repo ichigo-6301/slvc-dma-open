@@ -26,6 +26,7 @@ reg [7:0] pkt_mem [0:`DMA_PKT_MEM_BYTES-1];
 
 reg global_enable = 1'b0;
 reg tx_enable = 1'b0;
+reg quiesce = 1'b0;
 reg [MAX_CH*32-1:0] tx_ctrl_flat = {(MAX_CH*32){1'b0}};
 reg [MAX_CH*32-1:0] tx_cfg_flat = {(MAX_CH*32){1'b0}};
 reg [MAX_CH*32-1:0] tx_base_l_flat = {(MAX_CH*32){1'b0}};
@@ -55,6 +56,7 @@ reg [31:0] cq_rd_ptr = 32'h0;
 reg [31:0] cq_reserved_count = 32'h0;
 wire       cq_reserve_inc;
 wire       busy;
+wire       drain_idle;
 wire [MAX_CH-1:0] tx_ch_busy_flat;
 
 wire       event_valid;
@@ -116,6 +118,9 @@ reg [31:0] last_desc_evt_rd_ptr = 32'h0;
 reg       last_desc_evt_inc_err = 1'b0;
 reg       last_desc_evt_update_status = 1'b0;
 reg       last_desc_evt_clear_busy_log = 1'b0;
+reg [511:0] held_tx_data = 512'h0;
+integer event_before = 0;
+integer tx_wait_guard = 0;
 
 axi64_slave_model u_mem (
     .aclk(clk),
@@ -151,6 +156,7 @@ dma_tx_engine u_dut (
     .clk(clk),
     .rstn(rstn),
     .soft_reset(1'b0),
+    .quiesce(quiesce),
     .global_enable(global_enable),
     .tx_enable(tx_enable),
     .tx_ctrl_flat(tx_ctrl_flat),
@@ -180,6 +186,7 @@ dma_tx_engine u_dut (
     .cq_reserved_count(cq_reserved_count),
     .cq_reserve_inc(cq_reserve_inc),
     .busy(busy),
+    .drain_idle(drain_idle),
     .tx_ch_busy_flat(tx_ch_busy_flat),
     .event_valid(event_valid),
     .event_ch(event_ch),
@@ -380,6 +387,7 @@ task clear_inputs;
     begin
         global_enable = 1'b0;
         tx_enable = 1'b0;
+        quiesce = 1'b0;
         tx_ctrl_flat = {(MAX_CH*32){1'b0}};
         tx_cfg_flat = {(MAX_CH*32){1'b0}};
         tx_base_l_flat = {(MAX_CH*32){1'b0}};
@@ -630,6 +638,72 @@ initial begin
     expect_true(last_desc_evt_update_status, "T12 desc status update pulse");
     expect_true(last_desc_evt_clear_busy_log, "T12 desc clear busy pulse");
     expect_true(last_desc_evt_inc_err, "T12 desc inc err pulse");
+
+    $display("E20A10_CASE T13 quiesce_cancels_pending_start_and_descriptor");
+    apply_reset();
+    @(negedge clk);
+    global_enable = 1'b1;
+    tx_enable = 1'b1;
+    set_word(tx_ctrl_flat, CH0,
+             (32'h1 << `DMA_TX_CTRL_ENABLE) |
+             (32'h1 << `DMA_TX_CTRL_START));
+    tx_desc_enable_flat[CH1] = 1'b1;
+    tx_desc_ready_flat[CH1] = 1'b1;
+    @(posedge clk);
+    @(negedge clk);
+    quiesce = 1'b1;
+    wait_cycles(4);
+    expect_eq4(u_dut.state, ST_IDLE, "T13 state remains idle");
+    expect_true(drain_idle, "T13 scheduler drain idle");
+    expect_true(!tx_desc_ctx_req, "T13 descriptor launch suppressed");
+    expect_true(!tx_axis_tvalid, "T13 TX frame launch suppressed");
+    expect_true(!u_dut.tx_sched_req_valid_q &&
+                !u_dut.tx_sched_grant_valid_q &&
+                !u_dut.tx_sched_meta_valid_q,
+                "T13 pending scheduler pipeline cleared");
+
+    $display("E20A10_CASE T14 quiesce_drains_active_tx_and_blocks_next_descriptor");
+    apply_reset();
+    event_before = event_count;
+    prep_start_setup(CH0, 1'b0, 32'd64, 32'h0000_2400,
+                     32'd0, 32'd0, 32'd0, 32'd0);
+    tx_wait_guard = 0;
+    while (!tx_axis_tvalid && (tx_wait_guard < 200)) begin
+        @(posedge clk);
+        tx_wait_guard = tx_wait_guard + 1;
+    end
+    if (tx_wait_guard >= 200) begin
+        $display("Error: T14 TX launch timeout state=%0d req=%0d grant=%0d meta=%0d arvalid=%0d rvalid=%0d",
+                 u_dut.state, u_dut.tx_sched_req_valid_q,
+                 u_dut.tx_sched_grant_valid_q, u_dut.tx_sched_meta_valid_q,
+                 m_axi_arvalid, m_axi_rvalid);
+        $finish;
+    end
+    held_tx_data = tx_axis_tdata;
+    @(negedge clk);
+    quiesce = 1'b1;
+    tx_desc_enable_flat[CH1] = 1'b1;
+    tx_desc_ready_flat[CH1] = 1'b1;
+    repeat (4) begin
+        @(posedge clk);
+        #1;
+        expect_true(tx_axis_tvalid, "T14 active TX valid held during stall");
+        expect_true(tx_axis_tdata === held_tx_data,
+                    "T14 active TX data stable during stall");
+        expect_true(!drain_idle, "T14 active TX keeps drain busy");
+        expect_true(!tx_desc_ctx_req,
+                    "T14 next descriptor remains blocked while quiescing");
+    end
+    @(negedge clk);
+    tx_axis_tready = 1'b1;
+    wait_event_count(event_before + 1, 200);
+    wait_state(ST_IDLE, 40);
+    wait_cycles(3);
+    expect_true(drain_idle, "T14 drain idle after accepted TX completes");
+    expect_eq32(event_count, event_before + 1,
+                "T14 exactly one accepted TX completion");
+    expect_true(!tx_desc_ctx_req,
+                "T14 descriptor launch remains suppressed after drain");
 
     $display("PASS tb_rtl_v33e20a10_tx_cq_space_check_pipeline");
     $finish;

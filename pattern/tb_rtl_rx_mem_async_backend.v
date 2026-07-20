@@ -30,7 +30,9 @@ reg s_arstn = 1'b0;
 reg m_arstn = 1'b0;
 wire s_rstn;
 wire m_rstn;
+reg s_reset_request = 1'b0;
 reg s_soft_reset = 1'b0;
+wire s_reset_done;
 
 reg s_cmd_valid = 1'b0;
 wire s_cmd_ready;
@@ -70,6 +72,8 @@ wire writer_cpl_ready;
 wire writer_cpl_error;
 wire [3:0] writer_cpl_error_code;
 wire writer_busy;
+wire mem_backend_busy;
+wire mem_protocol_error;
 
 wire [31:0] m_axi_awaddr;
 wire [7:0] m_axi_awlen;
@@ -169,7 +173,9 @@ dma_rx_payload_cdc_bridge #(
     .PAYLOAD_FIFO_LOG2(5),
     .CPL_FIFO_LOG2(2)
 ) u_bridge (
-    .s_clk(s_clk), .s_rst_n(s_rstn), .s_soft_reset(s_soft_reset),
+    .s_clk(s_clk), .s_rst_n(s_rstn),
+    .s_reset_request(s_reset_request), .s_soft_reset(s_soft_reset),
+    .s_reset_done(s_reset_done),
     .s_cmd_valid(s_cmd_valid), .s_cmd_ready(s_cmd_ready),
     .s_cmd_addr(s_cmd_addr), .s_cmd_len(s_cmd_len),
     .s_cmd_aligned_len(s_cmd_aligned_len), .s_cmd_channel(s_cmd_channel),
@@ -180,7 +186,9 @@ dma_rx_payload_cdc_bridge #(
     .s_cpl_error(s_cpl_error), .s_cpl_error_code(s_cpl_error_code),
     .s_cpl_tag(s_cpl_tag), .s_busy(bridge_busy),
     .s_protocol_error(bridge_protocol_error),
-    .m_clk(m_clk), .m_rst_n(m_rstn), .m_soft_reset(m_soft_reset),
+    .m_clk(m_clk), .m_rst_n(m_rstn),
+    .m_backend_busy(mem_backend_busy), .m_protocol_error(mem_protocol_error),
+    .m_soft_reset(m_soft_reset),
     .m_cmd_valid(m_cmd_valid), .m_cmd_ready(m_cmd_ready),
     .m_cmd_addr(m_cmd_addr), .m_cmd_len(m_cmd_len),
     .m_cmd_aligned_len(m_cmd_aligned_len), .m_cmd_channel(m_cmd_channel),
@@ -237,6 +245,8 @@ dma_axi_write_engine_64_stream #(
     .cpl_error(writer_cpl_error), .cpl_error_code(writer_cpl_error_code),
     .busy(writer_busy)
 );
+assign mem_backend_busy = writer_busy || serializer_busy;
+assign mem_protocol_error = serializer_format_error;
 `else
 dma_axi_write_engine_512 #(
     .MAX_BURST_BEATS(16), .MAX_OUTSTANDING(4),
@@ -260,6 +270,8 @@ dma_axi_write_engine_512 #(
     .cpl_error(writer_cpl_error), .cpl_error_code(writer_cpl_error_code),
     .busy(writer_busy)
 );
+assign mem_backend_busy = writer_busy;
+assign mem_protocol_error = 1'b0;
 `endif
 
 function [63:0] keep_for_bytes;
@@ -306,6 +318,8 @@ task apply_hard_reset;
         s_cmd_valid = 1'b0;
         s_payload_tvalid = 1'b0;
         s_cpl_ready = 1'b0;
+        s_reset_request = 1'b0;
+        s_soft_reset = 1'b0;
         s_arstn = 1'b0;
         m_arstn = 1'b0;
         #50;
@@ -675,6 +689,11 @@ initial begin
         fail("ideal-memory W utilization fell below 95 percent");
 
     while (bridge_busy || writer_busy)
+        @(posedge s_clk);
+    s_reset_request=1'b1;
+    @(posedge s_clk);
+    s_reset_request=1'b0;
+    while (!s_reset_done)
         @(posedge s_clk);
     s_soft_reset=1'b1;
     @(posedge s_clk);

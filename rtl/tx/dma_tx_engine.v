@@ -10,6 +10,7 @@ module dma_tx_engine #(
     input             clk,
     input             rstn,
     input             soft_reset,
+    input             quiesce,
     input             global_enable,
     input             tx_enable,
     input      [`DMA_MAX_CH*32-1:0] tx_ctrl_flat,
@@ -39,6 +40,7 @@ module dma_tx_engine #(
     input      [31:0] cq_reserved_count,
     output reg        cq_reserve_inc,
     output            busy,
+    output            drain_idle,
     output reg [`DMA_MAX_CH-1:0] tx_ch_busy_flat,
     output reg        event_valid,
     output reg [3:0]  event_ch,
@@ -206,6 +208,7 @@ wire tx_sched_idle = !tx_sched_req_valid_q && !tx_sched_grant_valid_q && !tx_sch
 assign m_axi_arsize = 3'd3;
 assign m_axi_arburst = 2'b01;
 assign busy = (state != ST_IDLE);
+assign drain_idle = (state == ST_IDLE) && tx_sched_idle;
 assign m_axi_araddr = ((state == ST_DESC_AR) || (state == ST_DESC_READ)) ? desc_araddr : pf_araddr;
 assign m_axi_arlen = ((state == ST_DESC_AR) || (state == ST_DESC_READ)) ? desc_arlen : pf_arlen;
 assign m_axi_arvalid = ((state == ST_DESC_AR) || (state == ST_DESC_READ)) ? desc_arvalid : pf_arvalid;
@@ -266,9 +269,9 @@ always @(*) begin
     tx_sched_req_any_c = 1'b0;
     for (sched_req_i = 0; sched_req_i < `DMA_TX_CH_NUM; sched_req_i = sched_req_i + 1) begin
         tx_sched_desc_req_vec_c[sched_req_i] =
-            global_enable && tx_enable && tx_desc_ready_flat[sched_req_i];
+            !quiesce && global_enable && tx_enable && tx_desc_ready_flat[sched_req_i];
         tx_sched_start_req_vec_c[sched_req_i] =
-            global_enable && tx_enable &&
+            !quiesce && global_enable && tx_enable &&
             tx_ctrl_flat[(sched_req_i*32) + `DMA_TX_CTRL_ENABLE] &&
             tx_ctrl_flat[(sched_req_i*32) + `DMA_TX_CTRL_START] &&
             !tx_desc_enable_flat[sched_req_i];
@@ -618,7 +621,13 @@ always @(posedge clk or negedge rstn) begin
             payload_error_done <= 1'b0;
             cqe_req_valid <= 1'b0;
             desc_mode <= 1'b0;
-            if (tx_sched_meta_valid_q) begin
+            if (quiesce) begin
+                tx_sched_req_valid_q <= 1'b0;
+                tx_sched_grant_valid_q <= 1'b0;
+                tx_sched_meta_valid_q <= 1'b0;
+                tx_sched_start_req_vec_q <= {`DMA_TX_CH_NUM{1'b0}};
+                tx_sched_desc_req_vec_q <= {`DMA_TX_CH_NUM{1'b0}};
+            end else if (tx_sched_meta_valid_q) begin
                 tx_sched_meta_valid_q <= 1'b0;
                 active_ch <= tx_sched_meta_ch_q;
                 cpl_en <= tx_sched_meta_ctrl_q[`DMA_TX_CTRL_CPL_EN];

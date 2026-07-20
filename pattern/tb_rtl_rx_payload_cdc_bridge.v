@@ -10,7 +10,9 @@ real s_half_ns = 5.0;
 real m_half_ns = 2.5;
 reg s_rst_n = 1'b0;
 reg m_rst_n = 1'b0;
+reg s_reset_request = 1'b0;
 reg s_soft_reset = 1'b0;
+wire s_reset_done;
 
 reg s_cmd_valid = 1'b0;
 wire s_cmd_ready;
@@ -51,6 +53,7 @@ reg m_cpl_valid = 1'b0;
 wire m_cpl_ready;
 reg m_cpl_error = 1'b0;
 reg [3:0] m_cpl_error_code = 4'h0;
+reg m_protocol_error = 1'b0;
 
 integer errors = 0;
 integer command_count = 0;
@@ -111,7 +114,9 @@ dma_rx_payload_cdc_bridge #(
 ) u_dut (
     .s_clk(s_clk),
     .s_rst_n(s_rst_n),
+    .s_reset_request(s_reset_request),
     .s_soft_reset(s_soft_reset),
+    .s_reset_done(s_reset_done),
     .s_cmd_valid(s_cmd_valid),
     .s_cmd_ready(s_cmd_ready),
     .s_cmd_addr(s_cmd_addr),
@@ -132,6 +137,8 @@ dma_rx_payload_cdc_bridge #(
     .s_protocol_error(s_protocol_error),
     .m_clk(m_clk),
     .m_rst_n(m_rst_n),
+    .m_backend_busy(mem_frame_active || m_cpl_valid),
+    .m_protocol_error(m_protocol_error),
     .m_soft_reset(m_soft_reset),
     .m_cmd_valid(m_cmd_valid),
     .m_cmd_ready(m_cmd_ready),
@@ -195,6 +202,9 @@ task apply_hard_reset;
         s_cmd_valid = 1'b0;
         s_payload_tvalid = 1'b0;
         s_cpl_ready = 1'b0;
+        s_reset_request = 1'b0;
+        s_soft_reset = 1'b0;
+        m_protocol_error = 1'b0;
         s_rst_n = 1'b0;
         m_rst_n = 1'b0;
         repeat (6) @(posedge s_clk);
@@ -431,6 +441,20 @@ initial begin
         send_frame(50 + random_frame, (($random(random_seed) & 32'h7fff_ffff) % 4096) + 1);
 
     while (s_busy || m_cpl_valid)
+        @(posedge s_clk);
+    $display("CDC_BRIDGE_PHASE memory_protocol_error_visibility");
+    @(negedge m_clk);
+    m_protocol_error = 1'b1;
+    @(negedge m_clk);
+    m_protocol_error = 1'b0;
+    repeat (6) @(posedge s_clk);
+    if (!s_protocol_error)
+        fail("memory-domain protocol error was not synchronized to source");
+
+    s_reset_request = 1'b1;
+    @(posedge s_clk);
+    s_reset_request = 1'b0;
+    while (!s_reset_done)
         @(posedge s_clk);
     s_soft_reset = 1'b1;
     @(posedge s_clk);

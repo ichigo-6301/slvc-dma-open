@@ -9,7 +9,9 @@ module dma_rx_payload_async_ooc_top #(
 )(
     input               s_clk,
     input               s_aresetn,
+    input               s_reset_request,
     input               s_soft_reset,
+    output              s_reset_done,
     input               s_cmd_valid,
     output              s_cmd_ready,
     input      [31:0]   s_cmd_addr,
@@ -74,6 +76,10 @@ wire writer_cpl_ready;
 wire writer_cpl_error;
 wire [3:0] writer_cpl_error_code;
 wire bridge_protocol_error;
+wire mem_backend_busy;
+wire mem_protocol_error;
+
+assign s_protocol_error = bridge_protocol_error;
 
 dma_reset_sync u_source_reset_sync (
     .clk(s_clk), .arstn(s_aresetn), .rstn(s_rstn)
@@ -89,7 +95,9 @@ dma_rx_payload_cdc_bridge #(
     .PAYLOAD_FIFO_LOG2(5),
     .CPL_FIFO_LOG2(2)
 ) u_bridge (
-    .s_clk(s_clk), .s_rst_n(s_rstn), .s_soft_reset(s_soft_reset),
+    .s_clk(s_clk), .s_rst_n(s_rstn),
+    .s_reset_request(s_reset_request), .s_soft_reset(s_soft_reset),
+    .s_reset_done(s_reset_done),
     .s_cmd_valid(s_cmd_valid), .s_cmd_ready(s_cmd_ready),
     .s_cmd_addr(s_cmd_addr), .s_cmd_len(s_cmd_len),
     .s_cmd_aligned_len(s_cmd_aligned_len), .s_cmd_channel(s_cmd_channel),
@@ -100,7 +108,9 @@ dma_rx_payload_cdc_bridge #(
     .s_cpl_error(s_cpl_error), .s_cpl_error_code(s_cpl_error_code),
     .s_cpl_tag(s_cpl_tag), .s_busy(s_busy),
     .s_protocol_error(bridge_protocol_error),
-    .m_clk(mem_clk), .m_rst_n(mem_rstn), .m_soft_reset(mem_soft_reset),
+    .m_clk(mem_clk), .m_rst_n(mem_rstn),
+    .m_backend_busy(mem_backend_busy), .m_protocol_error(mem_protocol_error),
+    .m_soft_reset(mem_soft_reset),
     .m_cmd_valid(mem_cmd_valid), .m_cmd_ready(mem_cmd_ready),
     .m_cmd_addr(mem_cmd_addr), .m_cmd_len(mem_cmd_len),
     .m_cmd_aligned_len(mem_cmd_aligned_len),
@@ -124,8 +134,6 @@ wire serializer_format_error;
 wire serializer_busy;
 wire [9:0] serializer_available_beats =
     ({4'h0, mem_payload_level} << 3) + {6'h0, serializer_held_beats};
-
-assign s_protocol_error = bridge_protocol_error | serializer_format_error;
 
 dma_rx_payload_serializer_512_to_64 u_serializer (
     .clk(mem_clk), .rstn(mem_rstn), .soft_reset(mem_soft_reset),
@@ -160,9 +168,9 @@ dma_axi_write_engine_64_stream #(
     .cpl_error(writer_cpl_error), .cpl_error_code(writer_cpl_error_code),
     .busy(mem_writer_busy)
 );
+assign mem_backend_busy = mem_writer_busy || serializer_busy;
+assign mem_protocol_error = serializer_format_error;
 `else
-assign s_protocol_error = bridge_protocol_error;
-
 dma_axi_write_engine_512 #(
     .MAX_BURST_BEATS(16), .MAX_OUTSTANDING(MAX_OUTSTANDING),
     .MAX_CMD_BYTES(4096), .USE_SOURCE_CREDIT(0)
@@ -186,6 +194,8 @@ dma_axi_write_engine_512 #(
     .cpl_error(writer_cpl_error), .cpl_error_code(writer_cpl_error_code),
     .busy(mem_writer_busy)
 );
+assign mem_backend_busy = mem_writer_busy;
+assign mem_protocol_error = 1'b0;
 `endif
 
 endmodule

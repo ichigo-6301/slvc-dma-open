@@ -7,6 +7,7 @@ module dma_ufc_mailbox(
     input             clk,
     input             rstn,
     input             soft_reset,
+    input             quiesce,
     input             enable,
 
     input             tx_start,
@@ -54,8 +55,8 @@ module dma_ufc_mailbox(
 
 reg tx_ps_active;
 
-assign ufc_rx_ready = enable && !rx_pending;
-assign core_tx_ready = enable && !ufc_tx_valid && !tx_busy;
+assign ufc_rx_ready = enable && !quiesce && !rx_pending;
+assign core_tx_ready = enable && !quiesce && !ufc_tx_valid && !tx_busy;
 
 always @(posedge clk or negedge rstn) begin
     if (!rstn) begin
@@ -119,7 +120,7 @@ always @(posedge clk or negedge rstn) begin
                 ufc_tx_flow_id <= core_tx_flow_id;
                 ufc_tx_arg0 <= core_tx_arg0;
                 ufc_tx_arg1 <= core_tx_arg1;
-            end else if (tx_start) begin
+            end else if (tx_start && !quiesce) begin
                 if (tx_busy || ufc_tx_valid) begin
                     tx_busy_reject <= 1'b1;
                 end else begin
@@ -144,7 +145,7 @@ always @(posedge clk or negedge rstn) begin
             end
         end
 
-        if (enable && ufc_rx_valid) begin
+        if (enable && !quiesce && ufc_rx_valid) begin
             if (!rx_pending) begin
                 rx_pending <= 1'b1;
                 rx_msg_opcode <= ufc_rx_opcode;

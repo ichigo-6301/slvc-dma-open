@@ -314,13 +314,56 @@ wire tx_enable;
 wire irq_enable;
 wire ufc_enable;
 wire axil_soft_reset;
+wire axil_soft_reset_request;
+wire axil_soft_reset_pending;
 wire core_soft_reset;
-reg async_soft_reset_pending_q;
+reg soft_reset_quiesce_q;
+reg soft_reset_mem_request_sent_q;
+reg soft_reset_drain_idle_q;
+reg soft_reset_drain_done_q;
+reg ingress_work_busy_q;
+reg cq_work_busy_q;
+reg [25:0] rx_input_payload_beats_left_q;
+wire ingress_work_busy;
+wire cq_work_busy;
+wire soft_reset_mem_reset_done;
+wire soft_reset_drain_done;
+wire soft_reset_drain_idle_raw;
+wire cdc_protocol_error_status;
+wire soft_reset_quiesce = HAS_RX_MEM_ASYNC &&
+                          (soft_reset_quiesce_q || axil_soft_reset_pending ||
+                           axil_soft_reset_request);
+wire soft_reset_mem_request = HAS_RX_MEM_ASYNC && soft_reset_quiesce &&
+                              soft_reset_drain_done &&
+                              !soft_reset_mem_request_sent_q;
+wire soft_reset_ready = !HAS_RX_MEM_ASYNC || soft_reset_mem_reset_done;
+assign soft_reset_drain_done = soft_reset_drain_done_q;
+`ifndef DMA_RX_MEM_ASYNC_PROFILE
+assign soft_reset_mem_reset_done = 1'b1;
+assign cdc_protocol_error_status = 1'b0;
+`endif
 wire axil_ch_reset;
 wire [3:0] axil_ch_reset_ch;
 wire [511:0] rx_front_tdata;
 wire rx_front_tvalid;
 wire rx_front_tready;
+wire rx_skid_s_ready;
+wire rx_axis_input_fire = rx_axis_tvalid && rx_axis_tready;
+wire [31:0] rx_axis_header_payload_len = {
+    rx_axis_tdata[127:120], rx_axis_tdata[119:112],
+    rx_axis_tdata[111:104], rx_axis_tdata[103:96]
+};
+wire [31:0] rx_axis_header_payload_rounded =
+    rx_axis_header_payload_len + 32'd63;
+wire rx_quiesce_input_open = !soft_reset_quiesce ||
+                             (((rx_state == RX_COLLECT) ||
+                               (rx_state == RX_DROP)) &&
+                              (rx_input_payload_beats_left_q != 0));
+wire rx_quiesce_drain_buffered_header = soft_reset_quiesce &&
+                                         HAS_RX_AXIS_SKID &&
+                                         rx_front_tvalid;
+wire rx_idle_parser_open = !soft_reset_quiesce ||
+                           rx_quiesce_drain_buffered_header;
 wire [31:0] cq_base_l;
 wire [31:0] cq_base_h;
 wire [31:0] cq_size;
@@ -905,24 +948,61 @@ wire pay_cpl_valid;
 wire pay_cpl_ready = (wr_state == WR_PAY_WAIT);
 wire pay_cpl_fire = pay_cpl_valid && pay_cpl_ready;
 wire legacy_pay_done;
-wire async_payload_busy = HAS_RX_MEM_ASYNC && pay_busy;
-wire async_backend_idle = !async_payload_busy && (wr_state == WR_IDLE);
+assign core_soft_reset = axil_soft_reset;
 
-assign core_soft_reset = HAS_RX_MEM_ASYNC ?
-                         ((axil_soft_reset && !async_payload_busy) ||
-                          (async_soft_reset_pending_q && async_backend_idle)) :
-                         axil_soft_reset;
+always @(posedge aclk or negedge aresetn) begin
+    if (!aresetn || core_soft_reset) begin
+        rx_input_payload_beats_left_q <= 26'h0;
+    end else if ((rx_state == RX_COMMIT) && admit_valid && !admit_accept &&
+                 (admit_status_code == `DMA_ST_HEADER_ERR)) begin
+        rx_input_payload_beats_left_q <= 26'h0;
+    end else if (rx_axis_input_fire) begin
+        if (rx_input_payload_beats_left_q == 0)
+            rx_input_payload_beats_left_q <=
+                rx_axis_header_payload_rounded[31:6];
+        else
+            rx_input_payload_beats_left_q <=
+                rx_input_payload_beats_left_q - 1'b1;
+    end
+end
 
 always @(posedge aclk or negedge aresetn) begin
     if (!aresetn) begin
-        async_soft_reset_pending_q <= 1'b0;
+        soft_reset_quiesce_q <= 1'b0;
+        soft_reset_mem_request_sent_q <= 1'b0;
+        soft_reset_drain_idle_q <= 1'b0;
+        soft_reset_drain_done_q <= 1'b0;
+        ingress_work_busy_q <= 1'b0;
+        cq_work_busy_q <= 1'b0;
     end else if (!HAS_RX_MEM_ASYNC) begin
-        async_soft_reset_pending_q <= 1'b0;
+        soft_reset_quiesce_q <= 1'b0;
+        soft_reset_mem_request_sent_q <= 1'b0;
+        soft_reset_drain_idle_q <= 1'b0;
+        soft_reset_drain_done_q <= 1'b0;
+        ingress_work_busy_q <= 1'b0;
+        cq_work_busy_q <= 1'b0;
+    end else if (core_soft_reset) begin
+        soft_reset_quiesce_q <= 1'b0;
+        soft_reset_mem_request_sent_q <= 1'b0;
+        soft_reset_drain_idle_q <= 1'b0;
+        soft_reset_drain_done_q <= 1'b0;
+        ingress_work_busy_q <= 1'b0;
+        cq_work_busy_q <= 1'b0;
     end else begin
-        if (axil_soft_reset && !async_backend_idle)
-            async_soft_reset_pending_q <= 1'b1;
-        else if (core_soft_reset)
-            async_soft_reset_pending_q <= 1'b0;
+        ingress_work_busy_q <= ingress_work_busy;
+        cq_work_busy_q <= cq_work_busy;
+        if (axil_soft_reset_pending || axil_soft_reset_request)
+            soft_reset_quiesce_q <= 1'b1;
+        if (soft_reset_quiesce) begin
+            soft_reset_drain_idle_q <= soft_reset_drain_idle_raw;
+            soft_reset_drain_done_q <= soft_reset_drain_idle_q &&
+                                       soft_reset_drain_idle_raw;
+        end else begin
+            soft_reset_drain_idle_q <= 1'b0;
+            soft_reset_drain_done_q <= 1'b0;
+        end
+        if (soft_reset_mem_request)
+            soft_reset_mem_request_sent_q <= 1'b1;
     end
 end
 wire cqe_done;
@@ -1119,6 +1199,8 @@ assign tx_cqe_error = HAS_CQ_SINGLE_WRITER ?
 assign tx_cqe_busy = HAS_CQ_SINGLE_WRITER ? 1'b0 : tx_cqe_busy_raw;
 
 wire tx_busy;
+wire tx_drain_idle;
+wire ufc_tx_busy;
 wire [`DMA_MAX_CH-1:0] tx_ch_busy_flat;
 wire tx_event_valid;
 wire [3:0] tx_event_ch;
@@ -1143,9 +1225,22 @@ wire [1:0] tx_arburst;
 wire tx_arvalid;
 wire tx_arready;
 wire tx_rready;
-wire core_busy_raw = (rx_state != RX_IDLE) || (wr_state != WR_IDLE) ||
-                     release_service_busy || queue_meta_valid || frame_queue_busy ||
-                     tx_busy || tx_cqe_active;
+assign ingress_work_busy = queue_meta_valid || frame_queue_busy ||
+                           (|queue_meta_used_flat) || (|queue_used_bytes_flat);
+assign cq_work_busy = cqe_busy || tx_cqe_busy || cq_single_busy ||
+                      tx_cqe_active || tx_cqe_req_valid ||
+                      (cq_reserved_count != 0) || cq_reserve_dec_pending ||
+                      (cq_cmd_credit_count != CQ_CMD_CREDIT_DEPTH) ||
+                      (cq_cmd_credit_reserve_evt_q != 0) ||
+                      (cq_cmd_credit_return_evt_q != 0);
+wire core_work_busy = (rx_state != RX_IDLE) || (wr_state != WR_IDLE) ||
+                      release_service_busy ||
+                      (HAS_RX_AXIS_SKID && rx_front_tvalid) ||
+                      ingress_work_busy_q || pay_busy ||
+                      cq_work_busy_q || tx_busy || !tx_drain_idle ||
+                      ufc_tx_busy || ufc_tx_valid || frame_drop_pending;
+assign soft_reset_drain_idle_raw = !core_work_busy;
+wire core_busy_raw = core_work_busy || soft_reset_quiesce;
 wire axi_busy_raw = pay_busy | cqe_busy | tx_busy | tx_cqe_busy;
 
 assign m_axi_araddr = tx_araddr;
@@ -1163,7 +1258,6 @@ wire [31:0] ufc_tx_arg0_cfg;
 wire [31:0] ufc_tx_arg1_cfg;
 wire ufc_tx_clear_done;
 wire ufc_tx_clear_busy_reject;
-wire ufc_tx_busy;
 wire ufc_tx_done;
 wire ufc_tx_busy_reject;
 wire ufc_tx_done_event;
@@ -1211,24 +1305,28 @@ generate
             .rstn(aresetn),
             .soft_reset(core_soft_reset),
             .s_axis_tdata(rx_axis_tdata),
-            .s_axis_tvalid(rx_axis_tvalid),
-            .s_axis_tready(rx_axis_tready),
+            .s_axis_tvalid(rx_axis_tvalid && rx_quiesce_input_open),
+            .s_axis_tready(rx_skid_s_ready),
             .m_axis_tdata(rx_front_tdata),
             .m_axis_tvalid(rx_front_tvalid),
             .m_axis_tready(rx_front_tready)
         );
+        assign rx_axis_tready = rx_skid_s_ready && rx_quiesce_input_open;
     end else begin : g_rx_axis_direct
         assign rx_front_tdata = rx_axis_tdata;
         assign rx_front_tvalid = rx_axis_tvalid;
         assign rx_axis_tready = rx_front_tready;
+        assign rx_skid_s_ready = 1'b0;
     end
 endgenerate
 
-assign parser_in_valid = (rx_state == RX_IDLE) && !release_service_busy && rx_front_tvalid;
+assign parser_in_valid = (rx_state == RX_IDLE) && rx_idle_parser_open &&
+                         !release_service_busy && rx_front_tvalid;
 assign parser_out_ready = (rx_state == RX_PARSE_WAIT);
 
 assign rx_front_tready = (rx_state == RX_IDLE) ?
-                         (release_service_busy ? 1'b0 : parser_in_ready) :
+                         ((release_service_busy || !rx_idle_parser_open) ?
+                             1'b0 : parser_in_ready) :
                          (rx_state == RX_COLLECT) ? queue_payload_tready :
                          (rx_state == RX_DROP) ? 1'b1 :
                          1'b0;
@@ -1259,6 +1357,10 @@ dma_axil_regs #(
     .s_axil_rready(s_axil_rready),
     .core_busy(core_busy_to_regs),
     .axi_busy(axi_busy_to_regs),
+    .soft_reset_ready(soft_reset_ready),
+    .soft_reset_quiescing(soft_reset_quiesce),
+    .soft_reset_drain_done(soft_reset_drain_done),
+    .cdc_protocol_error(cdc_protocol_error_status),
     .event_valid(event_to_regs_valid),
     .event_ch_valid(event_to_regs_ch_valid),
     .event_ch(event_to_regs_ch),
@@ -1406,6 +1508,8 @@ dma_axil_regs #(
     .ufc_rx_arg0(ufc_rx_msg_arg0),
     .ufc_rx_arg1(ufc_rx_msg_arg1),
     .ufc_rx_msg_event(ufc_rx_msg_event),
+    .soft_reset_pending(axil_soft_reset_pending),
+    .soft_reset_request_pulse(axil_soft_reset_request),
     .soft_reset_pulse(axil_soft_reset),
     .ch_reset_pulse(),
     .ch_reset_ch(),
@@ -1577,6 +1681,7 @@ dma_ufc_mailbox u_ufc_mailbox(
     .clk(aclk),
     .rstn(aresetn),
     .soft_reset(core_soft_reset),
+    .quiesce(soft_reset_quiesce),
     .enable(global_enable && ufc_enable),
     .tx_start(ufc_tx_start),
     .tx_cfg_opcode(ufc_tx_opcode_cfg),
@@ -1948,6 +2053,7 @@ dma_tx_engine #(
     .clk(aclk),
     .rstn(aresetn),
     .soft_reset(core_soft_reset),
+    .quiesce(soft_reset_quiesce),
     .global_enable(global_enable),
     .tx_enable(tx_enable),
     .tx_ctrl_flat(tx_ctrl_flat),
@@ -1977,6 +2083,7 @@ dma_tx_engine #(
     .cq_reserved_count(cq_reserved_count),
     .cq_reserve_inc(tx_cq_reserve_inc),
     .busy(tx_busy),
+    .drain_idle(tx_drain_idle),
     .tx_ch_busy_flat(tx_ch_busy_flat),
     .event_valid(tx_event_valid),
     .event_ch(tx_event_ch),
@@ -2109,6 +2216,8 @@ wire [7:0] async_source_cpl_tag;
 wire async_bridge_busy;
 wire async_bridge_protocol_error;
 wire async_writer_busy;
+wire async_mem_backend_busy;
+wire async_mem_protocol_error;
 
 assign pay_busy = async_bridge_busy;
 assign pay_arbiter_busy = 1'b0;
@@ -2145,7 +2254,9 @@ dma_rx_payload_cdc_bridge #(
 ) u_rx_payload_cdc_bridge (
     .s_clk(aclk),
     .s_rst_n(async_source_rstn),
+    .s_reset_request(soft_reset_mem_request),
     .s_soft_reset(core_soft_reset),
+    .s_reset_done(soft_reset_mem_reset_done),
     .s_cmd_valid(pay_cmd_valid),
     .s_cmd_ready(pay_cmd_ready),
     .s_cmd_addr(active_dst_addr),
@@ -2166,6 +2277,8 @@ dma_rx_payload_cdc_bridge #(
     .s_protocol_error(async_bridge_protocol_error),
     .m_clk(mem_clk),
     .m_rst_n(async_mem_rstn),
+    .m_backend_busy(async_mem_backend_busy),
+    .m_protocol_error(async_mem_protocol_error),
     .m_soft_reset(async_mem_soft_reset),
     .m_cmd_valid(async_bridge_cmd_valid),
     .m_cmd_ready(async_bridge_cmd_ready),
@@ -2257,6 +2370,9 @@ dma_axi_write_engine_64_stream #(
     .cpl_error_code(async_writer_cpl_error_code),
     .busy(async_writer_busy)
 );
+assign async_mem_backend_busy = async_writer_busy || async_serializer_busy;
+assign async_mem_protocol_error = async_serializer_format_error;
+assign cdc_protocol_error_status = async_bridge_protocol_error;
 `else
 dma_axi_write_engine_512 #(
     .MAX_BURST_BEATS(`DMA_MAX_BURST_LEN),
@@ -2297,6 +2413,9 @@ dma_axi_write_engine_512 #(
     .cpl_error_code(async_writer_cpl_error_code),
     .busy(async_writer_busy)
 );
+assign async_mem_backend_busy = async_writer_busy;
+assign async_mem_protocol_error = 1'b0;
+assign cdc_protocol_error_status = async_bridge_protocol_error;
 `endif
 `else
 assign queue_wide_payload_tready = 1'b0;

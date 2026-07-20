@@ -42,13 +42,26 @@ RX_CDC_COMMON_SIM_CASES = [
 
 RX_ASYNC64_SIM_CASES = [
     ("run_rtl_rx_mem_async64_backend.do", "PASS tb_rtl_rx_mem_async64_backend"),
-    ("run_rtl_rx_mem_async64_integration.do", "PASS tb_rtl_rx_mem_async64_integration"),
+    ("run_rtl_rx_mem_async64_integration.do", (
+        "PASS tb_rtl_rx_mem_async64_integration",
+        "PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header",
+    )),
 ]
 
 RX_ASYNC512_SIM_CASES = [
     ("run_rtl_rx_mem_async512_backend.do", "PASS tb_rtl_rx_mem_async512_backend"),
-    ("run_rtl_rx_mem_async512_integration.do", "PASS tb_rtl_rx_mem_async512_integration"),
+    ("run_rtl_rx_mem_async512_integration.do", (
+        "PASS tb_rtl_rx_mem_async512_integration",
+        "PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header",
+    )),
 ]
+
+
+def marker_count(cases):
+    return sum(
+        len(markers) if isinstance(markers, tuple) else 1
+        for _, markers in cases
+    )
 
 
 def parse_config(path):
@@ -103,8 +116,9 @@ def simulation_profile(config):
         "rx_profile": rx_profile,
         "core_count": len(SIM_CASES),
         "adapter_count": adapter_count,
-        "rx_count": len(rx_cases),
-        "total_count": len(SIM_CASES) + adapter_count + len(rx_cases),
+        "rx_count": marker_count(rx_cases),
+        "rx_test_count": len(rx_cases),
+        "total_count": len(SIM_CASES) + adapter_count + marker_count(rx_cases),
         "rx_cases": rx_cases,
     }
 
@@ -131,6 +145,7 @@ def show_config(config):
     print("required_core_markers: {}".format(profile["core_count"]))
     print("required_adapter_markers: {}".format(profile["adapter_count"]))
     print("required_rx_backend_markers: {}".format(profile["rx_count"]))
+    print("scheduled_rx_backend_tests: {}".format(profile["rx_test_count"]))
     print("required_total_markers: {}".format(profile["total_count"]))
 
 
@@ -145,17 +160,19 @@ def run_sim(root, config, dry_run):
     print("required_core_markers: {}".format(profile["core_count"]))
     print("required_adapter_markers: {}".format(profile["adapter_count"]))
     print("required_rx_backend_markers: {}".format(profile["rx_count"]))
+    print("scheduled_rx_backend_tests: {}".format(profile["rx_test_count"]))
     print("required_total_markers: {}".format(profile["total_count"]))
     if profile["adapter_enabled"]:
         cases.extend(ADAPTER_SIM_CASES)
     cases.extend(profile["rx_cases"])
-    commands = [(["vsim", "-c", "-do", script], marker) for script, marker in cases]
+    commands = [(["vsim", "-c", "-do", script], markers)
+                for script, markers in cases]
     for command, _ in commands:
         print("command: " + " ".join(command))
     if dry_run:
         return
     require_tool("vsim")
-    for command, marker in commands:
+    for command, markers in commands:
         completed = subprocess.run(
             command,
             cwd=str(root / "modelsim"),
@@ -168,7 +185,10 @@ def run_sim(root, config, dry_run):
         failed = failed or "** Error:" in completed.stdout
         failed = failed or "Error in macro" in completed.stdout
         failed = failed or "# Errors: 0" not in completed.stdout
-        failed = failed or marker not in completed.stdout
+        required_markers = markers if isinstance(markers, tuple) else (markers,)
+        failed = failed or any(
+            marker not in completed.stdout for marker in required_markers
+        )
         if failed:
             raise RuntimeError("ModelSim regression failed: {}".format(command[-1]))
 

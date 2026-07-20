@@ -66,6 +66,9 @@ reg [31:0] total_beats_q;
 reg [31:0] w_beats_accepted_q;
 reg [31:0] reserved_source_beats_q;
 reg [7:0] aw_plan_beats_q;
+reg aw_candidate_valid_q;
+reg [31:0] aw_candidate_addr_q;
+reg [7:0] aw_candidate_beats_q;
 
 reg [7:0] plan_beats_mem [0:MAX_OUTSTANDING-1];
 reg [7:0] plan_wr_ptr_q;
@@ -97,6 +100,10 @@ wire [31:0] source_unreserved_beats =
         (source_level_ext - reserved_source_beats_q) : 32'h0;
 wire source_credit_ok = (USE_SOURCE_CREDIT == 0) ||
                         (source_unreserved_beats >= plan_beats_c);
+wire aw_candidate_load = active_q && !aw_candidate_valid_q &&
+                         !m_axi_awvalid && (issue_beats_left_q != 0) &&
+                         (outstanding_count_q < MAX_OUTSTANDING) &&
+                         (plan_count_q < MAX_OUTSTANDING) && source_credit_ok;
 
 assign cmd_ready = !active_q && !cpl_valid;
 assign busy = active_q || cpl_valid;
@@ -159,6 +166,9 @@ always @(posedge clk or negedge rstn) begin
         w_beats_accepted_q <= 32'h0;
         reserved_source_beats_q <= 32'h0;
         aw_plan_beats_q <= 8'h0;
+        aw_candidate_valid_q <= 1'b0;
+        aw_candidate_addr_q <= 32'h0;
+        aw_candidate_beats_q <= 8'h0;
         plan_wr_ptr_q <= 8'h0;
         plan_rd_ptr_q <= 8'h0;
         plan_count_q <= 8'h0;
@@ -188,6 +198,9 @@ always @(posedge clk or negedge rstn) begin
         w_beats_accepted_q <= 32'h0;
         reserved_source_beats_q <= 32'h0;
         aw_plan_beats_q <= 8'h0;
+        aw_candidate_valid_q <= 1'b0;
+        aw_candidate_addr_q <= 32'h0;
+        aw_candidate_beats_q <= 8'h0;
         plan_wr_ptr_q <= 8'h0;
         plan_rd_ptr_q <= 8'h0;
         plan_count_q <= 8'h0;
@@ -219,6 +232,10 @@ always @(posedge clk or negedge rstn) begin
             total_beats_q <= (cmd_len + 32'd7) >> 3;
             w_beats_accepted_q <= 32'h0;
             reserved_source_beats_q <= 32'h0;
+            aw_plan_beats_q <= 8'h0;
+            aw_candidate_valid_q <= 1'b0;
+            aw_candidate_addr_q <= 32'h0;
+            aw_candidate_beats_q <= 8'h0;
             plan_wr_ptr_q <= 8'h0;
             plan_rd_ptr_q <= 8'h0;
             plan_count_q <= 8'h0;
@@ -253,15 +270,22 @@ always @(posedge clk or negedge rstn) begin
                     issue_addr_q <= issue_addr_q + {21'h0, aw_plan_beats_q, 3'b000};
                     issue_beats_left_q <= issue_beats_left_q - aw_plan_beats_q;
                 end
-            end else if ((issue_beats_left_q != 0) &&
-                         (outstanding_count_q < MAX_OUTSTANDING) &&
-                         (plan_count_q < MAX_OUTSTANDING) && source_credit_ok) begin
-                m_axi_awaddr <= issue_addr_q;
-                m_axi_awlen <= plan_beats_c[7:0] - 1'b1;
+            end else if (aw_candidate_valid_q) begin
+                m_axi_awaddr <= aw_candidate_addr_q;
+                m_axi_awlen <= aw_candidate_beats_q - 1'b1;
                 m_axi_awsize <= 3'd3;
                 m_axi_awburst <= 2'b01;
                 m_axi_awvalid <= 1'b1;
-                aw_plan_beats_q <= plan_beats_c[7:0];
+                aw_plan_beats_q <= aw_candidate_beats_q;
+                aw_candidate_valid_q <= 1'b0;
+            end else begin
+                // Capture planning results locally before they drive the AXI output
+                // registers. Invalid candidates may track issue context; only valid
+                // candidates reserve an AW output slot.
+                aw_candidate_addr_q <= issue_addr_q;
+                aw_candidate_beats_q <= plan_beats_c[7:0];
+                if (aw_candidate_load)
+                    aw_candidate_valid_q <= 1'b1;
             end
 
             if (aw_fire) begin
@@ -343,7 +367,8 @@ always @(posedge clk or negedge rstn) begin
                 endcase
             end
 
-            if ((issue_beats_left_q == 0) && !m_axi_awvalid &&
+            if ((issue_beats_left_q == 0) && !aw_candidate_valid_q &&
+                !m_axi_awvalid &&
                 (plan_count_q == 0) && !w_burst_active_q &&
                 (source_bytes_left_q == 0) && !m_axi_wvalid &&
                 (reserved_source_beats_q == 0) &&

@@ -680,15 +680,12 @@ always @(posedge clk or negedge rstn) begin
         global_status_mirror[5] <= (cq_size_r != 0) &&
             (((cq_wr_ptr_r + 1 >= cq_size_r) ? 32'h0 : (cq_wr_ptr_r + 1)) == cq_rd_ptr_r);
         global_status_mirror[6] <= |(irq_status & irq_mask);
-        if (HAS_DEBUG_STATUS) begin
-            debug_state_mirror <= 32'h0;
-            debug_state_mirror[0] <= core_busy_q;
-            debug_state_mirror[1] <= axi_busy_q;
-            debug_state_mirror[2] <= soft_reset_pending_q;
-            debug_state_mirror[3] <= soft_reset_quiescing;
-            debug_state_mirror[4] <= soft_reset_drain_done;
-            debug_state_mirror[5] <= cdc_protocol_error;
-        end
+        if (HAS_DEBUG_STATUS)
+            debug_state_mirror <= {26'h0, cdc_protocol_error,
+                                   soft_reset_drain_done,
+                                   soft_reset_quiescing,
+                                   soft_reset_pending_q,
+                                   axi_busy_q, core_busy_q};
         else
             debug_state_mirror <= 32'h0;
 

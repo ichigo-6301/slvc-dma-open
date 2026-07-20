@@ -114,7 +114,7 @@ integer memory_i;
 integer bytes_written_this_beat;
 
 integer errors = 0;
-integer directed_lengths [0:17];
+integer directed_lengths [0:20];
 integer directed_i;
 integer ratio_i;
 integer stress_i;
@@ -144,6 +144,35 @@ integer throughput_expected_wbeats = 0;
 integer throughput_utilization_x100 = 0;
 integer throughput_bytes_per_cycle_x1000 = 0;
 integer throughput_gap_reports = 0;
+integer forced_aw_stall_cycles = 0;
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+integer aw_stability_checks = 0;
+integer credit_wait_zero_cycles = 0;
+integer credit_wait_short_cycles = 0;
+integer credit_candidate_exact = 0;
+integer credit_candidate_surplus = 0;
+integer simultaneous_aw_b = 0;
+integer simultaneous_aw_source = 0;
+integer simultaneous_aw_plan_pop = 0;
+integer simultaneous_source_b = 0;
+integer simultaneous_last_w_b = 0;
+integer throughput_aw_bursts = 0;
+integer throughput_aw_beats = 0;
+integer throughput_planner_bubbles = 0;
+integer throughput_aw_wait_cycles = 0;
+integer throughput_peak_outstanding = 0;
+integer throughput_average_burst_x100 = 0;
+reg aw_stall_active_q = 1'b0;
+reg [31:0] aw_stall_addr_q = 32'h0;
+reg [7:0] aw_stall_len_q = 8'h0;
+reg [2:0] aw_stall_size_q = 3'h0;
+reg [1:0] aw_stall_burst_q = 2'h0;
+reg issue_monitor_valid_q = 1'b0;
+reg issue_change_allowed_q = 1'b0;
+reg [31:0] issue_addr_prev_q = 32'h0;
+reg [31:0] issue_beats_prev_q = 32'h0;
+reg [7:0] plan_wr_ptr_prev_q = 8'h0;
+`endif
 
 wire aw_fire = m_axi_awvalid && m_axi_awready;
 wire w_fire = m_axi_wvalid && m_axi_wready;
@@ -421,21 +450,252 @@ task send_frame;
     end
 endtask
 
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+task issue_command_without_payload;
+    input [31:0] address;
+    input integer length;
+    begin
+        @(negedge s_clk);
+        s_cmd_addr = address;
+        s_cmd_len = length;
+        s_cmd_aligned_len = (length + 63) & 32'hffff_ffc0;
+        s_cmd_channel = 4'hd;
+        s_cmd_valid = 1'b1;
+        while (!s_cmd_ready)
+            @(negedge s_clk);
+        @(negedge s_clk);
+        s_cmd_valid = 1'b0;
+        wait (u_writer.active_q);
+    end
+endtask
+
+task force_writer_hard_reset_and_recover;
+    begin
+        s_arstn = 1'b0;
+        m_arstn = 1'b0;
+        #1;
+        if (u_writer.aw_candidate_valid_q || m_axi_awvalid ||
+            (u_writer.aw_candidate_addr_q != 0) ||
+            (u_writer.aw_candidate_beats_q != 0) || u_writer.active_q)
+            fail("hard reset did not clear AW candidate state");
+        apply_hard_reset();
+    end
+endtask
+
+task run_source_credit_probes;
+    begin
+        $display("ASYNC64_PLANNER_PHASE source_credit");
+        issue_command_without_payload(32'h0000_8000, 128);
+        force u_writer.s_payload_level = 10'd0;
+        repeat (4) begin
+            @(posedge m_clk);
+            if (u_writer.aw_candidate_valid_q || m_axi_awvalid)
+                fail("zero source credit created an AW candidate");
+        end
+        force u_writer.s_payload_level = 10'd15;
+        repeat (4) begin
+            @(posedge m_clk);
+            if (u_writer.aw_candidate_valid_q || m_axi_awvalid)
+                fail("short source credit created an AW candidate");
+        end
+        force u_writer.s_payload_level = 10'd16;
+        wait (u_writer.aw_candidate_valid_q);
+        #1;
+        if (u_writer.aw_candidate_beats_q != 8'd16)
+            fail("exact source credit produced the wrong candidate length");
+        release u_writer.s_payload_level;
+        force_writer_hard_reset_and_recover();
+
+        issue_command_without_payload(32'h0000_a000, 128);
+        force u_writer.s_payload_level = 10'd24;
+        wait (u_writer.aw_candidate_valid_q);
+        #1;
+        if (u_writer.aw_candidate_beats_q != 8'd16)
+            fail("surplus source credit produced the wrong candidate length");
+        forced_aw_stall_cycles = 8;
+        wait (m_axi_awvalid);
+        release u_writer.s_payload_level;
+        force_writer_hard_reset_and_recover();
+    end
+endtask
+
+task send_frame_with_aw_stall;
+    input integer id;
+    input [31:0] address;
+    input integer length;
+    input integer stall_cycles;
+    integer stall_i;
+    begin
+        fork
+            send_frame(id, address, length, 4'h0);
+            begin
+                wait (u_writer.aw_candidate_valid_q);
+                forced_aw_stall_cycles = stall_cycles + 1;
+                wait (m_axi_awvalid);
+                for (stall_i = 0; stall_i < stall_cycles; stall_i = stall_i + 1) begin
+                    @(posedge m_clk);
+                    if (!m_axi_awvalid || m_axi_awready)
+                        fail("forced AW backpressure window was not preserved");
+                end
+                forced_aw_stall_cycles = 0;
+            end
+        join
+    end
+endtask
+
+task send_frame_with_aw_plan_pop_overlap;
+    input integer id;
+    input [31:0] address;
+    integer accepted_aw;
+    begin
+        ideal_memory = 1'b1;
+        fork
+            send_frame(id, address, 4096, 4'h0);
+            begin
+                accepted_aw = 0;
+                while (accepted_aw < 2) begin
+                    @(posedge m_clk);
+                    if (aw_fire)
+                        accepted_aw = accepted_aw + 1;
+                end
+                wait (m_axi_awvalid);
+                force m_axi_awready = 1'b0;
+                while (!((u_writer.w_burst_beats_left_q == 1) &&
+                         (u_writer.plan_count_q != 0) &&
+                         serializer_tvalid && serializer_tready))
+                    @(negedge m_clk);
+                force m_axi_awready = 1'b1;
+                @(posedge m_clk);
+                if (!(aw_fire && u_writer.plan_pop))
+                    fail("failed to align AW handshake with plan queue pop");
+                #1;
+                release m_axi_awready;
+            end
+        join
+        ideal_memory = 1'b0;
+    end
+endtask
+`endif
+
 always @(negedge m_clk or negedge m_rstn) begin
     if (!m_rstn) begin
         mem_lfsr_q <= 32'h91e3_502d;
         m_axi_awready <= 1'b0;
         m_axi_wready <= 1'b0;
+        forced_aw_stall_cycles = 0;
     end else begin
         mem_lfsr_q <= {mem_lfsr_q[30:0],
                        mem_lfsr_q[31] ^ mem_lfsr_q[21] ^
                        mem_lfsr_q[1] ^ mem_lfsr_q[0]};
-        m_axi_awready <= (aw_count < AWQ_DEPTH) &&
-                         (ideal_memory || mem_lfsr_q[0] || mem_lfsr_q[4]);
+        if (forced_aw_stall_cycles > 0) begin
+            m_axi_awready <= 1'b0;
+            forced_aw_stall_cycles = forced_aw_stall_cycles - 1;
+        end else begin
+            m_axi_awready <= (aw_count < AWQ_DEPTH) &&
+                             (ideal_memory || mem_lfsr_q[0] || mem_lfsr_q[4]);
+        end
         m_axi_wready <= wr_active &&
                        (ideal_memory || mem_lfsr_q[1] || mem_lfsr_q[5]);
     end
 end
+
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+always @(posedge m_clk or negedge m_rstn) begin
+    if (!m_rstn || u_writer.soft_reset) begin
+        aw_stall_active_q <= 1'b0;
+        issue_monitor_valid_q <= 1'b0;
+        issue_change_allowed_q <= 1'b0;
+        issue_addr_prev_q <= 32'h0;
+        issue_beats_prev_q <= 32'h0;
+        plan_wr_ptr_prev_q <= 8'h0;
+    end else begin
+        if (aw_stall_active_q) begin
+            aw_stability_checks <= aw_stability_checks + 1;
+            if (!m_axi_awvalid || (m_axi_awaddr != aw_stall_addr_q) ||
+                (m_axi_awlen != aw_stall_len_q) ||
+                (m_axi_awsize != aw_stall_size_q) ||
+                (m_axi_awburst != aw_stall_burst_q))
+                fail("AW channel changed while backpressured");
+        end
+        aw_stall_active_q <= m_axi_awvalid && !m_axi_awready;
+        if (m_axi_awvalid && !m_axi_awready) begin
+            aw_stall_addr_q <= m_axi_awaddr;
+            aw_stall_len_q <= m_axi_awlen;
+            aw_stall_size_q <= m_axi_awsize;
+            aw_stall_burst_q <= m_axi_awburst;
+        end
+
+        if (issue_monitor_valid_q) begin
+            if (((u_writer.issue_addr_q != issue_addr_prev_q) ||
+                 (u_writer.issue_beats_left_q != issue_beats_prev_q)) &&
+                !issue_change_allowed_q)
+                fail("issue context changed without AW handshake or command");
+            if ((u_writer.plan_wr_ptr_q != plan_wr_ptr_prev_q) &&
+                !issue_change_allowed_q)
+                fail("plan queue write pointer changed without AW handshake");
+        end
+        issue_monitor_valid_q <= 1'b1;
+        issue_change_allowed_q <= aw_fire || (m_cmd_valid && m_cmd_ready);
+        issue_addr_prev_q <= u_writer.issue_addr_q;
+        issue_beats_prev_q <= u_writer.issue_beats_left_q;
+        plan_wr_ptr_prev_q <= u_writer.plan_wr_ptr_q;
+
+        if (u_writer.aw_candidate_valid_q) begin
+            if ((u_writer.aw_candidate_beats_q == 0) ||
+                (u_writer.aw_candidate_beats_q > 16) ||
+                (u_writer.aw_candidate_addr_q[2:0] != 0) ||
+                ((u_writer.aw_candidate_addr_q[11:0] +
+                  (u_writer.aw_candidate_beats_q << 3)) > 4096))
+                fail("illegal registered AW candidate");
+            if (m_axi_awvalid)
+                fail("candidate and AXI AW output were valid together");
+            if (u_writer.source_unreserved_beats < u_writer.aw_candidate_beats_q)
+                fail("AW candidate exceeded unreserved source credit");
+            if (u_writer.source_unreserved_beats == u_writer.aw_candidate_beats_q)
+                credit_candidate_exact <= credit_candidate_exact + 1;
+            else
+                credit_candidate_surplus <= credit_candidate_surplus + 1;
+        end
+        if (u_writer.active_q && (u_writer.issue_beats_left_q != 0) &&
+            !u_writer.aw_candidate_valid_q && !m_axi_awvalid) begin
+            if (u_writer.source_unreserved_beats == 0)
+                credit_wait_zero_cycles <= credit_wait_zero_cycles + 1;
+            else if (u_writer.source_unreserved_beats < u_writer.plan_beats_c)
+                credit_wait_short_cycles <= credit_wait_short_cycles + 1;
+        end
+        if (u_writer.plan_count_q > 4)
+            fail("plan queue exceeded MAX_OUTSTANDING");
+        if (u_writer.outstanding_count_q > 4)
+            fail("outstanding count exceeded MAX_OUTSTANDING");
+        if (u_writer.reserved_source_beats_q > u_writer.total_beats_q)
+            fail("reserved source credit exceeded command size");
+
+        if (aw_fire && b_fire)
+            simultaneous_aw_b <= simultaneous_aw_b + 1;
+        if (aw_fire && u_writer.source_fire)
+            simultaneous_aw_source <= simultaneous_aw_source + 1;
+        if (aw_fire && u_writer.plan_pop)
+            simultaneous_aw_plan_pop <= simultaneous_aw_plan_pop + 1;
+        if (u_writer.source_fire && b_fire)
+            simultaneous_source_b <= simultaneous_source_b + 1;
+        if (w_fire && m_axi_wlast && b_fire)
+            simultaneous_last_w_b <= simultaneous_last_w_b + 1;
+
+        if (throughput_enable && !throughput_done) begin
+            if (aw_fire) begin
+                throughput_aw_bursts <= throughput_aw_bursts + 1;
+                throughput_aw_beats <= throughput_aw_beats + m_axi_awlen + 1;
+            end
+            if (u_writer.aw_candidate_load)
+                throughput_planner_bubbles <= throughput_planner_bubbles + 1;
+            if (u_writer.active_q && (u_writer.issue_beats_left_q != 0) && !aw_fire)
+                throughput_aw_wait_cycles <= throughput_aw_wait_cycles + 1;
+            if (u_writer.outstanding_count_q > throughput_peak_outstanding)
+                throughput_peak_outstanding <= u_writer.outstanding_count_q;
+        end
+    end
+end
+`endif
 
 always @(posedge m_clk or negedge m_rstn) begin
     if (!m_rstn) begin
@@ -591,16 +851,21 @@ initial begin
     for (memory_i = 0; memory_i < MEM_BYTES; memory_i = memory_i + 1)
         memory[memory_i] = 8'h00;
 
-    directed_lengths[0]=1; directed_lengths[1]=7; directed_lengths[2]=8;
-    directed_lengths[3]=31; directed_lengths[4]=63; directed_lengths[5]=64;
-    directed_lengths[6]=65; directed_lengths[7]=127; directed_lengths[8]=128;
-    directed_lengths[9]=255; directed_lengths[10]=256; directed_lengths[11]=511;
-    directed_lengths[12]=512; directed_lengths[13]=1023; directed_lengths[14]=1024;
-    directed_lengths[15]=2048; directed_lengths[16]=4095; directed_lengths[17]=4096;
+    directed_lengths[0]=1; directed_lengths[1]=8; directed_lengths[2]=9;
+    directed_lengths[3]=63; directed_lengths[4]=64; directed_lengths[5]=65;
+    directed_lengths[6]=127; directed_lengths[7]=128; directed_lengths[8]=129;
+    directed_lengths[9]=255; directed_lengths[10]=256; directed_lengths[11]=257;
+    directed_lengths[12]=4095; directed_lengths[13]=4096; directed_lengths[14]=7;
+    directed_lengths[15]=31; directed_lengths[16]=511; directed_lengths[17]=512;
+    directed_lengths[18]=1023; directed_lengths[19]=1024;
+    directed_lengths[20]=2048;
 
     apply_hard_reset();
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+    run_source_credit_probes();
+`endif
     $display("ASYNC_BACKEND_PHASE directed_lengths");
-    for (directed_i=0; directed_i<18; directed_i=directed_i+1)
+    for (directed_i=0; directed_i<21; directed_i=directed_i+1)
         send_frame(directed_i, 32'h0001_0000 + directed_i*32'h1200,
                    directed_lengths[directed_i], 4'h0);
 
@@ -620,11 +885,25 @@ initial begin
 
     $display("ASYNC_BACKEND_PHASE four_k_boundaries");
 `ifdef DMA_RX_MEM_ASYNC64_PROFILE
-    send_frame(48, 32'h0005_0ff8, 4096, 4'h0);
+    send_frame(48, 32'h0008_0000, 4096, 4'h0);
+    send_frame(49, 32'h0008_1f80, 4096, 4'h0);
+    send_frame(50, 32'h0008_3fc0, 4096, 4'h0);
+    send_frame(51, 32'h0008_5ff0, 4096, 4'h0);
+    send_frame(52, 32'h0008_7ff8, 4096, 4'h0);
 `else
     send_frame(48, 32'h0005_0fc0, 4096, 4'h0);
 `endif
-    send_frame(49, 32'h0005_2000, 4096, 4'h0);
+    send_frame(53, 32'h0008_a000, 4096, 4'h0);
+
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+    $display("ASYNC64_PLANNER_PHASE aw_backpressure cycles=1,2,7,31");
+    send_frame_with_aw_stall(60, 32'h0009_0000, 4096, 1);
+    send_frame_with_aw_stall(61, 32'h0009_2000, 4096, 2);
+    send_frame_with_aw_stall(62, 32'h0009_4000, 4096, 7);
+    send_frame_with_aw_stall(63, 32'h0009_6000, 4096, 31);
+    $display("ASYNC64_PLANNER_PHASE simultaneous_aw_plan_pop");
+    send_frame_with_aw_plan_pop_overlap(64, 32'h0009_8000);
+`endif
 
     $display("ASYNC_BACKEND_PHASE max_outstanding");
     hold_b_responses=1'b1;
@@ -679,14 +958,33 @@ initial begin
     throughput_w_fires=0;
     throughput_cycles=0;
     throughput_gap_reports=0;
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+    throughput_aw_bursts=0;
+    throughput_aw_beats=0;
+    throughput_planner_bubbles=0;
+    throughput_aw_wait_cycles=0;
+    throughput_peak_outstanding=0;
+`endif
     throughput_expected_wbeats=1048576/AXI_BYTES;
     send_frame(4095, 32'h0060_0000, 1048576, 4'h0);
     throughput_enable=0;
     ideal_memory=1'b0;
     throughput_utilization_x100=(throughput_w_fires*10000)/throughput_cycles;
     throughput_bytes_per_cycle_x1000=(1048576*1000)/throughput_cycles;
-    if (throughput_utilization_x100 < 9500)
-        fail("ideal-memory W utilization fell below 95 percent");
+    if (throughput_utilization_x100 < 9900)
+        fail("ideal-memory W utilization fell below 99 percent");
+`ifdef DMA_RX_MEM_ASYNC64_PROFILE
+    throughput_average_burst_x100 =
+        (throughput_aw_beats * 100) / throughput_aw_bursts;
+    if (throughput_aw_beats != throughput_expected_wbeats)
+        fail("throughput AW beat total did not match payload beat total");
+    if (throughput_average_burst_x100 != 1600)
+        fail("large-frame average burst was not 16 beats");
+    if (throughput_peak_outstanding != 4)
+        fail("throughput test did not sustain four outstanding bursts");
+    if (throughput_planner_bubbles == 0)
+        fail("registered planner boundary was not observed");
+`endif
 
     while (bridge_busy || writer_busy)
         @(posedge s_clk);
@@ -711,8 +1009,28 @@ initial begin
     if (bridge_protocol_error)
         fail("CDC bridge protocol error asserted");
 `ifdef DMA_RX_MEM_ASYNC64_PROFILE
+    $display("ASYNC64_AW_PLANNER_STATS candidate_register_bits=41 aw_bursts=%0d aw_beats=%0d average_burst_x100=%0d planner_bubble_cycles=%0d aw_wait_cycles=%0d peak_outstanding=%0d credit_wait_zero=%0d credit_wait_short=%0d credit_exact=%0d credit_surplus=%0d aw_stability_checks=%0d",
+             throughput_aw_bursts, throughput_aw_beats,
+             throughput_average_burst_x100, throughput_planner_bubbles,
+             throughput_aw_wait_cycles, throughput_peak_outstanding,
+             credit_wait_zero_cycles, credit_wait_short_cycles,
+             credit_candidate_exact, credit_candidate_surplus,
+             aw_stability_checks);
+    $display("ASYNC64_AW_SIMULTANEOUS aw_b=%0d aw_source=%0d aw_plan_pop=%0d source_b=%0d last_w_b=%0d",
+             simultaneous_aw_b, simultaneous_aw_source,
+             simultaneous_aw_plan_pop, simultaneous_source_b,
+             simultaneous_last_w_b);
     if (u_serializer.format_error)
         fail("serializer format error asserted for legal payloads");
+    if ((credit_wait_zero_cycles == 0) || (credit_wait_short_cycles == 0) ||
+        (credit_candidate_exact == 0) || (credit_candidate_surplus == 0))
+        fail("source-credit boundary coverage was incomplete");
+    if (aw_stability_checks < 41)
+        fail("AW backpressure stability coverage was incomplete");
+    if ((simultaneous_aw_b == 0) || (simultaneous_aw_source == 0) ||
+        (simultaneous_aw_plan_pop == 0) || (simultaneous_source_b == 0) ||
+        (simultaneous_last_w_b == 0))
+        fail("simultaneous AW/W/B event coverage was incomplete");
 `endif
 
     $display("ASYNC_BACKEND_THROUGHPUT bytes=1048576 axi_bytes_per_cycle_x1000=%0d utilization_pct_x100=%0d w_fire_cycles=%0d mem_cycles=%0d peak_outstanding=%0d",
@@ -727,6 +1045,7 @@ initial begin
     if (errors != 0)
         $fatal(1, "tb_rtl_rx_mem_async_backend failed errors=%0d", errors);
 `ifdef DMA_RX_MEM_ASYNC64_PROFILE
+    $display("PASS tb_rtl_async64_aw_planner candidate_stage=1 aw_stalls=1,2,7,31 source_credit=0,short,exact,surplus four_k_offsets=000,f80,fc0,ff0,ff8");
     $display("PASS tb_rtl_rx_mem_async64_backend stress_frames=%0d clock_profiles=6 clock_stops=2", stress_frames);
 `else
     $display("PASS tb_rtl_rx_mem_async512_backend stress_frames=%0d clock_profiles=6 clock_stops=2", stress_frames);

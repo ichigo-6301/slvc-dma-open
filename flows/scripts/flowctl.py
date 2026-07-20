@@ -41,7 +41,10 @@ RX_CDC_COMMON_SIM_CASES = [
 ]
 
 RX_ASYNC64_SIM_CASES = [
-    ("run_rtl_rx_mem_async64_backend.do", "PASS tb_rtl_rx_mem_async64_backend"),
+    ("run_rtl_rx_mem_async64_backend.do", (
+        "PASS tb_rtl_rx_mem_async64_backend",
+        "PASS tb_rtl_async64_aw_planner candidate_stage=1 aw_stalls=1,2,7,31 source_credit=0,short,exact,surplus four_k_offsets=000,f80,fc0,ff0,ff8",
+    )),
     ("run_rtl_rx_mem_async64_integration.do", (
         "PASS tb_rtl_rx_mem_async64_integration",
         "PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header",

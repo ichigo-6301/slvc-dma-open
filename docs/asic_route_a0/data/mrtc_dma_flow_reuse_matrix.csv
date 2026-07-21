@@ -1,0 +1,20 @@
+mrtc_component,dma_reuse,modification_required,not_reusable,reason,classification
+Kconfig and defconfig,yes,replace symbols tops profiles clocks and stages,no,stage selection model is generic,ANALYSIS
+source manifest,yes,add profile-specific filelists and defines,no,manifest parsing is generic but source closure differs,ANALYSIS
+local toolchain isolation,yes,rename environment prefix or generalize,no,PDK libraries tools and licenses must remain ignored,ANALYSIS
+DC wrapper,partial,rewrite tops clocks macro counts compile defines and reports,MRTC top assumptions,MRTC has one clock and two fixed macros,ANALYSIS
+OpenRAM view audit,partial,parameterize organizations ports pins clocks and expected views,fixed macro name and pin tuple,DMA has several widths depths and possible dual-clock memory,ANALYSIS
+Library Compiler DB,yes,loop over several Liberty cells and assert hashes,no,conversion and fail-closed read write are generic,ANALYSIS
+mapped netlist hash,yes,bind netlist SDC and macro manifest at every handoff,no,identity contract is design independent,ANALYSIS
+OpenROAD adapter,partial,generate DMA design config macro list and handoff,MRTC die core density and top,DMA macro count and floorplan are different,ANALYSIS
+macro placement Tcl,method only,create placement from generated DMA dimensions,MRTC symmetric coordinates,DMA needs clustered width and depth banks,ANALYSIS
+PDN macro connection,partial,audit every DMA supply pin and macro family,no,vdd gnd to VDD VSS technique may recur,ANALYSIS
+OpenRCX SPEF handoff,yes,rename top paths and assert same-run artifacts,no,netlist SDC SPEF contract is generic,ANALYSIS
+PrimeTime runner,partial,add multi-clock coverage exceptions and macro set,no,fail-closed read link parasitics is reusable,ANALYSIS
+timing audit,partial,add per-clock CDC recovery removal macro checks,no,DMA has more path classes and clocks,ANALYSIS
+waiver policy,yes,require exact object sets and rationale,no,policy is generic while objects are design specific,ANALYSIS
+result maturity,yes,retain separate implementation timing macro and signoff dimensions,no,maturity model is generic,ANALYSIS
+public private artifact boundary,yes,replace allowlists and provenance,no,PDK generated views logs and licenses remain private,ANALYSIS
+CI preflight,yes,add DMA profile manifest memory and CDC audits,no,static schema and dry-run checks are reusable,ANALYSIS
+release tag and checksums,yes,bind only reviewed release artifacts,no,Route A0 analysis must not alter frozen release tags,ANALYSIS
+MRTC frequency and PPA,no,none,all measured values,DMA architecture and macro topology differ,VERIFIED_REPOSITORY_FACT

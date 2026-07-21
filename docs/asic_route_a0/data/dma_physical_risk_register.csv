@@ -1,0 +1,14 @@
+risk_id,risk,scope,likelihood,impact,evidence,mitigation,stop_condition,classification
+PHY-01,512-bit macro pin access and congestion,Target B and C,high,high,wide banks and routed FPGA address path,cluster width banks and run bounded pin-access global-route check,unrouteable required pins or persistent overflow,ANALYSIS
+PHY-02,unknown OpenRAM dimensions invalidate floorplan,all SRAM profiles,high,high,no DMA macros generated,freeze dimensions before die and macro placement,no complete LEF set,TBD_MEASUREMENT
+PHY-03,depth-bank read mux becomes route dominated,fixed ingress payload,medium,high,proposed 4-way depth banking,register bank select and place mux at banks,negative timing dominated by cross-bank route,ASSUMPTION
+PHY-04,dual-clock FIFO macro lacks safe model,Async512,high,high,current generic array only,retain registers or characterize exact dual-clock leaf,missing independent-clock timing and collision contract,ANALYSIS
+PHY-05,reset and enable fanout,Target C,high,medium,existing soft-reset path and many reset arrays,local buffering replication and staged reset based on reports,unbounded fanout or recovery removal failures,VERIFIED_REPOSITORY_FACT
+PHY-06,CTS interaction with macros and two clocks,Async512,medium,high,aclk and mem_clk plus boundary registers,separate trees and synchronizer placement constraints,unresolved skew or excessive hold repair,ANALYSIS
+PHY-07,macro PG connection mismatch,all SRAM profiles,medium,high,MRTC required vdd gnd mapping,audit pins and use reviewed pre-PDN hook,unconnected or shorted supply pins,VERIFIED_REPOSITORY_FACT
+PHY-08,hold repair explosion near short CDC paths,Async512,medium,high,two-stage synchronizers and short toggles,classify paths before guardband and cap repair growth,large unexplained buffer growth or residual violations,ANALYSIS
+PHY-09,mixed 64 and 512 memory boundaries fragment floorplan,Target C,high,medium,current top has separate RX512 and shared 64-bit AXI,regionalize RX TX CQ interfaces,512-bit bus crossing control and TX regions,VERIFIED_REPOSITORY_FACT
+PHY-10,macro analytical model limits timing interpretation,all SRAM profiles,high,high,MRTC OpenRAM evidence used analytical Liberty,report model maturity separately and check min period,no reviewed macro timing model,VERIFIED_REPOSITORY_FACT
+PHY-11,LEF normalization diverges from GDS,all SRAM profiles,medium,high,MRTC snapped LEF only to manufacturing grid,prefer same-configuration routeable perimeter views and record hashes,physical abstract no longer matches layout,VERIFIED_REPOSITORY_FACT
+PHY-12,unresolved TX clock contract,Target C,high,high,tx_axis clock ports unused,freeze synchronous or external CDC boundary before SDC,ambiguous TX launch capture clock,VERIFIED_REPOSITORY_FACT
+

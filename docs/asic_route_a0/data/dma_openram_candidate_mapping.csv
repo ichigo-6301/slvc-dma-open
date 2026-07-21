@@ -1,0 +1,11 @@
+memory_family,classification,logical_organization,candidate_macro_organization,banking,width_banks,depth_banks,candidate_macro_count,port_requirement,clock_requirement,wrapper_contract,openram_status,risk,next_measurement
+fixed_ingress_payload,MUST_MACRO,2048x512,512x128,2D,4,4,16,1R1W,single aclk,one-cycle read and registered depth select,ANALYSIS_FEASIBLE,medium,generate one macro and compare four depth options
+shared_pool_payload,MUST_MACRO,64x512,64x128,width,4,1,4,1R1W,single aclk,one-cycle read and no data reset,ANALYSIS_FEASIBLE,medium,generate view and audit perimeter pin access
+fixed_ingress_metadata,MAY_MACRO,64x352,64x128,width,3,1,3,1R1W,single aclk,preserve one-cycle read and forbid or define collision,ANALYSIS_FEASIBLE,medium,compare register and macro area timing
+shared_adapter_context,MAY_MACRO,64x299,64x128,width,3,1,3,1R1W,single aclk,preserve context visibility through pointers,ANALYSIS_FEASIBLE,medium,compare register and macro area timing
+async_payload_fifo,MAY_MACRO,32x577,32x128,width,5,1,5,1R1W dual-clock,unrelated aclk and mem_clk,technology wrapper plus Gray ownership and collision assertions,TBD_MEASUREMENT,high,prove generator ports Liberty checks and async collision behavior
+shared_pool_keep,KEEP_REGISTERS,64x64,none,none,0,0,0,1R1W,single aclk,parallel latency with payload,NOT_SELECTED,low,reevaluate only after payload macro dimensions
+free_list_and_next_ptr,KEEP_REGISTERS,2 arrays of 64x6,none,none,0,0,0,multiple logical accesses,single aclk,reset initialization and ordered allocation release,NOT_DIRECTLY_MAPPABLE,high,none in first implementation
+channel_and_descriptor_tables,KEEP_REGISTERS,multiple 16x32 arrays,none,none,0,0,0,multiple update sources,single aclk,CSR event priority and reset,NOT_DIRECTLY_MAPPABLE,high,retain registers
+tx_axi_and_cq_queues,KEEP_REGISTERS,depth 4 to 16,none,none,0,0,0,queue specific,single aclk or mem_clk,zero-latency or reset-sensitive behavior,POOR_UTILIZATION,low,retain registers
+

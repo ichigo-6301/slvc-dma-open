@@ -47,4 +47,3 @@ The component matrix is [mrtc_dma_flow_reuse_matrix.csv](data/mrtc_dma_flow_reus
 - **ANALYSIS**: abstract common Python/Tcl helpers for manifest reading, tool-path isolation, view hashing, LC conversion, mapped-netlist/SDC identity, ORFS handoff, SPEF validation, PrimeTime coverage, and maturity rendering.
 - **ANALYSIS**: keep design-owned files separate: top/profile definitions, memory inventory, wrapper maps, macro manifests, pins, SDC exceptions, floorplan, macro placement, and report parsers.
 - **ASSUMPTION**: a common flow library should accept declarative design/profile manifests rather than branching on `MRTC` or `DMA` names inside shared scripts.
-

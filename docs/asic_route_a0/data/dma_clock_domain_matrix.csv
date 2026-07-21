@@ -6,4 +6,3 @@ carrier_rx_clk,carrier_rx_clk,TBD,optional carrier RX FIFO,carrier_rx_rst_n,asyn
 carrier_tx_clk,carrier_tx_clk,TBD,optional carrier TX FIFO,carrier_tx_rst_n,asynchronous,generic FIFO local reset,dma_clk data to carrier TX,Gray-pointer async FIFO with read pipeline,yes,2,16,independent optional clock group with exact FIFO constraints,review wide data ownership,medium,TBD_MEASUREMENT
 carrier_ctrl_rx_clk,carrier_ctrl_rx_clk,TBD,optional control RX FIFO,carrier_ctrl_rx_rst_n,asynchronous,generic FIFO local reset,88-bit message to dma_clk,Gray-pointer async FIFO,yes,2,8,independent optional clock group with exact FIFO constraints,review atomic message data,low,TBD_MEASUREMENT
 carrier_ctrl_tx_clk,carrier_ctrl_tx_clk,TBD,optional control TX FIFO,carrier_ctrl_tx_rst_n,asynchronous,generic FIFO local reset,88-bit message from dma_clk,Gray-pointer async FIFO,yes,2,8,independent optional clock group with exact FIFO constraints,review atomic message data,low,TBD_MEASUREMENT
-

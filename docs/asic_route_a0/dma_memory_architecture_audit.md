@@ -77,4 +77,3 @@ Detailed rows are in [dma_memory_inventory.csv](data/dma_memory_inventory.csv), 
 - **ANALYSIS**: depth banking adds decode and a 512-bit read mux. Register the bank select with the synchronous read address and avoid a cross-core combinational mux.
 - **ANALYSIS**: macro pin orientation and perimeter access may dominate routability more than cell logic.
 - **TBD_MEASUREMENT**: macro aspect ratio, halo, channel spacing, mux area, clock pin load, and floorplan dimensions.
-

@@ -11,4 +11,3 @@ dma_rx512_async_sram,Target B async,Nangate45,SRAM plus dual-clock FIFO,200,100,
 dma_rx512_async_sram,Target B async,Nangate45,SRAM plus dual-clock FIFO,200,300,not included,per domain,TBD,TBD,memory-clock stretch,planned,macro period or memory-domain setup failure,async512 random phase and backpressure,per-clock QOR and macro checks,ASSUMPTION
 dma_full_rx512_async_sram,Target C,Nangate45,mixed SRAM and registers,200,200,200,200,TBD after Target B,TBD after route,final system target,planned,unresolved TX clock IO or macro closure,complete 14 plus RX CDC suites and macro tests,full hierarchy QOR CDC route RCX PT and IO coverage,ASSUMPTION
 dma_zynq_async64_compat,compatibility,Nangate45 or FPGA,generic or inferred,200,200,200,200,not ASIC canonical,not ASIC canonical,compatibility comparison only,planned,do not promote to native ASIC result,existing Async64 regression,comparison reports only,ANALYSIS
-

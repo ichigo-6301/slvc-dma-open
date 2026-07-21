@@ -61,4 +61,3 @@ All rows above are **VERIFIED_REPOSITORY_FACT**. The commit chain from `main` to
 - **ANALYSIS**: analysis branch: `docs/dma-asic-route-a0-analysis` from `eed14d7`.
 - **ASSUMPTION**: next implementation branch after blocker review: `feat/dma-rx512-sram-route-a1` from the approved canonical equivalent of `eed14d7`.
 - **ANALYSIS**: do not branch ASIC work from `origin/main`, Async64 alone, or the private UDP adapter line; each omits required 512-bit/CDC development work.
-

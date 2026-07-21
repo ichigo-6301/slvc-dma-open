@@ -1,0 +1,14 @@
+profile,stage,current_maturity,promotion_target,required_evidence,blocking_condition,classification
+dma_rx512_sameclk_register_sanity,analysis,analyzed,elaboration_verified,exact filelist defines check_design and source regression,no flow wrapper or executed elaboration,ANALYSIS
+dma_rx512_sameclk_register_sanity,DC,planned,dc_verified,per-clock QOR constraints top paths and hashes,no Route A0 tool run,VERIFIED_REPOSITORY_FACT
+dma_rx512_sameclk_sram,memory preparation,analyzed,elaboration_verified,pinned OpenRAM views wrappers hashes and macro semantic regression,no generated DMA macro views,ANALYSIS
+dma_rx512_sameclk_sram,DC,planned,dc_verified,exact macro count clean link QOR and mapped handoff,no macro binding or full RX synthesis top,ANALYSIS
+dma_rx512_sameclk_sram,P&R,planned,chip_level_pnr_verified,placement CTS route DRC antenna and same-run SPEF,no macro dimensions or DC handoff,ANALYSIS
+dma_rx512_sameclk_sram,STA,planned,post_route_sta_verified,matching netlist SDC SPEF DB and complete setup hold coverage,no routed handoff,ANALYSIS
+dma_rx512_async_sram,CDC and memory,analyzed,elaboration_verified,dual-clock leaf contract CDC report and macro equivalence,dual-clock macro or register decision not frozen,ANALYSIS
+dma_rx512_async_sram,DC,planned,dc_verified,multi-clock clean link exact exceptions macro count and QOR,no async SRAM profile flow,ANALYSIS
+dma_rx512_async_sram,P&R,planned,chip_level_pnr_verified,two-clock CTS route CDC placement DRC antenna SPEF,no same-clock macro baseline,ANALYSIS
+dma_rx512_async_sram,STA,planned,post_route_sta_verified,matching multi-clock handoff and recovery removal coverage,no routed handoff,ANALYSIS
+dma_full_rx512_async_sram,architecture,analyzed,elaboration_verified,resolved TX clock contract full source closure and regression,TX clock and canonical repository decisions open,ANALYSIS
+dma_full_rx512_async_sram,implementation,planned,overall_profile_partial,full DC P&R STA plus explicit macro and IO caveats,Target B not yet implemented,ANALYSIS
+dma_zynq_async64_compat,branch evidence,dc_verified,not_completed,retain existing compatibility evidence only,not selected for ASIC route,VERIFIED_REPOSITORY_FACT

@@ -11,4 +11,3 @@ PHY-09,mixed 64 and 512 memory boundaries fragment floorplan,Target C,high,mediu
 PHY-10,macro analytical model limits timing interpretation,all SRAM profiles,high,high,MRTC OpenRAM evidence used analytical Liberty,report model maturity separately and check min period,no reviewed macro timing model,VERIFIED_REPOSITORY_FACT
 PHY-11,LEF normalization diverges from GDS,all SRAM profiles,medium,high,MRTC snapped LEF only to manufacturing grid,prefer same-configuration routeable perimeter views and record hashes,physical abstract no longer matches layout,VERIFIED_REPOSITORY_FACT
 PHY-12,unresolved TX clock contract,Target C,high,high,tx_axis clock ports unused,freeze synchronous or external CDC boundary before SDC,ambiguous TX launch capture clock,VERIFIED_REPOSITORY_FACT
-

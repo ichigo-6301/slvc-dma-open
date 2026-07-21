@@ -28,4 +28,3 @@ The proposed runs are enumerated in [dma_frequency_matrix.csv](data/dma_frequenc
 2. **ANALYSIS**: stop frequency promotion on negative DC setup slack, macro min-period failure, unconstrained internal endpoints, or unresolved black boxes.
 3. **ANALYSIS**: stop P&R promotion on macro overlap, unroutable pins, severe congestion, CTS failure, detail-route/antenna violations, or missing same-run SPEF.
 4. **ANALYSIS**: stop result promotion on mapped-netlist/SDC/SPEF identity mismatch or incomplete PrimeTime setup/hold coverage.
-

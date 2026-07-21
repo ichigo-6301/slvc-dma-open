@@ -14,4 +14,3 @@ AXI-Lite readback,region decode and table mirror,RDATA register,high,high,low,st
 CDC full empty,Gray pointer synchronizer,ready valid and level,medium,medium,low,dual-clock FIFO,yes,two-stage sync and pointer arithmetic,possible,dma_async_fifo structure,CDC report plus per-clock timing and bus skew,yes,ANALYSIS
 CQ owner-last,CQE body completion,owner write command,medium,medium,low,CQE staging,no,explicit body then owner FSM,correctness critical,dma_cq_writer contract,endpoint timing and formal sequence check,yes,VERIFIED_REPOSITORY_FACT
 Soft reset distribution,AXI-Lite reset request,multiple state enable or reset pins,low,high,low,no,yes for async ack,quiesce and local reset stages,possible,existing FPGA same-clock critical path involved soft-reset distribution,fanout report and physical replication review,yes,VERIFIED_REPOSITORY_FACT
-

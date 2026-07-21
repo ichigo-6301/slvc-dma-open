@@ -65,4 +65,3 @@ RX ingress / admission
 3. **ANALYSIS**: complete placement and congestion review at conservative density.
 4. **ANALYSIS**: add CTS and audit setup/hold path classes before aggressive repair.
 5. **ANALYSIS**: require detailed route, antenna, final SPEF, and matching PrimeTime handoff before any physical timing claim.
-

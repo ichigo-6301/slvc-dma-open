@@ -74,4 +74,3 @@ frame_dma_rx_top
 4. **ANALYSIS**: Target C, after memory and CDC leaves are independently closed.
 
 **ANALYSIS**: Target A is too local for final claims, while Target C is too broad for first macro/P&R bring-up. The A-to-B-to-C sequence is retained.
-

@@ -63,4 +63,3 @@ The predicted path register is [dma_predicted_critical_paths.csv](data/dma_predi
 3. **ANALYSIS**: do not reduce channel count, FIFO depth, outstanding count, or error observability to improve a synthetic result.
 4. **ANALYSIS**: do not report the historical writer-only DC sweep as full-DMA frequency.
 5. **TBD_MEASUREMENT**: first collect `check_design`, per-clock QOR, top paths, fanout, inferred/mapped memories, unmapped points, and unconstrained endpoints for each profile.
-

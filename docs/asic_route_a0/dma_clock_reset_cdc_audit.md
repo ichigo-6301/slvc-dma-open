@@ -49,4 +49,3 @@ The machine-readable domain table is [dma_clock_domain_matrix.csv](data/dma_cloc
 3. **ANALYSIS**: wide FIFO data is intentionally sampled only after pointer ownership changes; CDC tools may report it as unsynchronized data and require exact structural waivers.
 4. **ANALYSIS**: stopped-clock reset behavior intentionally remains pending. SoC reset architecture must not assume bounded completion when either clock is stopped.
 5. **ANALYSIS**: reset synchronization, memory validity, and macro collision rules must be tested together after memory replacement.
-

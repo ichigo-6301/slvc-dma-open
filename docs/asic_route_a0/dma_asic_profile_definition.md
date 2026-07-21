@@ -50,4 +50,3 @@ Every statement is prefixed with `VERIFIED_REPOSITORY_FACT`, `ANALYSIS`, `ASSUMP
 | FPGA emulation | `dma_zynq_async64_compat` | ANALYSIS | isolated 64-bit compatibility point |
 
 **ANALYSIS**: the user's initial preference is accepted with one correction: the final system target is named `full_rx512`, because the repository does not implement 512-bit TX/CQ/descriptor memory ports.
-

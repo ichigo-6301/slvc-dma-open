@@ -69,4 +69,3 @@
 4. **ANALYSIS**: exception precedence and overridden-constraint report.
 5. **ANALYSIS**: recovery/removal coverage.
 6. **ANALYSIS**: mapped-netlist and SDC SHA-256 identity through DC, OpenROAD/OpenRCX, and PrimeTime.
-

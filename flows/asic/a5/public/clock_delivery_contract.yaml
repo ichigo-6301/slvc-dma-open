@@ -1,4 +1,4 @@
-kind: dma_a5_public_clock_delivery_contract
+record_kind: dma_a5_public_clock_delivery_contract
 schema_version: 1.0.0
 status: method_verified_result_partial
 cts_profile: d200

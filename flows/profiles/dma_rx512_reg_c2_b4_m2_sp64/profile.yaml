@@ -1,5 +1,5 @@
 schema_version: 1.0.0
-kind: dma_implementation_profile
+record_kind: dma_implementation_profile
 profile_id: dma_rx512_reg_c2_b4_m2_sp64
 maturity: partial
 canonical_source_commit: 2d9d2f9e0436b322c774737efbeed7ae02a5f59b

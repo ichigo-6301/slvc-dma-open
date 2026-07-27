@@ -1,4 +1,4 @@
-kind: development_profile_provenance
+record_kind: development_profile_provenance
 schema_version: 1.0.0
 branch: fix/async64-aw-planner-pipeline
 base_commit: 89fc2e024b7d6eb98b73ef97b96b711a66937f3f

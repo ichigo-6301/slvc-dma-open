@@ -4,25 +4,43 @@ nonclaims:
   - id: slvc_dma_rx_payload_cdc_arbitrary_width
     profile: slvc_dma_v1_512_rx_payload_cdc_development
     statement: Arbitrary 64/128/256/512-bit RX memory-width parameterization is not claimed.
-    reason: The implemented development profiles provide only discrete async64 and async512 memory backends plus same-clock 512.
+    reason: The development profiles provide only discrete async64 and async512 memory backends plus same-clock 512.
     status: not_claimed
     public: true
   - id: slvc_dma_rx_payload_cdc_one_sided_reset
     profile: slvc_dma_v1_512_rx_payload_cdc_development
     statement: Arbitrary one-sided hard-reset recovery is not claimed.
-    reason: The current contract requires both asynchronous domains to assert hard reset together and deassert locally through reset synchronizers.
+    reason: Both asynchronous domains must assert hard reset together and deassert locally through reset synchronizers.
     status: not_claimed
     public: true
   - id: slvc_dma_rx_payload_cdc_signoff
     profile: slvc_dma_v1_512_rx_payload_cdc_development
-    statement: Complete ASIC CDC/RDC signoff, physical implementation, and extracted STA are not claimed.
-    reason: Evidence is simulation, Vivado routed OOC CDC reporting, and Design Compiler frontend OOC synthesis with generic FIFO arrays.
+    statement: "Complete ASIC CDC/RDC signoff, physical implementation, and extracted STA are not claimed."
+    reason: "Evidence is simulation, Vivado routed OOC CDC reporting, and Design Compiler frontend OOC synthesis with generic FIFO arrays."
     status: not_claimed
     public: true
   - id: slvc_dma_rx_payload_cdc_board_ddr
     profile: slvc_dma_v1_512_rx_payload_cdc_development
     statement: Board DDR throughput or lossless system operation is not claimed.
-    reason: Throughput values come from an ideal RTL memory model and OOC implementation, not a board memory controller.
+    reason: "Throughput values come from an ideal RTL memory model and OOC implementation, not a board memory controller."
+    status: not_claimed
+    public: true
+  - id: slvc_dma_c2b4_full_product_signoff
+    profile: dma_rx512_reg_c2_b4_m2_sp64
+    statement: "C4B4, complete-DMA, Fmax, power, IO, OCV/MMMC, foundry, and silicon signoff are not claimed by the C2B4 post-route result."
+    reason: The verified point is a two-channel RX512 memory-subsystem development profile at one nominal academic corner with zero physical hold uncertainty.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_async64_vivado_2022_2_board
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: "A board implementation, bitstream, hardware run, or zero-DRC result is not claimed for the Vivado 2022.2 async64 point."
+    reason: The result is routed OOC and retains 52 classified OOC DRC warning entries.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_sram_a5_c4b4_closure
+    profile: dma_rx512_sram_a5_development
+    statement: "C4B4 SRAM synthesis, physical implementation, extracted STA, 300 MHz closure, power, and macro or foundry signoff are not claimed."
+    reason: Clock delivery was corrected only in the boundary canary; the proxy 1.5625 ns min-pulse gate blocked C4B4 execution.
     status: not_claimed
     public: true
   - id: slvc_dma_udp_adapter_board_integration
@@ -53,23 +71,5 @@ nonclaims:
     profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
     statement: A change to the frozen v0.1.0-rc1 DMA core or software-visible ABI is not claimed.
     reason: "The adapter is an optional upstream compatibility layer and does not alter the core channel table, CQE layout, register map, or release tag."
-    status: not_claimed
-    public: true
-  - id: slvc_dma_c2b4_full_product_signoff
-    profile: dma_rx512_reg_c2_b4_m2_sp64
-    statement: C4B4, complete-DMA, Fmax, power, IO, OCV/MMMC, foundry, and silicon signoff are not claimed by the C2B4 post-route result.
-    reason: The verified point is a two-channel RX512 memory-subsystem development profile at one nominal academic corner with zero physical hold uncertainty.
-    status: not_claimed
-    public: true
-  - id: slvc_dma_async64_vivado_2022_2_board
-    profile: slvc_dma_v1_512_rx_payload_cdc_development
-    statement: A board implementation, bitstream, hardware run, or zero-DRC result is not claimed for the Vivado 2022.2 async64 point.
-    reason: The result is routed OOC and retains 52 classified OOC DRC warning entries.
-    status: not_claimed
-    public: true
-  - id: slvc_dma_sram_a5_c4b4_closure
-    profile: dma_rx512_sram_a5_development
-    statement: C4B4 SRAM synthesis, physical implementation, extracted STA, 300 MHz closure, power, and macro or foundry signoff are not claimed.
-    reason: Clock delivery was corrected only in the boundary canary; the proxy 1.5625 ns min-pulse gate blocked C4B4 execution.
     status: not_claimed
     public: true

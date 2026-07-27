@@ -801,6 +801,16 @@ end
 
 always @(posedge m_clk) begin
     if (m_rstn) begin
+        if (u_writer.source_fire && (u_writer.source_bytes_left_q == 0))
+            fail("source transfer occurred with no bytes remaining");
+        if (u_writer.w_burst_active_q &&
+            (u_writer.source_bytes_left_q == 0))
+            fail("active W burst has no source bytes remaining");
+        if (u_writer.reserved_source_beats_q > 64)
+            fail("reserved source beats exceeded bounded capacity");
+        if (u_writer.source_fire && !u_writer.aw_fire &&
+            (u_writer.reserved_source_beats_q == 0))
+            fail("source transfer underflowed reserved beats");
         if (m_payload_tvalid && m_payload_tready)
             cdc_read_beats <= cdc_read_beats + 1;
         if (!m_payload_tvalid && writer_busy)

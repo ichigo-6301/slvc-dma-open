@@ -533,6 +533,16 @@ end
 // AXI and completion payloads must remain stable for the whole stall window.
 always @(posedge clk) begin
     if (rstn && !soft_reset) begin
+        if (u_dut.source_fire && (u_dut.source_bytes_left_q == 0))
+            fail("source transfer occurred with no bytes remaining");
+        if (u_dut.w_burst_active_q && (u_dut.source_bytes_left_q == 0))
+            fail("active W burst has no source bytes remaining");
+        if (u_dut.reserved_source_beats_q >
+            (MAX_OUTSTANDING * MAX_BURST_BEATS))
+            fail("reserved source beats exceeded bounded capacity");
+        if (u_dut.source_fire && !u_dut.aw_fire &&
+            (u_dut.reserved_source_beats_q == 0))
+            fail("source transfer underflowed reserved beats");
         if (aw_stalled_q && ({m_axi_awaddr, m_axi_awlen, m_axi_awsize, m_axi_awburst} !== aw_held_q))
             fail("AW payload changed while stalled");
         if (w_stalled_q && ({m_axi_wdata, m_axi_wstrb, m_axi_wlast} !== w_held_q))

@@ -87,3 +87,31 @@ evidence:
       - slvc_dma_v1_steady_state_writer_throughput
     sha256: null
     public: true
+  - id: slvc_dma_c2b4_n45_register_postroute_summary
+    path: evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml
+    type: dc_openroad_openrcx_primetime_same_run_summary
+    source_ref: bb8591a8903e55027722f404e99fe9df9832dbf7
+    tool: Design Compiler O-2018.06-SP1 / OpenROAD / OpenRCX / PrimeTime O-2018.06-SP1
+    claims:
+      - slvc_dma_c2b4_n45_register_postroute_450
+    sha256: 9716e2ad8aa4d41a9c87bd9c6861ee9a88a10c2901c97931bf1702e26ec3cdd3
+    public: true
+  - id: slvc_dma_async64_vivado_2022_2_ooc_summary
+    path: evidence/slvc_dma_async64_vivado_2022_2_ooc_summary.yaml
+    type: vivado_2022_2_routed_ooc_timing_utilization_cdc
+    source_ref: 529256758b33ba9628bc0bf93501297dd3e25487
+    tool: Vivado 2022.2 build 3671981
+    claims:
+      - slvc_dma_async64_vivado_2022_2_ooc_200m
+    sha256: d5f2d7494ad20f4a26f495c249d2501c5fbfa10363f3234259d9d25bff4170e7
+    public: true
+  - id: slvc_dma_sram_a5_development_summary
+    path: evidence/slvc_dma_sram_a5_development_summary.yaml
+    type: openram_model_clock_delivery_and_pulse_blocker_summary
+    source_ref: 8eba006d68322a336d61ab8720395b3e092f61c1
+    tool: OpenRAM / ngspice / OpenROAD / OpenRCX / PrimeTime
+    claims:
+      - slvc_dma_sram_a5_clock_delivery_canary
+      - slvc_dma_sram_a5_256_area_reduction
+    sha256: 4120e1da78c59b509fe6161b0f5f7ebb5b6c796128a64491c651e1d000ba449c
+    public: true

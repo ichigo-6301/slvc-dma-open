@@ -55,3 +55,21 @@ nonclaims:
     reason: "The adapter is an optional upstream compatibility layer and does not alter the core channel table, CQE layout, register map, or release tag."
     status: not_claimed
     public: true
+  - id: slvc_dma_c2b4_full_product_signoff
+    profile: dma_rx512_reg_c2_b4_m2_sp64
+    statement: C4B4, complete-DMA, Fmax, power, IO, OCV/MMMC, foundry, and silicon signoff are not claimed by the C2B4 post-route result.
+    reason: The verified point is a two-channel RX512 memory-subsystem development profile at one nominal academic corner with zero physical hold uncertainty.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_async64_vivado_2022_2_board
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: A board implementation, bitstream, hardware run, or zero-DRC result is not claimed for the Vivado 2022.2 async64 point.
+    reason: The result is routed OOC and retains 52 classified OOC DRC warning entries.
+    status: not_claimed
+    public: true
+  - id: slvc_dma_sram_a5_c4b4_closure
+    profile: dma_rx512_sram_a5_development
+    statement: C4B4 SRAM synthesis, physical implementation, extracted STA, 300 MHz closure, power, and macro or foundry signoff are not claimed.
+    reason: Clock delivery was corrected only in the boundary canary; the proxy 1.5625 ns min-pulse gate blocked C4B4 execution.
+    status: not_claimed
+    public: true

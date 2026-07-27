@@ -1,0 +1,79 @@
+kind: dma_async64_vivado_2022_2_routed_ooc_summary
+schema_version: 1.0.0
+status: verified_with_warnings
+classification: routed_ooc_timing_met
+source:
+  measured_repository: ichigo-6301/dma
+  rtl_optimization_commit: 529256758b33ba9628bc0bf93501297dd3e25487
+  flow_commit: 1887b25216f553aed6a7998417675708e086d787
+tool:
+  name: Vivado
+  version: "2022.2"
+  build: 3671981
+profile:
+  id: slvc_dma_512_rx_async64
+  top: frame_dma_rx_top
+  part: xc7z100ffg900-2
+  frequency_mhz: 200
+  aclk_period_ns: 5.000
+  mem_clk_period_ns: 5.000
+  place_directive: ExtraNetDelay_high
+  phys_opt_directive: AggressiveExplore
+  route_directive: Explore
+timing:
+  setup_wns_ns: 0.152
+  setup_tns_ns: 0.0
+  hold_whs_ns: 0.059
+  hold_ths_ns: 0.0
+  pulse_width_wns_ns: 1.732
+  failed_nets: 0
+  unrouted_nets: 0
+  partially_routed_nets: 0
+utilization:
+  slice_luts: 39299
+  slice_registers: 43671
+  block_ram_tiles: 54
+  ramb36e1: 52
+  ramb18e1: 4
+  dsp: 0
+  bufg: 1
+  async64_writer_luts: 441
+  async64_writer_ffs: 393
+cdc_and_bus_skew:
+  constrained_gray_buses: 4
+  unconstrained_project_gray_buses: 0
+  bus_skew_violation_count: 0
+  worst_bus_skew_slack_ns: 4.431
+  cdc_warnings_retained: true
+drc:
+  error_count: 0
+  warning_entry_count: 52
+  zero_drc_claimed: false
+  warning_classes:
+    CHECK_3: 2
+    RBOR_1: 8
+    REQP_1839: 20
+    REQP_1840: 20
+    RTSTAT_10: 1
+    ZPS7_1: 1
+resources:
+  elapsed_seconds: 1204.381
+  peak_aggregate_rss_bytes: 7907786752
+  minimum_host_free_bytes: 19894067200
+artifact_hashes:
+  wrapper_tcl_sha256: 53b5f6e20142caa70f05fe66b63608c9cb79bf7198317b2a9f2c48dace4c8a7b
+  routed_checkpoint_sha256: ebca71d48934cb84d26d753788538210552ff8af1e3e484b62798b3eb93089bb
+  timing_summary_sha256: 376f6c76f063da5d6596a1e1a238fb855d8f18737b59effac782beef3b84abb7
+  routed_utilization_sha256: 9c32a94ee9bba492304619c9c30113f334d156d46066124815cac8fae9e32023
+  cdc_aclk_to_mem_sha256: a3c4f1814d35e1e2cb5e25d71796d4200e56b387404af56f556abeee10c2204c
+  cdc_mem_to_aclk_sha256: f4267771ee3089b4a2ab815765ce70620d6ebe843ed902fb97807ec8d176605a
+  bus_skew_sha256: cac52a12fcdd78201bc81c919e6d04f195ef8e7b59abef7560cf77023153a8a9
+  drc_sha256: cd87b2aa422120f96acbc5bdcf8a61fc92de15c1aa4e2c56fcb6b5921b4fa3b0
+  methodology_sha256: 546b3906834eb82a893e477bba383873258754f335c613f43e31cc86ab8eb97f
+claims:
+  - The async64 RX path completed routed OOC at 200 MHz with positive setup and hold slack in Vivado 2022.2.
+nonclaims:
+  - board_implementation
+  - bitstream_or_hardware_validation
+  - zero_drc
+  - direct_numeric_merge_with_vivado_2018_3

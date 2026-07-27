@@ -1,0 +1,117 @@
+kind: dma_c2b4_nangate45_register_postroute_summary
+schema_version: 1.0.0
+status: verified
+classification: internal_postroute_closure_point
+measured_repository: ichigo-6301/dma
+measured_branch: showcase/dma-c2b4-nangate45-register
+source:
+  base_commit: 0aecf53134b34389d9a779784d65b8f666d0581e
+  rtl_content_commit: 348df4949d4d88954a4402cd47118c6444099a17
+  execution_evidence_commit: bb8591a8903e55027722f404e99fe9df9832dbf7
+  writer_rtl:
+    dma_axi_write_engine_512.v: d6585993fdab2446049d0f7efcf90412755106587d59c5441228b789c7f500b2
+    dma_axi_write_engine_64_stream.v: 729e8bccf6f97997284ab54b7931c923944749c44e8824060c5ebe0333a0a23a
+profile:
+  id: dma_rx512_reg_c2_b4_m2_sp64
+  top: dma_rx512_memory_subsystem_top
+  channels: 2
+  max_frame_bytes: 4096
+  metadata_depth: 2
+  shared_blocks: 64
+  memory_mode: register_expanded
+  sram_macro_count: 0
+memory:
+  fixed_payload_bits: 65536
+  fixed_banking: 4_width_x_2_depth_8_arrays_of_128x64
+  shared_payload_bits: 32768
+  shared_keep_bits: 4096
+  total_payload_keep_bits: 102400
+  mapped_payload_keep_registers: 102400
+  payload_preserved: true
+tool_identity:
+  design_compiler: O-2018.06-SP1
+  primetime: O-2018.06-SP1
+  orfs_commit: bea7dcd7be7f26d1328f6058b01cf42bf4352aa2
+  orfs_container: openroad/orfs@sha256:5fb6465e18c42bfaa19f0ba40190f1c75cb6118feffd236b13ed8081ff3f573f
+  nangate45_db_sha256: 111c429e7ae9341d51f5f04b0e4c7574e5c1359de32d51b151470463abe187de
+  nangate45_liberty_sha256: 8d540a4d4cf6d09d27c87ad067857a9c0c2eeb023ab7a56e058cd3113db4e9b1
+dc_stress_600mhz:
+  status: timing_fail
+  period_ns: 1.666667
+  setup_wns_ns: -0.0554587
+  setup_tns_ns: -5.93551556
+  setup_violating_path_count: 388
+  tool_error: false
+dc_handoff_550mhz:
+  status: verified
+  compile_command: compile_ultra
+  period_ns: 1.818182
+  setup_uncertainty_ns: 0.200
+  hold_uncertainty_ns: 0.050
+  setup_wns_ns: 0.000284195
+  setup_tns_ns: 0.0
+  hold_wns_ns: 0.0441018
+  hold_tns_ns: 0.0
+  register_count: 113741
+  total_cell_area: 946952.019998
+  design_rule_violation_count: 0
+  uid131_status: closed
+  elapsed_seconds: 1484.143
+  peak_aggregate_rss_bytes: 18358214656
+physical_450mhz:
+  status: verified
+  mapped_source_frequency_mhz: 550
+  period_ns: 2.222222
+  setup_uncertainty_ns: 0.200
+  hold_uncertainty_ns: 0.000
+  hold_methodology: ideal_nominal_no_ocv_or_jitter
+  detail_route_drc_count: 0
+  antenna_violation_count: 0
+  electrical_violation_count: 0
+  standard_cell_area_um2: 1042070
+  standard_cell_count: 555849
+  sequential_cell_count: 113741
+  utilization_percent: 38.5506
+  elapsed_seconds: 1319.334
+  peak_aggregate_rss_bytes: 22435655680
+primetime_450mhz:
+  status: verified
+  setup_wns_ns: 0.041322
+  setup_tns_ns: 0.0
+  hold_wns_ns: 0.000341
+  hold_tns_ns: 0.0
+  setup_violation_count: 0
+  hold_violation_count: 0
+  electrical_violation_count: 0
+  min_pulse_width_violation_count: 0
+  min_period_violation_count: 0
+  rc004_count: 0
+  no_driving_cell_count: 0
+  synchronous_endpoint_coverage_percent: 100.0
+flow_hashes:
+  profile_yaml_sha256: edb0a61f926bcbffbf42ef1a303d61ef0d9c6502293c1647682b2ea828e03ac7
+  override_manifest_sha256: 81e1cee28ba2efcb8e70d3e06c1b84509f1109def6c7c3dcc9daca5cafa379d4
+  dc_550_sdc_sha256: d40bffb6c70ebdb460d70791e7c83fe2f6ee1d8c23923c68012f1d9b8ef3988c
+  dc_mapped_netlist_sha256: 38cf919b1dacf64516cca078f4e70cb76bb6e64f0c142561f5e73b44dc74a8ad
+  dc_mapped_sdc_sha256: 29fb63ac6b5abca6cafc53d5df93e68cda0cb4ed53baa2720bfda2d4979ae3a1
+  dc_mapped_ddc_sha256: bdf312da0398965029396e46e038bec57ddd128ee0d0349aa6294345d3ef30aa
+  eco_manifest_sha256: cbd6e1ea4bf8084fd0330619e86538dafe3569aa30cfe2eb6c7d9eb70af49530
+  eco3_tcl_sha256: 644cc3dfd27bcf67baec7f7bb4bd0c483fe5c63ea75d8b24a8cbf5a80450cd93
+same_run_artifacts_not_distributed:
+  routed_odb_sha256: 8646de13454ee2932b0b6f9ab3b0a7f80e1fbd0af03638c6426da25f033535f8
+  routed_netlist_sha256: a5798bc086548616bc3cdf48b17afe28658b674ed4cdfd112f074797e78f706b
+  routed_sdc_sha256: 8af6f1719da270362d4625e6ef36b96d108b6c6326b5f604d88088faf21bb20d
+  routed_spef_sha256: 49dbd017e39993a1230889ed178c05ebf776fc9018cfd8f841481959ea203b4b
+maturity:
+  implementation_chain: verified
+  overall: partial
+  reason: nominal_single_corner_internal_profile_without_io_ocv_mmmc_or_foundry_signoff
+claims:
+  - C2B4 register-expanded RX512 memory subsystem completed a 550 MHz DC handoff and a 450 MHz same-run OpenROAD/OpenRCX/PrimeTime closure point.
+  - All 102400 payload and keep bits were preserved as registers with zero SRAM macros.
+nonclaims:
+  - c4b4_result
+  - complete_dma
+  - fmax
+  - power
+  - io_ocv_mmmc_foundry_or_silicon_signoff

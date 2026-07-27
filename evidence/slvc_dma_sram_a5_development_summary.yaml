@@ -1,0 +1,73 @@
+kind: dma_sram_a5_development_summary
+schema_version: 1.0.0
+status: partial_blocked
+classification: clock_delivery_verified_min_pulse_blocked
+source:
+  measured_repository: ichigo-6301/dma
+  clock_delivery_execution_commit: 8eba006d68322a336d61ab8720395b3e092f61c1
+  pulse_recovery_execution_commit: 9282972e3a05e4d655881a5afa71082eccc8fcd4
+  production_rtl_modified: false
+tool_identity:
+  openram_commit: e16d9eb0b4495e8beee441ced3fcad68391155e6
+  openram_version: 1.2.49
+  ngspice_version: 46
+  ngspice_solver: KLU
+  corner: TT_1p1V_25C
+  orfs_commit: bea7dcd7be7f26d1328f6058b01cf42bf4352aa2
+model_512x128:
+  status: verified
+  organization: 512x128_1rw1r
+  characterization: transistor_level_trimmed_spice_4x4
+  table_max_load_pf: 0.004182
+  table_max_slew_ns: 0.080
+  minimum_period_ns: 3.125
+  min_pulse_width_high_ns: 1.5625
+  min_pulse_width_low_ns: 1.5625
+  liberty_constraints_modified_or_waived: false
+  macro_drc_lvs_pex: not_closed
+  liberty_sha256: 5a24400458258288f52fe0dfb6105cc7b9e89070d5fd5c0042e4d06f9203a15e
+  db_sha256: c6cf83ba16972d5c72620325c205bf71402fdcd6cd03f9d2e38ab1b91475164d
+clock_delivery_canary:
+  status: verified_pulse_blocked
+  cts_profile: d200
+  leaf_mode: macro_x3
+  leaf_cell: CLKBUF_X3
+  leaf_count: 2
+  maximum_pin_to_leaf_distance_um: 15.7975
+  baseline_macro_clock_slew_ps: 86.384
+  selected_macro_clock_slew_ps: 16.434
+  slew_target_ps: 72.0
+  setup_wns_ns: 0.372516
+  hold_wns_ns: 0.171934
+  detail_route_drc_count: 0
+  antenna_violation_count: 0
+  rc004_count: 0
+  table_extrapolation_count: 0
+  min_pulse_width_violation_count: 4
+model_256x128:
+  status: frequency_blocked_after_maxpoint
+  organization: 256x128_1rw1r
+  macro_area_um2: 121909.4336125
+  baseline_512_macro_area_um2: 195801.7873125
+  area_reduction_percent: 37.7383448406
+  minimum_period_ns: 3.125
+  min_pulse_width_high_ns: 1.5625
+  min_pulse_width_low_ns: 1.5625
+  pulse_improvement_ns: 0.0
+  full_4x4_characterization_complete: false
+remaining_blocker:
+  category: min_pulse_width_proxy_model
+  target_frequency_mhz: 300
+  setup_uncertainty_ns: 0.200
+  required_pulse_ns: 1.5625
+  available_pulse_ns: 1.4667
+  c4b4_dc_pnr_pt_started: false
+claims:
+  - The 512x128 model passed the bounded model audit and a one-macro canary demonstrated corrected clock delivery.
+  - The generated 256x128 macro area is 37.74 percent lower than the generated 512x128 macro area.
+nonclaims:
+  - c4b4_sram_dc_pnr_or_sta_complete
+  - 300mhz_sram_closure
+  - independent_true_pulse_characterization_complete
+  - performance_or_power_improvement_from_256x128
+  - macro_drc_lvs_pex_or_foundry_signoff

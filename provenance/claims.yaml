@@ -213,3 +213,63 @@ claims:
     status: verified
     caveat: Library area units are technology-specific and are not a full-DMA area estimate; power is likewise a pre-layout estimate.
     public: true
+  - id: slvc_dma_c2b4_n45_register_postroute_450
+    profile: dma_rx512_reg_c2_b4_m2_sp64
+    statement: The C2B4 register-expanded RX512 memory subsystem completed a 550 MHz Design Compiler handoff and a 450 MHz same-run OpenROAD, OpenRCX, and PrimeTime closure point.
+    metric: internal_postroute_setup_hold
+    value: 0.000341
+    unit: ns minimum setup or hold WNS
+    benchmark: C2B4 RX512 memory subsystem with 102400 payload and keep registers
+    configuration: Nangate45 nominal corner; DC 550 MHz; P&R and PT 450 MHz; setup uncertainty 0.200 ns; nominal hold uncertainty 0 ns
+    source_ref: bb8591a8903e55027722f404e99fe9df9832dbf7
+    tool: Design Compiler O-2018.06-SP1 / OpenROAD / OpenRCX / PrimeTime O-2018.06-SP1
+    evidence:
+      - slvc_dma_c2b4_n45_register_postroute_summary
+    status: verified
+    caveat: This is a C2 development profile and internal nominal academic-corner result, not C4B4, Fmax, complete-DMA, power, IO, OCV/MMMC, foundry, or silicon signoff.
+    public: true
+  - id: slvc_dma_async64_vivado_2022_2_ooc_200m
+    profile: slvc_dma_v1_512_rx_payload_cdc_development
+    statement: The async64 RX path completed routed OOC at 200 MHz with +0.152 ns setup WNS and +0.059 ns hold WHS in Vivado 2022.2.
+    metric: fpga_routed_ooc_timing
+    value: 0.059
+    unit: ns minimum setup or hold slack
+    benchmark: synth, place, phys-opt, and route OOC on xc7z100ffg900-2
+    configuration: 5.000 ns aclk and mem_clk; ExtraNetDelay_high / AggressiveExplore / Explore
+    source_ref: 529256758b33ba9628bc0bf93501297dd3e25487
+    tool: Vivado 2022.2 build 3671981
+    evidence:
+      - slvc_dma_async64_vivado_2022_2_ooc_summary
+    status: verified
+    caveat: The result retains 52 classified OOC DRC warnings and is not a bitstream, board implementation, or zero-DRC claim; it is separate from Vivado 2018.3 data.
+    public: true
+  - id: slvc_dma_sram_a5_clock_delivery_canary
+    profile: dma_rx512_sram_a5_development
+    statement: A dedicated CLKBUF_X3 leaf reduced the one-macro canary clock slew from 86.384 ps to 16.434 ps while preserving the Liberty limits.
+    metric: macro_clock_slew
+    value: 16.434
+    unit: ps
+    benchmark: routed 512x128 OpenRAM output-boundary canary with OpenRCX and PrimeTime
+    configuration: Nangate45 reference platform; d200 CTS; one leaf per macro clock pin
+    source_ref: 8eba006d68322a336d61ab8720395b3e092f61c1
+    tool: OpenRAM 1.2.49 / ngspice 46 / OpenROAD / OpenRCX / PrimeTime
+    evidence:
+      - slvc_dma_sram_a5_development_summary
+    status: verified
+    caveat: The canary remained blocked by four proxy min-pulse checks; no C4B4 SRAM DC, P&R, or PT result is claimed.
+    public: true
+  - id: slvc_dma_sram_a5_256_area_reduction
+    profile: dma_rx512_sram_a5_development
+    statement: The generated 256x128 analytical macro area was 37.74 percent lower than the generated 512x128 macro area.
+    metric: generated_macro_area_reduction
+    value: 37.7383448406
+    unit: percent
+    benchmark: same OpenRAM and FreePDK45 generation methodology
+    configuration: TT 1.1 V 25 C; 1RW1R; 21-stage fanout-4 replica delay
+    source_ref: 9282972e3a05e4d655881a5afa71082eccc8fcd4
+    tool: OpenRAM 1.2.49 / ngspice 46
+    evidence:
+      - slvc_dma_sram_a5_development_summary
+    status: verified
+    caveat: Full 4x4 characterization, performance, power, C4B4 integration, macro DRC/LVS/PEX, and foundry signoff are not complete.
+    public: true

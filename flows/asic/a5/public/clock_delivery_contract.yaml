@@ -1,0 +1,20 @@
+kind: dma_a5_public_clock_delivery_contract
+schema_version: 1.0.0
+status: method_verified_result_partial
+cts_profile: d200
+clock_leaf_cell: CLKBUF_X3
+leaf_count:
+  boundary_canary: 2
+  c4b4: 16
+maximum_pin_to_leaf_distance_um: 20.0
+macro_clock_slew_gate_ps: 72.0
+measured_baseline_macro_clock_slew_ps: 86.384
+measured_selected_macro_clock_slew_ps: 16.434
+policy:
+  preserve_liberty_max_capacitance: true
+  preserve_liberty_min_pulse_width: true
+  waiver_allowed: false
+nonclaims:
+  - c4b4_sram_dc_pnr_sta_complete
+  - independent_true_pulse_characterization_complete
+  - macro_or_foundry_signoff

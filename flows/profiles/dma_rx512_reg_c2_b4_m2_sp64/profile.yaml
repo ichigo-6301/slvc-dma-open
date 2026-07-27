@@ -1,0 +1,36 @@
+schema_version: 1.0.0
+kind: dma_implementation_profile
+profile_id: dma_rx512_reg_c2_b4_m2_sp64
+maturity: planned
+canonical_source_commit: 2d9d2f9e0436b322c774737efbeed7ae02a5f59b
+top: dma_rx512_memory_subsystem_top
+target: rx512_memory_subsystem
+memory_mode: registers
+macro_count: 0
+stream_width: 512
+memory_axi_width: 512
+clock_domains: 1
+parameters:
+  channels: 2
+  fixed_payload_words_64b_per_channel: 512
+  fixed_payload_aw: 9
+  fixed_meta_depth: 2
+  fixed_meta_aw: 1
+  shared_block_num: 64
+  shared_block_aw: 6
+  max_frame_bytes: 4096
+  max_burst_beats: 16
+  max_outstanding: 4
+expected_fixed_payload_bits: 65536
+fixed_banking:
+  width_banks: 4
+  depth_banks: 2
+  leaf_width_bits: 128
+  leaf_depth: 64
+  register_array_count: 8
+shared_payload_bits: 32768
+shared_keep_bits: 4096
+payload_keep_bits: 102400
+resume_priority: diagnostic
+threshold_role: dc_to_yosys_register_memory_boundary
+claim_scope: internal_reg_to_reg_diagnostic

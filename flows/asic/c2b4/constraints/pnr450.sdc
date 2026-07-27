@@ -1,0 +1,11 @@
+# Generated C2B4 OpenROAD physical constraint. Do not edit.
+create_clock -name a1_clk -period 2.222222 [get_ports clk]
+set_clock_uncertainty -setup 0.200 [get_clocks a1_clk]
+set_clock_uncertainty -hold 0.000 [get_clocks a1_clk]
+set_input_delay 0.500 -clock a1_clk [all_inputs -no_clocks]
+set_input_transition 0.100 [all_inputs -no_clocks]
+set_output_delay 0.500 -clock a1_clk [all_outputs]
+set_load 0.050 [all_outputs]
+set_false_path -from [get_ports rstn]
+set_max_fanout 16 [current_design]
+set_max_transition 0.500 [current_design]

@@ -1,0 +1,50 @@
+{
+  "frame_payload_ram": {
+    "banking": {
+      "bank_width": 128,
+      "block_aw": 6,
+      "block_num": 64,
+      "data_width": 512,
+      "keep_register_array_count": 1,
+      "keep_width": 64,
+      "payload_width_banks": 4
+    },
+    "canonical_sha256": "4f76689f7f8226084c7760d7888392e84c6efbdf37ff4d7871ff2db573f6b7c3",
+    "canonical_source": "rtl/rx/dma_frame_payload_ram.v",
+    "override_sha256": "395be85922922790dc06b91332a565836b3d93cce95c9c3c4ab00557a637ff09",
+    "override_source": "dc_source_overrides/dma_rx512_reg_c2_b4_m2_sp64/dma_frame_payload_ram.v",
+    "semantic_contract": "one_cycle_sync_read_old_data_on_same_address_rw"
+  },
+  "ingress": {
+    "canonical_sha256": "132e72cf4fc48c0c809cc0380105d7b05b20b2426a387ea18633306b6b149f4a",
+    "canonical_source": "rtl/rx/dma_rx_fc_ingress_bank.v",
+    "override_sha256": "af6879df9bb60f83bd78f486e52632d51317cd6ccec8539478809b4647fd66e1",
+    "override_source": "dc_source_overrides/dma_rx512_reg_c2_b4_m2_sp64/dma_rx_fc_ingress_bank.v",
+    "replacement_count": 1
+  },
+  "payload_ram": {
+    "banking": {
+      "addr_width": 7,
+      "bank_depth": 64,
+      "bank_width": 128,
+      "data_width": 512,
+      "depth": 128,
+      "depth_banks": 2,
+      "expected_fixed_payload_bits": 65536,
+      "register_bank_count": 8,
+      "width_banks": 4
+    },
+    "canonical_sha256": "6029c43d87784c9f761949e1453449553127f364ffec13bd24a8584e6bcb4a38",
+    "canonical_source": "rtl/common/dma_payload_beat_ram.v",
+    "override_sha256": "318587e22594a8e5d296af0e2877caf9500714ad137fbcc56756bc6413f8a59c",
+    "override_source": "dc_source_overrides/dma_rx512_reg_c2_b4_m2_sp64/dma_payload_beat_ram.v",
+    "semantic_contract": "one_cycle_sync_read_old_data_on_same_address_rw"
+  },
+  "production_rtl_modified": false,
+  "profile_id": "dma_rx512_reg_c2_b4_m2_sp64",
+  "purpose": [
+    "dc_o_2018_06_two_state_case_equality_compatibility",
+    "bounded_register_payload_elaboration"
+  ],
+  "schema": "dma_a3_dc_source_override_v3"
+}

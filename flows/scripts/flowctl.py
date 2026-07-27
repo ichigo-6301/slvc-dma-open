@@ -277,6 +277,32 @@ def run_rx_payload_writer_dc_ooc(root, config, dry_run):
     )
 
 
+SHOWCASE_COMMANDS = {
+    "n45-c2-reg-sim": "c2-sim",
+    "n45-c2-reg-dc": "c2-dc",
+    "n45-c2-reg-pnr": "c2-pnr",
+    "n45-c2-reg-sta": "c2-sta",
+    "n45-c2-reg-audit": "c2-audit",
+    "vivado-async64-2022.2-ooc": "vivado-async64-2022.2-ooc",
+    "n45-a5-model-audit": "a5-model-audit",
+    "n45-a5-clock-delivery-audit": "a5-clock-delivery-audit",
+}
+
+
+def run_showcase(root, command):
+    dry_run = command.endswith("-dry-run")
+    base = command[:-8] if dry_run else command
+    showcase_command = SHOWCASE_COMMANDS[base]
+    invocation = [
+        sys.executable,
+        str(root / "flows/scripts/n45_showcase.py"),
+        "--root", str(root), showcase_command,
+    ]
+    if dry_run:
+        invocation.append("--dry-run")
+    return subprocess.run(invocation, cwd=str(root)).returncode
+
+
 def main():
     if sys.version_info < MIN_PYTHON:
         sys.stderr.write("flowctl: error: Python 3.6 or newer is required\n")
@@ -296,11 +322,21 @@ def main():
     sub.add_parser("adapter-dc-ooc-dry-run")
     sub.add_parser("rx-payload-writer-dc-ooc")
     sub.add_parser("rx-payload-writer-dc-ooc-dry-run")
+    for command in sorted(SHOWCASE_COMMANDS):
+        sub.add_parser(command)
+        if command != "n45-c2-reg-audit":
+            sub.add_parser(command + "-dry-run")
     args = parser.parse_args()
     if args.command is None:
         parser.print_help()
         return 2
     root = Path(args.root).resolve()
+    showcase_base = (
+        args.command[:-8] if args.command.endswith("-dry-run")
+        else args.command
+    )
+    if showcase_base in SHOWCASE_COMMANDS:
+        return run_showcase(root, args.command)
     config_path = Path(args.config)
     if not config_path.is_absolute():
         config_path = root / config_path

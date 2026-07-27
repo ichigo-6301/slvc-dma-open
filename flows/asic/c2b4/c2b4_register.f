@@ -1,0 +1,9 @@
+rtl/common/dma_payload_beat_ram.v
+rtl/rx/dma_rx_fc_ingress_bank.v
+rtl/rx/dma_frame_payload_ram.v
+rtl/rx/dma_frame_shared_pool.v
+rtl/rx/dma_rx_frame_shared_adapter.v
+rtl/rx/dma_rx_ingress_source_selector.v
+rtl/rx/dma_axi_write_engine_512.v
+flows/asic/c2b4/rtl/dma_rx512_writer_route_top.v
+flows/asic/c2b4/rtl/dma_rx512_memory_subsystem_top.v

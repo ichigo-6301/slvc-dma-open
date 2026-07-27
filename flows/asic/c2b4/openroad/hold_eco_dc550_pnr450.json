@@ -1,0 +1,70 @@
+{
+  "schema": "dma_c2b4_postroute_hold_eco_v3",
+  "profile_id": "dma_rx512_reg_c2_b4_m2_sp64",
+  "mapped_source_frequency_mhz": 550,
+  "physical_frequency_mhz": 450,
+  "baseline_postroute_netlist_sha256": "893a4f61ec5d997a65e83c2eef99d6fb9536db0304c06bcf5a4269fc149972ab",
+  "baseline_postroute_odb_sha256": "d5d92ee0ed36f9b212ed119be808f783e2efb5e3f807e88922e46849469e8078",
+  "delay_cell": "CLKBUF_X1",
+  "delay_cells_per_endpoint": 2,
+  "incremental_delay_cells_by_endpoint": {
+    "u_shared_ingress/pool_in_data_reg[1][74]/D": 1,
+    "u_fixed_ingress/payload_ram_wr_data_q_reg[278]/D": 1,
+    "u_shared_ingress/pool_in_data_reg[0][46]/D": 1
+  },
+  "eco1_postroute_netlist_sha256": "28b00512d3f05623baa01910e12eaff12b1bce2fa2df79dd2ea1e9daa2a43ba2",
+  "eco1_primetime_residual": {
+    "hold_slack_ns": -0.00232,
+    "setup_slack_ns": 1.09158,
+    "startpoint": "shared_payload_tdata[74]",
+    "endpoint": "u_shared_ingress/pool_in_data_reg[1][74]/D"
+  },
+  "eco2_postroute_netlist_sha256": "362914b9496e24b7f697c8f4c920a9e60854fa054dfba0b584e3422bb7957bf4",
+  "eco2_routed_prefill_odb_sha256": "556840097e3732273b17f5b793c58cd667bc2f7cd8fb7ce4fd5dad97c6f5c972",
+  "eco2_primetime_residuals": [
+    {
+      "hold_slack_ns": -0.002312,
+      "setup_slack_ns": 1.215257,
+      "startpoint": "fixed_payload_tdata[278]",
+      "endpoint": "u_fixed_ingress/payload_ram_wr_data_q_reg[278]/D"
+    },
+    {
+      "hold_slack_ns": -0.00176,
+      "setup_slack_ns": 1.176461,
+      "startpoint": "shared_payload_tdata[46]",
+      "endpoint": "u_shared_ingress/pool_in_data_reg[0][46]/D"
+    }
+  ],
+  "minimum_setup_slack_ns": 1.054982,
+  "maximum_hold_deficit_ns": 0.038044,
+  "hold_guardband_ns": 0.020,
+  "hold_endpoints": [
+    "u_shared_ingress/pool_in_data_reg[0][68]/D",
+    "u_shared_ingress/pool_in_data_reg[0][74]/D",
+    "u_shared_ingress/pool_in_data_reg[1][67]/D",
+    "u_shared_ingress/pool_in_data_reg[0][80]/D",
+    "u_shared_ingress/pool_in_data_reg[1][47]/D",
+    "u_shared_ingress/pool_in_data_reg[0][47]/D",
+    "u_shared_ingress/pool_in_data_reg[0][73]/D",
+    "u_shared_ingress/pool_in_data_reg[1][72]/D",
+    "u_shared_ingress/pool_in_data_reg[0][48]/D",
+    "u_shared_ingress/pool_in_data_reg[1][78]/D",
+    "u_shared_ingress/pool_in_data_reg[1][68]/D",
+    "u_shared_ingress/ctx_read_pending_q_reg/D",
+    "u_fixed_ingress/payload_ram_wr_data_q_reg[251]/D",
+    "u_shared_ingress/u_pool/meta_wr_ptr_reg[0][0]/D",
+    "u_fixed_ingress/payload_ram_wr_data_q_reg[252]/D",
+    "u_shared_ingress/frame_valid_q_reg/D",
+    "u_fixed_ingress/meta_rd_ptr_reg[0][0]/D",
+    "u_fixed_ingress/payload_ram_wr_data_q_reg[91]/D",
+    "u_fixed_ingress/payload_ram_wr_data_q_reg[253]/D"
+  ],
+  "clock_fanout_drivers": {
+    "clkbuf_11_853__f_clk/Z": 24,
+    "clkbuf_11_1194__f_clk/Z": 24,
+    "clkbuf_11_768__f_clk/Z": 20,
+    "clkbuf_11_1025__f_clk/Z": 18,
+    "clkbuf_11_1322__f_clk/Z": 18,
+    "clkbuf_11_852__f_clk/Z": 17
+  }
+}

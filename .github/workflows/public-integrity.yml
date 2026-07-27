@@ -21,11 +21,8 @@ jobs:
         with:
           python-version: "3.8"
       -
-        name: Verify provenance and local documentation links
-        run: python3 flows/scripts/public_hygiene.py --root .
-      -
-        name: Verify C2B4 and showcase flow contracts
-        run: python3 -m unittest flows.scripts.test_n45_showcase
+        name: Verify showcase, provenance, links, assets, and flow contracts
+        run: make showcase-check PYTHON=python3
       -
         name: Generate public defconfig
         run: python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig

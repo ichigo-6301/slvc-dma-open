@@ -1,0 +1,22 @@
+{
+  "kind": "showcase_asset_manifest",
+  "schema_version": "1.0.0",
+  "assets": [
+    {
+      "path": "docs/assets/slvc_dma_overview.svg",
+      "sha256": "a05575192a4fe06474c7c027ea197b6c7edfc9753f8d7b3790569cbfa6130f71",
+      "format": "svg",
+      "source": "hand-authored architecture diagram derived from the public RTL hierarchy and interface documentation",
+      "claim_ids": []
+    },
+    {
+      "path": "docs/assets/slvc_dma_virtual_channel_buffering.svg",
+      "sha256": "bf9701bdfec0cc26f366f9381aedf8159d92dc1928635b58697bf5c4b648b6b9",
+      "format": "svg",
+      "source": "hand-authored architecture diagram derived from the public admission, fixed-ingress, shared-pool, selector, writer, and CQ RTL",
+      "claim_ids": [
+        "slvc_dma_channel_admission_isolation_directed"
+      ]
+    }
+  ]
+}

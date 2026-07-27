@@ -4,6 +4,36 @@
 `frame_dma_wrapper` 暴露相同的功能接口，并且是 FPGA OOC timing top。公开 wrapper
 拒绝除 512-bit 之外的宽度。
 
+Canonical filelist 是 `flows/manifests/slvc_dma_512.f`。集成方应从一个明确的 boundary
+开始，不要同时实例化多个等价 frontend：
+
+| 上游场景 | 推荐连接 | 公开边界 |
+| --- | --- | --- |
+| 已产生 SHDR64 的 Aurora 或片内 shared stream | `source -> slvc_dma_wrapper` | 最短原生路径；generated Aurora IP 不在仓库中 |
+| 多个本地 source 共享链路 | `sources -> mcf_endpoint -> slvc_dma_wrapper` | MCF 负责 segment arbitration，DMA 负责 channel/ring/CQ ownership |
+| MAC 输出固定 Ethernet II/IPv4/UDP packet | `MAC AXIS -> dma_udp_ipv4_to_shdr64_adapter -> slvc_dma_wrapper` | 仅固定 RX profile；MAC/PHY、完整 stack 和端到端 UDP 流控不在范围内 |
+
+## 原生 SHDR64 / Aurora-Compatible 路径
+
+上游每个 segment 先发送一拍 64-byte SHDR64，再发送 header 中 `payload_len` 指定的
+payload。Core 不依赖 AXIS `TLAST` 判定 segment 结束。若 carrier 与 Core 时钟异步，
+必须插入 `slvc_carrier_cdc_adapter`；不能把异步时钟直接连接到 wrapper。
+
+`frame_dma_rx_aurora_ufc_wrap` 只展示 payload 与 UFC/control-message 的连接边界。
+它不是生成或配置 Aurora transceiver/channel IP 的 board recipe。
+
+## MCF 多源汇聚路径
+
+`mcf_endpoint` 在本地 source 之间仲裁完整 segment，并把 active source 锁到 segment
+结束。它不拥有 DDR ring、CQ 或 DMA channel table。PAUSE/RESUME 是单独控制消息，
+不能替代各 source 自己的 payload buffering 和 AXI4-Stream handshake。
+
+## 固定 UDP RX Adapter 路径
+
+`dma_udp_ipv4_to_shdr64_adapter` 只接受公开文档定义的 Ethernet II / IPv4 IHL=5 /
+unfragmented UDP profile。MAC 必须先移除 preamble、SFD 和 FCS。UDP destination port
+映射为 `SHDR64.flow_id`，因此在接收 packet 前必须配置对应 DMA channel context。
+
 ## 接口分组
 
 | 分组 | Public wrapper 信号 | 合同 |

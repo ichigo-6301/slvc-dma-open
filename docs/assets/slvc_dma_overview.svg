@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="620" viewBox="0 0 1480 620" role="img" aria-labelledby="title desc">
+  <title id="title">SLVC DMA shared-link overview</title>
+  <desc id="desc">Aurora-compatible SHDR64, optional UDP adaptation, and local MCF sources feed one virtual-channel DMA. Channel-aware admission selects dedicated or shared buffering before DDR rings and completion publication.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker>
+    <style>
+      .title{font:700 30px Arial,sans-serif;fill:#0f172a}.subtitle{font:400 16px Arial,sans-serif;fill:#475569}.heading{font:700 18px Arial,sans-serif;fill:#0f172a}.body{font:400 14px Arial,sans-serif;fill:#334155}.tiny{font:400 12px Arial,sans-serif;fill:#475569}.box{stroke:#334155;stroke-width:2}.flow{stroke:#334155;stroke-width:3;fill:none;marker-end:url(#arrow)}.control{stroke:#7c3aed;stroke-width:2.5;stroke-dasharray:8 5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1480" height="620" fill="#f8fafc"/>
+  <text x="48" y="48" class="title">SLVC DMA: multiple sources, one shared-link contract</text>
+  <text x="48" y="78" class="subtitle">Protocol adaptation, virtual-channel admission, hybrid buffering, DDR ownership, and completion publication.</text>
+
+  <rect x="45" y="125" width="210" height="300" rx="6" class="box" fill="#dbeafe"/>
+  <text x="150" y="158" text-anchor="middle" class="heading">Source boundaries</text>
+  <rect x="70" y="185" width="160" height="54" rx="5" fill="#fff" stroke="#2563eb"/>
+  <text x="150" y="208" text-anchor="middle" class="body">Aurora / native</text>
+  <text x="150" y="228" text-anchor="middle" class="tiny">SHDR64 segments</text>
+  <rect x="70" y="258" width="160" height="62" rx="5" fill="#fff" stroke="#2563eb"/>
+  <text x="150" y="282" text-anchor="middle" class="body">Ethernet / UDP</text>
+  <text x="150" y="302" text-anchor="middle" class="tiny">optional fixed adapter</text>
+  <rect x="70" y="339" width="160" height="54" rx="5" fill="#fff" stroke="#2563eb"/>
+  <text x="150" y="362" text-anchor="middle" class="body">Local endpoints</text>
+  <text x="150" y="382" text-anchor="middle" class="tiny">MCF arbitration</text>
+
+  <path d="M255 275 H300" class="flow"/>
+
+  <rect x="305" y="150" width="190" height="250" rx="6" class="box" fill="#cffafe"/>
+  <text x="400" y="185" text-anchor="middle" class="heading">Shared link</text>
+  <rect x="335" y="220" width="130" height="64" rx="5" fill="#fff" stroke="#0891b2"/>
+  <text x="400" y="246" text-anchor="middle" class="body">512-bit SHDR64</text>
+  <text x="400" y="268" text-anchor="middle" class="tiny">header + payload</text>
+  <text x="400" y="322" text-anchor="middle" class="body">flow_id</text>
+  <text x="400" y="345" text-anchor="middle" class="body">length / sequence</text>
+  <text x="400" y="368" text-anchor="middle" class="body">timestamp / CRC</text>
+
+  <path d="M495 275 H540" class="flow"/>
+
+  <rect x="545" y="125" width="230" height="300" rx="6" class="box" fill="#dcfce7"/>
+  <text x="660" y="160" text-anchor="middle" class="heading">Channel admission</text>
+  <rect x="580" y="190" width="160" height="44" rx="5" fill="#fff" stroke="#16a34a"/>
+  <text x="660" y="218" text-anchor="middle" class="body">Parse + match</text>
+  <rect x="580" y="249" width="160" height="44" rx="5" fill="#fff" stroke="#16a34a"/>
+  <text x="660" y="277" text-anchor="middle" class="body">Space + CQ check</text>
+  <rect x="580" y="308" width="160" height="44" rx="5" fill="#fff" stroke="#16a34a"/>
+  <text x="660" y="336" text-anchor="middle" class="body">Reserve + commit</text>
+  <text x="660" y="382" text-anchor="middle" class="tiny">channel context and ring ownership</text>
+
+  <path d="M775 275 H820" class="flow"/>
+
+  <rect x="825" y="125" width="230" height="300" rx="6" class="box" fill="#fef3c7"/>
+  <text x="940" y="160" text-anchor="middle" class="heading">Hybrid buffering</text>
+  <rect x="860" y="195" width="160" height="68" rx="5" fill="#fff" stroke="#d97706"/>
+  <text x="940" y="222" text-anchor="middle" class="body">Fixed ingress</text>
+  <text x="940" y="244" text-anchor="middle" class="tiny">reserved per channel</text>
+  <rect x="860" y="282" width="160" height="68" rx="5" fill="#fff" stroke="#d97706"/>
+  <text x="940" y="309" text-anchor="middle" class="body">Shared frame pool</text>
+  <text x="940" y="331" text-anchor="middle" class="tiny">free-list capacity</text>
+  <text x="940" y="385" text-anchor="middle" class="tiny">source locked until frame end</text>
+
+  <path d="M1055 275 H1100" class="flow"/>
+
+  <rect x="1105" y="125" width="330" height="300" rx="6" class="box" fill="#ede9fe"/>
+  <text x="1270" y="160" text-anchor="middle" class="heading">Memory and software ownership</text>
+  <rect x="1140" y="192" width="125" height="66" rx="5" fill="#fff" stroke="#7c3aed"/>
+  <text x="1202" y="220" text-anchor="middle" class="body">AXI writer</text>
+  <text x="1202" y="241" text-anchor="middle" class="tiny">4 KiB split</text>
+  <rect x="1300" y="192" width="105" height="66" rx="5" fill="#fff" stroke="#7c3aed"/>
+  <text x="1352" y="220" text-anchor="middle" class="body">DDR rings</text>
+  <text x="1352" y="241" text-anchor="middle" class="tiny">per channel</text>
+  <path d="M1265 225 H1300" class="flow"/>
+  <rect x="1140" y="292" width="125" height="66" rx="5" fill="#fff" stroke="#7c3aed"/>
+  <text x="1202" y="320" text-anchor="middle" class="body">Completion Q</text>
+  <text x="1202" y="341" text-anchor="middle" class="tiny">owner last</text>
+  <rect x="1300" y="292" width="105" height="66" rx="5" fill="#fff" stroke="#7c3aed"/>
+  <text x="1352" y="320" text-anchor="middle" class="body">Software</text>
+  <text x="1352" y="341" text-anchor="middle" class="tiny">IRQ + CSR</text>
+  <path d="M1265 325 H1300" class="flow"/>
+  <path d="M1202 258 V292" class="flow"/>
+
+  <rect x="45" y="480" width="1390" height="96" rx="6" fill="#fff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="72" y="515" class="heading">Separate control plane</text>
+  <text x="72" y="546" class="body">AXI4-Lite configuration and IRQ</text>
+  <path d="M355 538 H720" class="control"/>
+  <text x="740" y="546" class="body">PAUSE / RESUME control messages</text>
+  <path d="M1010 538 H1375" class="control"/>
+  <text x="1410" y="522" text-anchor="end" class="tiny">Local control policy, not UDP end-to-end flow control.</text>
+</svg>

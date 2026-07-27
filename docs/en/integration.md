@@ -5,6 +5,41 @@
 interfaces and is the FPGA OOC timing top. The public wrapper rejects widths
 other than 512 bits.
 
+The canonical filelist is `flows/manifests/slvc_dma_512.f`. Select one explicit
+upstream boundary rather than instantiating equivalent front ends together:
+
+| Upstream scenario | Recommended connection | Public boundary |
+| --- | --- | --- |
+| Aurora or on-chip shared stream already producing SHDR64 | `source -> slvc_dma_wrapper` | Shortest native path; generated Aurora IP is not distributed |
+| Multiple local sources sharing one link | `sources -> mcf_endpoint -> slvc_dma_wrapper` | MCF owns segment arbitration; DMA owns channels, rings, and CQ state |
+| Fixed Ethernet II/IPv4/UDP packets from a MAC | `MAC AXIS -> dma_udp_ipv4_to_shdr64_adapter -> slvc_dma_wrapper` | Fixed RX profile only; MAC/PHY, a complete stack, and end-to-end UDP flow control are out of scope |
+
+## Native SHDR64 / Aurora-Compatible Path
+
+Each upstream segment sends one 64-byte SHDR64 beat followed by the payload
+length declared in the header. The Core does not depend on AXIS `TLAST` for
+segment boundaries. Insert `slvc_carrier_cdc_adapter` when the carrier and Core
+clocks are asynchronous; do not connect asynchronous clocks directly to the
+wrapper.
+
+`frame_dma_rx_aurora_ufc_wrap` demonstrates the payload and UFC/control-message
+connection boundary. It does not generate or configure an Aurora transceiver
+or channel IP and is not a board recipe.
+
+## MCF Local-Source Aggregation
+
+`mcf_endpoint` arbitrates complete segments across local sources and locks the
+active source through the segment boundary. It does not own DDR rings, the CQ,
+or the DMA channel table. PAUSE/RESUME uses a separate control message and
+cannot replace each source's payload buffering and AXI4-Stream handshake.
+
+## Fixed UDP RX Adapter Path
+
+`dma_udp_ipv4_to_shdr64_adapter` accepts only the documented Ethernet II /
+IPv4 IHL=5 / unfragmented UDP profile. The MAC must remove preamble, SFD, and
+FCS first. The UDP destination port maps to `SHDR64.flow_id`, so the matching
+DMA channel context must be configured before packets are admitted.
+
 ## Interface Groups
 
 | Group | Public wrapper signals | Contract |

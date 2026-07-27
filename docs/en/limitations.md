@@ -4,7 +4,9 @@
   profile is not implemented.
 - The 200 MHz result is OOC, not a board implementation or lossless 10G claim.
 - The selected simulation set is directed regression, not coverage or formal closure.
-- ASIC libraries, SRAM macros, DFT, P&R, post-layout STA, and signoff are not complete.
+- The C2B4 register-expanded RX512 memory subsystem has one verified internal
+  post-route point. It is a two-channel profile with 102,400 memory bits in
+  registers, not C4B4, complete DMA, representative SRAM PPA, or signoff.
 - The exact release commit has not repeated U5 board validation.
 - Carrier CDC has directed verification but no complete signoff and waiver package.
 - The optional UDP/IPv4 adapter is a fixed receive profile, not a complete
@@ -36,3 +38,12 @@
 - RX backend Vivado results are OOC and Design Compiler results are frontend
   OOC synthesis with generic FIFO arrays. They are not full-system FPGA,
   board DDR, routed ASIC, SRAM-macro, physical-design, or signoff evidence.
+- The C2 physical result uses 0 ns hold uncertainty at a nominal single corner
+  and excludes IO timing, OCV/MMMC, power, foundry extraction, and silicon.
+- SRAM A5 clock delivery is verified only for a one-macro boundary canary. The
+  proxy high/low minimum-pulse value remains 1.5625 ns, C4B4 SRAM DC/P&R/PT was
+  not started, and macro DRC/LVS/PEX is open.
+- The 37.74% 256x128 macro-area reduction does not establish performance,
+  power, or integrated PPA improvement; full characterization is incomplete.
+- Vivado 2022.2 async64 data is separate from Vivado 2018.3. It retains 52
+  classified OOC DRC warnings and is not a board or zero-DRC result.

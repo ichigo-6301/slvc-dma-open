@@ -13,6 +13,45 @@ test observed 48 contiguous 512-bit AXI W beats.
 Each claim has a fixed source commit, tool, report checksum, and caveat in
 `provenance/` and `evidence/`.
 
+## Current Showcase Results
+
+<!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->
+
+The C2B4 register-expanded RX512 memory subsystem used a 550 MHz DC handoff for
+a 450 MHz OpenROAD/OpenRCX/PrimeTime point. All 102,400 payload/keep bits were
+preserved as registers and the mapped design contains zero SRAM macros.
+
+| DC setup WNS | PT setup WNS | PT hold WNS | Registers | Route DRC | Antenna | Electrical |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| +0.000284 ns at 550 MHz | +0.041322 ns at 450 MHz | +0.000341 ns | 113,741 | 0 | 0 | 0 |
+
+The 600 MHz DC stress point failed setup with `-0.0554587 ns` WNS and was not a
+tool crash. The physical result uses zero hold uncertainty at a nominal
+single corner. It is not C4B4, complete-DMA closure, Fmax, power, or signoff.
+
+<!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
+
+Vivado 2022.2 independently routed the async64 OOC profile at 200 MHz:
+
+| Version | WNS | TNS | WHS | THS | LUT | FF | BRAM tiles | DRC warnings |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Vivado 2022.2 | +0.152 ns | 0 | +0.059 ns | 0 | 39,299 | 43,671 | 54 | 52 |
+
+The 52 warning entries are retained and classified in evidence. This row is
+not merged numerically with the historical Vivado 2018.3 matrix and does not
+claim a bitstream, board implementation, or zero DRC.
+
+<!-- claim:slvc_dma_sram_a5_clock_delivery_canary maturity:verified -->
+<!-- claim:slvc_dma_sram_a5_256_area_reduction maturity:verified -->
+
+SRAM A5 is a partial research result. The audited 512x128 model and routed
+boundary canary reduced macro clock slew from `86.384 ps` to `16.434 ps` using
+`d200 + macro_x3`. A generated 256x128 macro was 37.7383% smaller than the
+generated 512x128 macro, but its proxy minimum pulse remained 1.5625 ns. C4B4
+SRAM synthesis and physical implementation were not started. See
+[ASIC Implementation](asic_implementation.md) for the model and nonclaim
+boundary.
+
 ## Optional RX-Wide Development Profile
 
 These branch-local measurements are separate from the frozen RC1 claims above.

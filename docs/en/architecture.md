@@ -28,6 +28,15 @@ master continues to carry CQ, TX read, and legacy RX traffic. See the
 [same-clock backend](rx_payload_512_backend.md) and
 [dual-clock backends](rx_payload_cdc_backends.md).
 
+For ASIC exploration, the memory subsystem has two flow-only bindings that do
+not change production RTL behavior. The verified C2B4 register-expanded
+profile lowers two channels of fixed payload plus the shared payload/keep store
+into 13 standard-cell register arrays. The A5 SRAM research profile instead
+binds fixed/shared payload arrays to OpenRAM macros and adds explicit macro
+output and clock-leaf boundaries. The latter remains blocked before C4B4
+integration by its proxy minimum-pulse model. See
+[ASIC Implementation](asic_implementation.md).
+
 ```mermaid
 flowchart LR
     MAC["MAC packet AXIS<br/>preamble/FCS removed"] --> UDP["Optional UDP/IPv4 adapter<br/>fixed 42-byte parse"]

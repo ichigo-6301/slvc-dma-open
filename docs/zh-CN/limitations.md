@@ -3,7 +3,9 @@
 - 本版本仅冻结 512-bit SLVC profile；128-bit standard profile 尚未实现。
 - 200 MHz 结果是 OOC，不是 board implementation 或 10G lossless claim。
 - 精选仿真是 directed regression，不是 functional coverage 或 formal closure。
-- ASIC library binding、SRAM macro、DFT、P&R、post-layout STA 和 signoff 未完成。
+- C2B4 register-expanded RX512 memory subsystem 有一个 verified internal
+  post-route point，但它是 102,400 memory bit 全部用 register 实现的两通道 profile，
+  不是 C4B4、完整 DMA、代表性 SRAM PPA 或 signoff。
 - 当前 release commit 未重新执行 U5 board validation；历史板级结果不作为当前
   commit 的 verified claim。
 - carrier CDC 有 directed verification，但无完整 signoff/waiver package。
@@ -29,3 +31,12 @@
 - RX backend Vivado 结果是 OOC，Design Compiler 结果是包含 generic FIFO array 的
   frontend OOC synthesis；它们不是完整系统 FPGA、板级 DDR、routed ASIC、SRAM
   macro、physical design 或 signoff evidence。
+- C2 物理结果在 nominal single corner 下使用 0 ns hold uncertainty，不包含 IO timing、
+  OCV/MMMC、功耗、foundry extraction 或 silicon evidence。
+- SRAM A5 clock delivery 只在单宏 boundary canary 上 verified。proxy high/low
+  minimum-pulse 仍为 1.5625 ns，未启动 C4B4 SRAM DC/P&R/PT，macro DRC/LVS/PEX
+  也未闭合。
+- 256x128 macro 37.74% 的生成面积降低不代表 performance、power 或集成 PPA 改善；
+  full characterization 尚未完成。
+- Vivado 2022.2 async64 数据与 Vivado 2018.3 分开；它保留 52 条分类 OOC DRC
+  warning，不是 board 或 zero-DRC 结果。

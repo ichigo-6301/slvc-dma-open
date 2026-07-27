@@ -26,6 +26,10 @@ marker per test.
 | `run_rtl_rx_mem_async64_integration.do` | Async64 fixed/shared ordering and bounded quiesce/drain under RX, buffered-header, AXI/CQ, clock-stop, repeat-reset, and UFC scenarios | `PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
 | `run_rtl_rx_mem_async512_backend.do` | Async512 lengths, 4 KiB split, response errors, backpressure, 2,000-frame stress, and throughput | `PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
 | `run_rtl_rx_mem_async512_integration.do` | Async512 fixed/shared ordering and bounded quiesce/drain under RX, buffered-header, AXI/CQ, clock-stop, repeat-reset, and UFC scenarios | `PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
+| `run_dma_a3_config_contract.do` | C2 channel count, 4 KiB frame contract, unsupported channel 2, and payload capacity | `PASS tb_dma_a3_config_contract channels=2` |
+| `run_dma_a3_ingress_profile.do` | C2 channels 0/1, round-robin wrap, metadata depth, fixed/shared selection, and reset/accounting | `PASS tb_dma_a3_ingress_profile` |
+| `run_dma_a3_banked_memory_contract.do` | 4x2 fixed banking, 512-bit assembly, old-data collision semantics, and address boundaries | `PASS tb_dma_a3_banked_memory_contract depth=128` |
+| `run_dma_a3_profile.do` | Integrated C2 RX512 memory subsystem and 102,400-bit payload/keep contract | `PASS tb_dma_rx512_memory_subsystem` |
 
 The first ten rows are the frozen core regression and are always required. The
 final four belong to the optional adapter P0 profile and are required only when
@@ -40,3 +44,15 @@ backend command, so its RX portion has five markers and its full profile has
 fifteen; async512 remains four RX markers and fourteen total. The matrix is
 directed verification, not coverage closure, formal proof, or complete CDC/RDC
 signoff.
+
+The public C2 showcase additionally runs 48 source/profile/constraint/handoff
+contract tests plus three identity and dry-run tests with:
+
+```text
+python3 -m unittest flows.scripts.test_n45_showcase
+```
+
+Those tests verify exact writer hashes, 4x2 banking, 13 register arrays, zero
+SRAM macros, 550-to-450 MHz constraint separation, mapped-netlist import,
+same-run handoff checks, and hash-bound ECO inputs. They validate the public
+flow contract; they do not rerun commercial EDA measurements.

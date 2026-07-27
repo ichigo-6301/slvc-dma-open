@@ -12,6 +12,42 @@ W prefetch smoke 的 long multi-burst case 观测到 48 个连续 512-bit AXI W 
 所有 claim 的工具、固定 source commit、报告 checksum 与 caveat 位于
 `provenance/` 和 `evidence/`。
 
+## 当前成果展示
+
+<!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->
+
+C2B4 register-expanded RX512 memory subsystem 使用 550 MHz DC handoff 完成
+450 MHz OpenROAD/OpenRCX/PrimeTime 点。102,400 payload/keep bits 全部保留为
+register，mapped design 中 SRAM macro 数量为 0。
+
+| DC setup WNS | PT setup WNS | PT hold WNS | Registers | Route DRC | Antenna | Electrical |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 550 MHz 下 +0.000284 ns | 450 MHz 下 +0.041322 ns | +0.000341 ns | 113,741 | 0 | 0 | 0 |
+
+600 MHz DC stress 的 setup WNS 为 `-0.0554587 ns`，不是工具崩溃。物理结果在
+nominal single corner 下使用 0 hold uncertainty；它不是 C4B4、完整 DMA closure、
+Fmax、功耗或 signoff。
+
+<!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
+
+Vivado 2022.2 独立完成 async64 OOC 200 MHz route：
+
+| Version | WNS | TNS | WHS | THS | LUT | FF | BRAM tiles | DRC warnings |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Vivado 2022.2 | +0.152 ns | 0 | +0.059 ns | 0 | 39,299 | 43,671 | 54 | 52 |
+
+52 条 warning entry 均在 evidence 中分类保留。该行不与历史 Vivado 2018.3 矩阵
+直接合并数值，也不声明 bitstream、board implementation 或 zero DRC。
+
+<!-- claim:slvc_dma_sram_a5_clock_delivery_canary maturity:verified -->
+<!-- claim:slvc_dma_sram_a5_256_area_reduction maturity:verified -->
+
+SRAM A5 是 partial 研究结果。经过审计的 512x128 model 与 routed boundary canary
+使用 `d200 + macro_x3` 将 macro clock slew 从 `86.384 ps` 降到 `16.434 ps`。
+生成的 256x128 macro 比生成的 512x128 macro 小 37.7383%，但 proxy minimum pulse
+仍为 1.5625 ns；没有启动 C4B4 SRAM 综合与物理实现。模型和 nonclaim 边界见
+[ASIC 实现](asic_implementation.md)。
+
 ## 可选 RX-Wide 开发 Profile
 
 以下开发分支测量与上方冻结 RC1 claim 相互独立，只适用于

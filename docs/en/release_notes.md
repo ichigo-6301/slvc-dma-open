@@ -2,9 +2,19 @@
 
 ## Unreleased Documentation And Delivery Updates
 
-`main` may contain documentation, delivery-structure, and public-integrity
-updates after the frozen release tag. These updates do not change RTL,
-interfaces, PPA claims, or the `v0.1.0-rc1` tag target.
+Current `main` publishes the measured reservation-timing updates to the two RX
+writers, C2B4 register-expanded ASIC flow contracts and evidence, the separate
+Vivado 2022.2 async64 routed-OOC result, and SRAM A5 model/clock-delivery audit
+methods. Writer ports, parameters, AXI cycle behavior, and throughput contracts
+remain unchanged.
+
+The C2 point is a two-channel RX512 memory subsystem at a nominal academic
+corner, not C4B4 or complete DMA. SRAM A5 remains blocked by proxy minimum
+pulse checks before C4B4. The public repository distributes summaries and
+sanitized reproducer scripts, not PDK/library payloads or measured handoffs.
+
+The `v0.1.0-rc1` annotated tag and its target remain immutable. No new tag is
+created for these evolving-main updates.
 
 The adapter P0 preview is a separate optional source profile. It adds a fixed
 Ethernet II / IPv4 / UDP receive adapter and its own simulation/DC evidence;

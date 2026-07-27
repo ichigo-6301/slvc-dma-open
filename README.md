@@ -4,12 +4,30 @@
 
 [English](README.en.md)
 
-源码阅读入口： [中文 RTL 阅读指南](docs/zh-CN/rtl_reading_guide.md)。本次注释同步只
-增加普通中文注释和阅读文档，不改变 RTL 功能 token、接口、QoR 或冻结 tag。
+源码阅读入口：[中文 RTL 阅读指南](docs/zh-CN/rtl_reading_guide.md)。当前 `main`
+在冻结 RC1 之后同步了 writer reservation 时序优化、公开 flow adapter 和开发结果；
+`v0.1.0-rc1` tag 本身没有移动或重建。
 
 SLVC DMA 是面向共享高速链路的 512-bit 虚拟通道 DMA IP。多个上游源可先复用为带
 SHDR64 header 的共享 segment stream；DMA 根据 channel metadata 在共享链路与 DDR
 ring 之间搬运 payload，并通过 completion queue 向软件发布完成事件。
+
+## 当前已验证实现
+
+<!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->
+<!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
+<!-- claim:slvc_dma_sram_a5_clock_delivery_canary maturity:verified -->
+<!-- claim:slvc_dma_sram_a5_256_area_reduction maturity:verified -->
+
+| Profile | 已验证结果 | 成熟度边界 | Claim marker |
+| --- | --- | --- | --- |
+| C2B4 register-expanded RX512 | DC 550 MHz handoff；OpenROAD/OpenRCX/PT 450 MHz；setup/hold WNS `+0.041322/+0.000341 ns`；DRC/antenna/electrical `0` | 两通道 memory-subsystem、nominal academic corner；不是 C4B4、完整 DMA 或 Fmax | `slvc_dma_c2b4_n45_register_postroute_450` |
+| Async64 FPGA OOC | Vivado 2022.2 routed OOC 200 MHz；WNS/WHS `+0.152/+0.059 ns`；39,299 LUT、43,671 FF、54 BRAM tile | 保留 52 条分类 OOC DRC warning；不是 bitstream 或板级实现 | `slvc_dma_async64_vivado_2022_2_ooc_200m` |
+| SRAM A5 research | 512x128 模型通过审计；macro leaf 将 clock slew 从 `86.384 ps` 降到 `16.434 ps`；256x128 生成面积降低 `37.74%` | `partial/blocked`：proxy min-pulse 仍为 `1.5625 ns`，未启动 C4B4 SRAM DC/P&R/PT | `slvc_dma_sram_a5_clock_delivery_canary` |
+
+ASIC 结果属于 Nangate45/OpenRAM 参考平台的内部实现证据。详细方法、same-run
+handoff 哈希和 nonclaim 见 [ASIC 实现](docs/zh-CN/asic_implementation.md) 与
+[结果](docs/zh-CN/results.md)。
 
 ## 当前公开版本
 
@@ -42,8 +60,8 @@ marker 加 4 个 adapter marker，共 14 个；使用
 | FPGA OOC implementation | [verified](docs/zh-CN/results.md) | Vivado 2018.3 三种 strategy 完成 200 MHz OOC setup/hold。 |
 | Adapter ASIC frontend | [verified](docs/zh-CN/udp_ipv4_adapter.md) | adapter-only DC OOC 达到 5.000 ns；不声明 physical/signoff。 |
 | Carrier CDC | [partial](docs/zh-CN/delivery_status.md) | directed behavior 已验证，尚无完整 CDC/RDC signoff。 |
-| Full DMA ASIC frontend | [planned](docs/zh-CN/delivery_status.md) | 需要单独 library-bound profile 与 evidence。 |
-| Physical implementation | [blocked](docs/zh-CN/delivery_status.md) | 等待 validated standard-cell 和 SRAM macro physical view。 |
+| C2B4 register ASIC | [verified/partial](docs/zh-CN/asic_implementation.md) | RX512 memory subsystem 已完成 550 MHz DC 与 450 MHz post-route PT；总体仍非 signoff。 |
+| SRAM A5 physical research | [partial/blocked](docs/zh-CN/asic_implementation.md) | clock delivery canary 已解决 slew，C4B4 被 proxy min-pulse 模型门禁阻止。 |
 | Board validation | [not claimed](docs/zh-CN/delivery_status.md) | 精确 public release commit 不声明板级结果。 |
 | Lossless 10G operation | [not claimed](docs/zh-CN/delivery_status.md) | 本 release 不是 board-level 10G production validation。 |
 
@@ -111,7 +129,8 @@ payload entry 和一个 tagged completion；AW/W/B 全部位于 `mem_clk`。冻�
 legacy 64-bit path、SHDR64/admission、CQ、TX 与 descriptor 均保持不变。
 
 同频 profile 的综合网表没有 RX payload CDC cell。两个异步 profile 均通过 13 条
-command、14 个 marker 的 ModelSim/Questa regression、两个时钟的 200 MHz routed OOC，以及 5 ns Design
+command 的 ModelSim/Questa regression；Async64 要求 15 个 marker，Async512 要求
+14 个 marker。两者均完成两个时钟的 200 MHz routed OOC，以及 5 ns Design
 Compiler OOC。这些是开发分支 evidence，不进入冻结 RC1 evidence set。详见
 [同频后端指南](docs/zh-CN/rx_payload_512_backend.md)和
 [双时钟后端指南](docs/zh-CN/rx_payload_cdc_backends.md)。
@@ -194,6 +213,21 @@ configs/slvc_dma_512_rx_async64_defconfig
 configs/slvc_dma_512_rx_async512_defconfig
 ```
 
+### 6. Nangate45 Showcase Flow
+
+```text
+python3 flows/scripts/flowctl.py n45-c2-reg-audit
+python3 flows/scripts/flowctl.py n45-c2-reg-sim-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-dc-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-pnr-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-sta-dry-run
+python3 flows/scripts/flowctl.py n45-a5-model-audit-dry-run
+python3 flows/scripts/flowctl.py n45-a5-clock-delivery-audit-dry-run
+```
+
+这些入口只分发公开安全的 flow contract。实际 DC/PT/ORFS 运行需要按
+`flows/config/toolchain.mk.example` 提供本地工具与库，不分发测量产物。
+
 公开 runner 要求 Python 3.6 或更高版本。`sim` 需要 ModelSim/Questa；
 `fpga-ooc` 需要 Vivado 2018.3；两个 DC OOC command 都需要 Design Compiler 和未跟踪的
 本地 standard-cell `.db`。GNU Make target 是便利封装；Windows 若只有
@@ -215,6 +249,8 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 | `rtl/adapters/dma_udp_ipv4_to_shdr64_adapter.v` | 可选固定 profile Ethernet/IPv4/UDP RX adapter |
 | `pattern/`, `modelsim/` | 公开 directed testbench 与运行脚本 |
 | `asic/dc/` | Adapter-only 与 RX-writer-only Design Compiler OOC 入口；不分发工艺库 |
+| `flows/asic/c2b4/` | C2B4 register DC、mapped-netlist OpenROAD/OpenRCX、PT 和精确 ECO contract |
+| `flows/asic/a5/public/` | SRAM model 与 clock-delivery 审计方法；不含宏 view |
 | `fpga/xilinx/` | Vivado 2018.3 OOC Tcl 入口 |
 | `flows/`, `configs/` | 可移植 runner、manifest 和 defconfig |
 | `evidence/`, `provenance/` | 固定提交的验证、PPA 与 SHA-256 证据 |
@@ -232,6 +268,7 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 - [验证矩阵](docs/zh-CN/verification_matrix.md)
 - [已核验结果](docs/zh-CN/results.md)
 - [FPGA 实现](docs/zh-CN/fpga_implementation.md)
+- [ASIC 实现](docs/zh-CN/asic_implementation.md)
 - [Delivery 状态](docs/zh-CN/delivery_status.md)
 - [Release Notes](docs/zh-CN/release_notes.md)
 - [限制](docs/zh-CN/limitations.md)
@@ -246,10 +283,13 @@ ignored `flows/local/`。完整流程见 [Flow README](flows/README.md)。
 - 200 MHz 数值是 OOC 结果，不是 board implementation 或 10G lossless claim；
 - directed regression 不等价于 coverage、formal 或 CDC/RDC signoff；
 - 当前公开版本不包含 P0/U5 board design、generated Xilinx IP、SDK application、
-  ASIC SRAM/library、DFT、P&R 或 signoff STA。
+  ASIC library/macro payload、DFT 或 foundry signoff；C2B4 只声明公开 evidence
+  绑定的 nominal post-route point。
 - 可选 adapter 不是完整 Ethernet/IP stack，不声明 board-level 或 lossless UDP。
 - 可选 RX memory profile 仅支持同频 512、async64 和 async512；不声明任意位宽、
   单边 hard-reset recovery、板级 DDR throughput、完整 DMA ASIC 实现或 signoff。
+- SRAM A5 只验证 clock-delivery canary 和模型审计；C4B4 SRAM DC/P&R/PT 未启动，
+  300 MHz 仍受 1.5625 ns proxy min-pulse 门禁限制。
 
 详细边界以 [限制文档](docs/zh-CN/limitations.md) 和
 [公开范围](PUBLIC_SCOPE.md) 为准。

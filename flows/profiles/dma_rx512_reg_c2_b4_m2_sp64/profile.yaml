@@ -1,7 +1,7 @@
 schema_version: 1.0.0
 kind: dma_implementation_profile
 profile_id: dma_rx512_reg_c2_b4_m2_sp64
-maturity: planned
+maturity: partial
 canonical_source_commit: 2d9d2f9e0436b322c774737efbeed7ae02a5f59b
 top: dma_rx512_memory_subsystem_top
 target: rx512_memory_subsystem
@@ -31,6 +31,6 @@ fixed_banking:
 shared_payload_bits: 32768
 shared_keep_bits: 4096
 payload_keep_bits: 102400
-resume_priority: diagnostic
-threshold_role: dc_to_yosys_register_memory_boundary
-claim_scope: internal_reg_to_reg_diagnostic
+resume_priority: showcase
+threshold_role: dc_to_openroad_primetime_register_memory_implementation
+claim_scope: internal_postroute_nominal_single_corner

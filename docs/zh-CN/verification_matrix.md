@@ -25,6 +25,10 @@ release-bound runner 要求每个测试同时给出 native zero-error summary �
 | `run_rtl_rx_mem_async64_integration.do` | Async64 fixed/shared 顺序，以及 RX、buffered header、AXI/CQ、clock stop、重复 reset 与 UFC 场景下的有界 quiesce/drain | `PASS tb_rtl_rx_mem_async64_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
 | `run_rtl_rx_mem_async512_backend.do` | Async512 长度、4 KiB 拆分、response error、backpressure、2,000-frame stress 和 throughput | `PASS tb_rtl_rx_mem_async512_backend stress_frames=2000 clock_profiles=6 clock_stops=2` |
 | `run_rtl_rx_mem_async512_integration.do` | Async512 fixed/shared 顺序，以及 RX、buffered header、AXI/CQ、clock stop、重复 reset 与 UFC 场景下的有界 quiesce/drain | `PASS tb_rtl_rx_mem_async512_integration directed_lengths=18 mixed_frames=256 soft_reset_drain=1`<br/>`PASS tb_rtl_rx_payload_soft_reset_quiesce scenarios=collect,multi_queue,aw_w_b,cq,clock_stop,repeat,ufc,buffered_header` |
+| `run_dma_a3_config_contract.do` | C2 channel count、4 KiB frame contract、unsupported channel 2 与 payload capacity | `PASS tb_dma_a3_config_contract channels=2` |
+| `run_dma_a3_ingress_profile.do` | C2 channels 0/1、round-robin wrap、metadata depth、fixed/shared selection 与 reset/accounting | `PASS tb_dma_a3_ingress_profile` |
+| `run_dma_a3_banked_memory_contract.do` | 4x2 fixed banking、512-bit assembly、old-data collision 语义与地址边界 | `PASS tb_dma_a3_banked_memory_contract depth=128` |
+| `run_dma_a3_profile.do` | 集成 C2 RX512 memory subsystem 与 102,400-bit payload/keep contract | `PASS tb_dma_rx512_memory_subsystem` |
 
 前十项始终属于 frozen core regression；最后四项仅在
 `CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y` 时调度。默认 adapter-enabled defconfig
@@ -35,3 +39,14 @@ wide marker，共 12 项。每个异步 defconfig 调度 10 项 core 和 3 条 R
 integration command 要求两个 marker。Async64 backend command 还要求 AW-planner
 marker，因此 RX 部分共 5 个、完整 profile 共 15 个；Async512 仍为 4 个 RX marker、
 总计 14 个。该矩阵不等价于 coverage closure、formal proof 或完整 CDC/RDC signoff。
+
+公开 C2 showcase 还通过以下命令运行 48 项 source/profile/constraint/handoff
+contract test 和 3 项 identity/dry-run test：
+
+```text
+python3 -m unittest flows.scripts.test_n45_showcase
+```
+
+这些测试检查精确 writer hash、4x2 banking、13 个 register array、0 SRAM macro、
+550-to-450 MHz 约束分离、mapped-netlist import、same-run handoff 和 hash-bound ECO
+输入。它们验证公开 flow contract，不会重跑商业 EDA 测量。

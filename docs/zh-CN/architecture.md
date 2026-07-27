@@ -24,6 +24,13 @@ writer 保持在 `mem_clk`。原 64-bit AXI master 继续承担 CQ、TX read 和
 traffic。详见[同频后端](rx_payload_512_backend.md)和
 [双时钟后端](rx_payload_cdc_backends.md)。
 
+ASIC 探索使用两种不改变生产 RTL 行为的 flow-only memory binding。已验证的 C2B4
+register-expanded profile 将两通道 fixed payload 与 shared payload/keep 映射为 13 个
+standard-cell register array。A5 SRAM 研究 profile 则将 fixed/shared payload array
+绑定到 OpenRAM macro，并增加显式 macro output 与 clock-leaf boundary；后者仍在
+C4B4 integration 之前受 proxy minimum-pulse model 阻塞。详见
+[ASIC 实现](asic_implementation.md)。
+
 ```mermaid
 flowchart LR
     MAC["MAC packet AXIS<br/>preamble/FCS removed"] --> UDP["Optional UDP/IPv4 adapter<br/>fixed 42-byte parse"]

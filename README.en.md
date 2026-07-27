@@ -5,14 +5,32 @@
 [中文](README.md)
 
 For source reading, see the [Chinese RTL reading guide](docs/zh-CN/rtl_reading_guide.md).
-This refresh adds ordinary Chinese comments and reading documentation only; it does not
-change RTL functional tokens, interfaces, QoR, or the frozen release tag.
+Current `main` adds the measured writer reservation optimization, public flow
+adapters, and development results after RC1. The `v0.1.0-rc1` tag itself has
+not moved or been rebuilt.
 
 SLVC DMA is a 512-bit virtual-channel DMA IP for a shared high-speed link.
 Multiple upstream sources can be multiplexed into an SHDR64-framed segment
 stream; the DMA moves payloads between the shared link and DDR rings according
 to channel metadata, then publishes completion events to software through a
 completion queue.
+
+## Currently Verified Implementations
+
+<!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->
+<!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
+<!-- claim:slvc_dma_sram_a5_clock_delivery_canary maturity:verified -->
+<!-- claim:slvc_dma_sram_a5_256_area_reduction maturity:verified -->
+
+| Profile | Verified result | Maturity boundary | Claim marker |
+| --- | --- | --- | --- |
+| C2B4 register-expanded RX512 | DC 550 MHz handoff; OpenROAD/OpenRCX/PT at 450 MHz; setup/hold WNS `+0.041322/+0.000341 ns`; DRC/antenna/electrical `0` | Two-channel memory subsystem at a nominal academic corner; not C4B4, complete DMA, or Fmax | `slvc_dma_c2b4_n45_register_postroute_450` |
+| Async64 FPGA OOC | Vivado 2022.2 routed OOC at 200 MHz; WNS/WHS `+0.152/+0.059 ns`; 39,299 LUTs, 43,671 FFs, 54 BRAM tiles | Retains 52 classified OOC DRC warnings; not a bitstream or board implementation | `slvc_dma_async64_vivado_2022_2_ooc_200m` |
+| SRAM A5 research | Audited 512x128 model; macro leaf reduced clock slew from `86.384 ps` to `16.434 ps`; generated 256x128 area reduced `37.74%` | `partial/blocked`: proxy min-pulse remains `1.5625 ns`; C4B4 SRAM DC/P&R/PT was not started | `slvc_dma_sram_a5_clock_delivery_canary` |
+
+The ASIC data is internal implementation evidence on the Nangate45/OpenRAM
+reference platform. See [ASIC Implementation](docs/en/asic_implementation.md)
+and [Results](docs/en/results.md) for methods, same-run hashes, and nonclaims.
 
 ## Current Public Release
 
@@ -48,8 +66,8 @@ adapter markers, fourteen total. Use
 | FPGA OOC implementation | [verified](docs/en/results.md) | Three Vivado 2018.3 strategies met 200 MHz OOC setup and hold. |
 | Adapter ASIC frontend | [verified](docs/en/udp_ipv4_adapter.md) | Adapter-only DC OOC met 5.000 ns; no physical/signoff claim. |
 | Carrier CDC | [partial](docs/en/delivery_status.md) | Directed behavior is verified; complete CDC/RDC signoff is absent. |
-| Full DMA ASIC frontend | [planned](docs/en/delivery_status.md) | Requires a separate library-bound profile and evidence. |
-| Physical implementation | [blocked](docs/en/delivery_status.md) | Awaiting validated standard-cell and SRAM macro physical views. |
+| C2B4 register ASIC | [verified/partial](docs/en/asic_implementation.md) | The RX512 memory subsystem completed 550 MHz DC and 450 MHz post-route PT; overall maturity is still below signoff. |
+| SRAM A5 physical research | [partial/blocked](docs/en/asic_implementation.md) | The clock-delivery canary fixed slew; the proxy min-pulse model blocks C4B4. |
 | Board validation | [not claimed](docs/en/delivery_status.md) | The exact public release commit has no board-level claim. |
 | Lossless 10G operation | [not claimed](docs/en/delivery_status.md) | This release is not a board-level 10G production validation. |
 
@@ -119,8 +137,9 @@ one tagged completion; AW/W/B remain entirely in `mem_clk`. The frozen wrapper,
 legacy 64-bit path, SHDR64/admission logic, CQ, TX, and descriptors are unchanged.
 
 The same-clock profile has no generated CDC cells. Both asynchronous profiles
-passed a 13-command, 14-marker ModelSim/Questa regression, 200 MHz routed OOC
-for both clocks, and 5 ns Design Compiler OOC. These are branch-local development-profile
+passed 13-command ModelSim/Questa regressions: async64 requires 15 markers and
+async512 requires 14. Both completed 200 MHz routed OOC for both clocks and
+5 ns Design Compiler OOC. These are branch-local development-profile
 results, not additions to the frozen RC1 evidence set. See the
 [same-clock backend guide](docs/en/rx_payload_512_backend.md) and
 [dual-clock backend guide](docs/en/rx_payload_cdc_backends.md).
@@ -205,6 +224,22 @@ configs/slvc_dma_512_rx_async64_defconfig
 configs/slvc_dma_512_rx_async512_defconfig
 ```
 
+### 6. Nangate45 Showcase Flow
+
+```text
+python3 flows/scripts/flowctl.py n45-c2-reg-audit
+python3 flows/scripts/flowctl.py n45-c2-reg-sim-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-dc-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-pnr-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-sta-dry-run
+python3 flows/scripts/flowctl.py n45-a5-model-audit-dry-run
+python3 flows/scripts/flowctl.py n45-a5-clock-delivery-audit-dry-run
+```
+
+These commands distribute public-safe flow contracts only. Actual DC/PT/ORFS
+runs require locally provided tools and libraries configured from
+`flows/config/toolchain.mk.example`; measured artifacts are not distributed.
+
 The public runner requires Python 3.6 or newer. `sim` requires ModelSim or
 Questa; `fpga-ooc` requires Vivado 2018.3. Both DC OOC commands require Design
 Compiler and an untracked local standard-cell `.db`. GNU Make targets are convenience
@@ -228,6 +263,8 @@ set.
 | `rtl/adapters/dma_udp_ipv4_to_shdr64_adapter.v` | Optional fixed-profile Ethernet/IPv4/UDP RX adapter |
 | `pattern/`, `modelsim/` | Public directed testbenches and run scripts |
 | `asic/dc/` | Adapter-only and RX-writer-only Design Compiler OOC entrypoints; no library is distributed |
+| `flows/asic/c2b4/` | C2B4 register DC, mapped-netlist OpenROAD/OpenRCX, PT, and exact ECO contracts |
+| `flows/asic/a5/public/` | SRAM model and clock-delivery audit methods; no macro views |
 | `fpga/xilinx/` | Vivado 2018.3 OOC Tcl entrypoint |
 | `flows/`, `configs/` | Portable runner, manifest, and defconfig |
 | `evidence/`, `provenance/` | Fixed-commit verification, PPA, and SHA-256 evidence |
@@ -245,6 +282,7 @@ set.
 - [Verification Matrix](docs/en/verification_matrix.md)
 - [Verified Results](docs/en/results.md)
 - [FPGA Implementation](docs/en/fpga_implementation.md)
+- [ASIC Implementation](docs/en/asic_implementation.md)
 - [Delivery Status](docs/en/delivery_status.md)
 - [Release Notes](docs/en/release_notes.md)
 - [Limitations](docs/en/limitations.md)
@@ -259,12 +297,16 @@ set.
 - The 200 MHz numbers are OOC results, not board implementation or lossless 10G claims;
 - Directed regression does not constitute coverage, formal, or CDC/RDC signoff;
 - The public release excludes the P0/U5 board design, generated Xilinx IP, SDK
-  application, ASIC SRAM/library, DFT, P&R, and signoff STA.
+  application, ASIC library/macro payloads, DFT, and foundry signoff. C2B4 is
+  limited to the nominal post-route point bound by public evidence.
 - The optional adapter is not a complete Ethernet/IP stack and has no
   board-level or lossless UDP claim.
 - Optional RX memory profiles support only same-clock 512, async64, and
   async512. They do not claim arbitrary widths, one-sided hard-reset recovery,
   board DDR throughput, full-DMA ASIC implementation, or signoff.
+- SRAM A5 covers only the clock-delivery canary and model audits. C4B4 SRAM
+  DC/P&R/PT was not started, and 300 MHz remains blocked by the 1.5625 ns proxy
+  minimum-pulse model.
 
 See [Limitations](docs/en/limitations.md) and [Public Scope](PUBLIC_SCOPE.md) for
 the complete release boundary.

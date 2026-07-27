@@ -24,6 +24,9 @@ jobs:
         name: Verify provenance and local documentation links
         run: python3 flows/scripts/public_hygiene.py --root .
       -
+        name: Verify C2B4 and showcase flow contracts
+        run: python3 -m unittest flows.scripts.test_n45_showcase
+      -
         name: Generate public defconfig
         run: python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
       -
@@ -36,5 +39,68 @@ jobs:
         name: Inspect OOC dry-run
         run: python3 flows/scripts/flowctl.py fpga-ooc-dry-run
       -
+        name: Audit C2B4 register profile
+        run: python3 flows/scripts/flowctl.py n45-c2-reg-audit
+      -
+        name: Inspect Nangate45 showcase dry-runs
+        run: |
+          python3 flows/scripts/flowctl.py n45-c2-reg-sim-dry-run
+          python3 flows/scripts/flowctl.py n45-c2-reg-dc-dry-run
+          python3 flows/scripts/flowctl.py n45-c2-reg-pnr-dry-run
+          python3 flows/scripts/flowctl.py n45-c2-reg-sta-dry-run
+          python3 flows/scripts/flowctl.py vivado-async64-2022.2-ooc-dry-run
+          python3 flows/scripts/flowctl.py n45-a5-model-audit-dry-run
+          python3 flows/scripts/flowctl.py n45-a5-clock-delivery-audit-dry-run
+      -
         name: Confirm tracked worktree hygiene
+        run: test -z "$(git status --porcelain)"
+  public-windows:
+    runs-on: windows-latest
+    steps:
+      -
+        uses: actions/checkout@v5
+      -
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.8"
+      -
+        name: Verify provenance and documentation links
+        run: python flows/scripts/public_hygiene.py --root .
+      -
+        name: Verify showcase contracts and dry-runs
+        run: python -m unittest flows.scripts.test_n45_showcase
+      -
+        name: Audit C2B4 register profile
+        run: python flows/scripts/flowctl.py n45-c2-reg-audit
+      -
+        name: Confirm tracked worktree hygiene
+        shell: pwsh
+        run: |
+          if (git status --porcelain) {
+            git status --short
+            exit 1
+          }
+  frozen-release-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        uses: actions/checkout@v5
+        with:
+          ref: v0.1.0-rc1
+          fetch-depth: 0
+      -
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.8"
+      -
+        name: Verify immutable tag identity
+        run: |
+          test "$(git rev-parse v0.1.0-rc1)" = "ae813bc1dee2c3fe1487010cafdb8d4211968d4d"
+          test "$(git rev-parse 'v0.1.0-rc1^{}')" = "d16f7bbb2e00289383e8325a67d76557504002c0"
+          test "$(git cat-file -t v0.1.0-rc1)" = "tag"
+      -
+        name: Verify manifest from frozen tag
+        run: python3 flows/scripts/public_hygiene.py --root .
+      -
+        name: Confirm frozen checkout hygiene
         run: test -z "$(git status --porcelain)"

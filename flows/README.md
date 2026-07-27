@@ -79,6 +79,53 @@ same-clock 512 requires `INPUT_CDC_ABSENCE`. The script unroutes the checkpoint
 before routing and does not accept a copied timing summary as a strategy run.
 Checkpoints and reports remain ignored generated artifacts.
 
+## Nangate45 Showcase Profiles
+
+The C2B4 register-expanded profile exposes the measured DC-to-physical method
+without distributing technology data or implementation artifacts:
+
+```text
+python3 flows/scripts/flowctl.py n45-c2-reg-audit
+python3 flows/scripts/flowctl.py n45-c2-reg-sim-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-dc-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-pnr-dry-run
+python3 flows/scripts/flowctl.py n45-c2-reg-sta-dry-run
+```
+
+The profile contains two channels, 4 KiB per channel, metadata depth 2, 64
+shared blocks, 13 flow-only register arrays, and zero SRAM macros. DC targets
+550 MHz while OpenROAD/OpenRCX/PrimeTime target 450 MHz. The physical profile
+uses 0 ns hold uncertainty as an explicit nominal no-OCV/no-jitter assumption.
+The exact measured hold ECO is enabled only when the mapped-netlist SHA matches
+its manifest; another netlist requires an explicit unmeasured-route opt-in and
+does not inherit the measured result.
+
+Copy `flows/config/toolchain.mk.example` to ignored
+`flows/local/toolchain.mk` and provide local DC/PT, ORFS, Liberty, and DB paths.
+The commands fail closed on missing or mismatched libraries and handoffs.
+
+Vivado 2022.2 and SRAM research methods have separate entries:
+
+```text
+python3 flows/scripts/flowctl.py vivado-async64-2022.2-ooc-dry-run
+python3 flows/scripts/flowctl.py n45-a5-model-audit-dry-run
+python3 flows/scripts/flowctl.py n45-a5-clock-delivery-audit-dry-run
+```
+
+The A5 commands audit model and clock-delivery contracts only. They do not
+provide a qualified C4B4 SRAM execution entry. Macro Liberty/DB/LEF/GDS files
+remain operator-provided and untracked.
+
+Run the public contract suite with:
+
+```text
+python3 -m unittest flows.scripts.test_n45_showcase
+```
+
+It contains exactly 48 C2 flow-contract tests plus three identity/dry-run
+tests. It verifies published adapters and hashes; it does not rerun the
+commercial or long physical measurements.
+
 `python3 flows/scripts/public_hygiene.py --root .` verifies the tracked public
 release checksum manifest and local Markdown links without invoking an EDA
 tool. `make public-hygiene` is its Make wrapper and is the same check used by

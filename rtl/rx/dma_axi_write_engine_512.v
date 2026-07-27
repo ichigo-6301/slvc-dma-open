@@ -59,6 +59,18 @@ localparam [3:0] ERR_AXI_SLVERR    = 4'd4;
 localparam [3:0] ERR_AXI_DECERR    = 4'd5;
 localparam [3:0] ERR_AXI_RESPONSE  = 4'd6;
 
+localparam integer BURST_BEATS_W =
+    (MAX_BURST_BEATS <= 1) ? 1 : $clog2(MAX_BURST_BEATS + 1);
+localparam integer RESERVED_SOURCE_BEATS_MAX =
+    MAX_BURST_BEATS * MAX_OUTSTANDING;
+localparam integer RESERVED_SOURCE_BEATS_W =
+    (RESERVED_SOURCE_BEATS_MAX <= 1) ? 1 :
+    $clog2(RESERVED_SOURCE_BEATS_MAX + 1);
+localparam integer SOURCE_LEVEL_W = 8;
+localparam integer SOURCE_CREDIT_W =
+    (RESERVED_SOURCE_BEATS_W > SOURCE_LEVEL_W) ?
+    RESERVED_SOURCE_BEATS_W : SOURCE_LEVEL_W;
+
 reg          active_q;
 reg          error_seen_q;
 reg [3:0]    error_code_q;
@@ -67,18 +79,18 @@ reg [31:0]   issue_beats_left_q;
 reg [31:0]   source_bytes_left_q;
 reg [31:0]   total_beats_q;
 reg [31:0]   w_beats_accepted_q;
-reg [31:0]   reserved_source_beats_q;
+reg [RESERVED_SOURCE_BEATS_W-1:0] reserved_source_beats_q;
 
-reg [7:0]    aw_plan_beats_q;
+reg [BURST_BEATS_W-1:0] aw_plan_beats_q;
 
 // The plan queue contains only AW bursts already accepted by the slave. This
 // makes WLAST independent of AWREADY and permits several B responses in flight.
-reg [7:0]    plan_beats_mem [0:MAX_OUTSTANDING-1];
+reg [BURST_BEATS_W-1:0] plan_beats_mem [0:MAX_OUTSTANDING-1];
 reg [7:0]    plan_wr_ptr_q;
 reg [7:0]    plan_rd_ptr_q;
 reg [7:0]    plan_count_q;
 reg          w_burst_active_q;
-reg [7:0]    w_burst_beats_left_q;
+reg [BURST_BEATS_W-1:0] w_burst_beats_left_q;
 reg [7:0]    outstanding_count_q;
 
 reg [31:0]   plan_beats_to_4k_c;
@@ -97,17 +109,22 @@ wire plan_pop_start = active_q && !w_burst_active_q && (plan_count_q != 0);
 wire plan_pop_continue = source_fire && (w_burst_beats_left_q == 1) &&
                          (plan_count_q != 0);
 wire plan_pop = plan_pop_start || plan_pop_continue;
-wire [31:0] source_level_ext = {24'h0, s_payload_level};
-wire [31:0] source_unreserved_beats =
-    (source_level_ext > reserved_source_beats_q) ?
-        (source_level_ext - reserved_source_beats_q) : 32'h0;
+wire [SOURCE_CREDIT_W-1:0] source_level_credit = s_payload_level;
+wire [SOURCE_CREDIT_W-1:0] reserved_source_beats_credit =
+    reserved_source_beats_q;
+wire [SOURCE_CREDIT_W-1:0] plan_beats_credit = plan_beats_c;
+wire [SOURCE_CREDIT_W-1:0] source_unreserved_beats =
+    (source_level_credit > reserved_source_beats_credit) ?
+        (source_level_credit - reserved_source_beats_credit) :
+        {SOURCE_CREDIT_W{1'b0}};
+wire [RESERVED_SOURCE_BEATS_W-1:0] aw_plan_beats_reserved =
+    aw_plan_beats_q;
 wire source_credit_ok = (USE_SOURCE_CREDIT == 0) ||
-                        (source_unreserved_beats >= plan_beats_c);
+                        (source_unreserved_beats >= plan_beats_credit);
 
 assign cmd_ready = !active_q && !cpl_valid;
 assign busy = active_q || cpl_valid;
-assign s_payload_tready = active_q && w_burst_active_q && w_output_ready &&
-                          (source_bytes_left_q != 0);
+assign s_payload_tready = active_q && w_burst_active_q && w_output_ready;
 assign m_axi_bready = active_q && (outstanding_count_q != 0);
 
 function [7:0] plan_ptr_next;
@@ -166,13 +183,13 @@ always @(posedge clk or negedge rstn) begin
         source_bytes_left_q <= 32'h0;
         total_beats_q <= 32'h0;
         w_beats_accepted_q <= 32'h0;
-        reserved_source_beats_q <= 32'h0;
-        aw_plan_beats_q <= 8'h0;
+        reserved_source_beats_q <= {RESERVED_SOURCE_BEATS_W{1'b0}};
+        aw_plan_beats_q <= {BURST_BEATS_W{1'b0}};
         plan_wr_ptr_q <= 8'h0;
         plan_rd_ptr_q <= 8'h0;
         plan_count_q <= 8'h0;
         w_burst_active_q <= 1'b0;
-        w_burst_beats_left_q <= 8'h0;
+        w_burst_beats_left_q <= {BURST_BEATS_W{1'b0}};
         outstanding_count_q <= 8'h0;
         m_axi_awaddr <= 32'h0;
         m_axi_awlen <= 8'h0;
@@ -195,13 +212,13 @@ always @(posedge clk or negedge rstn) begin
         source_bytes_left_q <= 32'h0;
         total_beats_q <= 32'h0;
         w_beats_accepted_q <= 32'h0;
-        reserved_source_beats_q <= 32'h0;
-        aw_plan_beats_q <= 8'h0;
+        reserved_source_beats_q <= {RESERVED_SOURCE_BEATS_W{1'b0}};
+        aw_plan_beats_q <= {BURST_BEATS_W{1'b0}};
         plan_wr_ptr_q <= 8'h0;
         plan_rd_ptr_q <= 8'h0;
         plan_count_q <= 8'h0;
         w_burst_active_q <= 1'b0;
-        w_burst_beats_left_q <= 8'h0;
+        w_burst_beats_left_q <= {BURST_BEATS_W{1'b0}};
         outstanding_count_q <= 8'h0;
         m_axi_awaddr <= 32'h0;
         m_axi_awlen <= 8'h0;
@@ -227,12 +244,12 @@ always @(posedge clk or negedge rstn) begin
             source_bytes_left_q <= cmd_len;
             total_beats_q <= (cmd_len + 32'd63) >> 6;
             w_beats_accepted_q <= 32'h0;
-            reserved_source_beats_q <= 32'h0;
+            reserved_source_beats_q <= {RESERVED_SOURCE_BEATS_W{1'b0}};
             plan_wr_ptr_q <= 8'h0;
             plan_rd_ptr_q <= 8'h0;
             plan_count_q <= 8'h0;
             w_burst_active_q <= 1'b0;
-            w_burst_beats_left_q <= 8'h0;
+            w_burst_beats_left_q <= {BURST_BEATS_W{1'b0}};
             outstanding_count_q <= 8'h0;
             m_axi_awvalid <= 1'b0;
             m_axi_wvalid <= 1'b0;
@@ -259,7 +276,9 @@ always @(posedge clk or negedge rstn) begin
             if (m_axi_awvalid) begin
                 if (aw_fire) begin
                     m_axi_awvalid <= 1'b0;
-                    issue_addr_q <= issue_addr_q + {aw_plan_beats_q, 6'b000000};
+                    issue_addr_q <= issue_addr_q +
+                        {{(32-BURST_BEATS_W-6){1'b0}},
+                         aw_plan_beats_q, 6'b000000};
                     issue_beats_left_q <= issue_beats_left_q - aw_plan_beats_q;
                 end
             end else if ((issue_beats_left_q != 0) &&
@@ -267,11 +286,11 @@ always @(posedge clk or negedge rstn) begin
                          (plan_count_q < MAX_OUTSTANDING) &&
                          source_credit_ok) begin
                 m_axi_awaddr <= issue_addr_q;
-                m_axi_awlen <= plan_beats_c[7:0] - 1'b1;
+                m_axi_awlen <= plan_beats_c - 1'b1;
                 m_axi_awsize <= 3'd6;
                 m_axi_awburst <= 2'b01;
                 m_axi_awvalid <= 1'b1;
-                aw_plan_beats_q <= plan_beats_c[7:0];
+                aw_plan_beats_q <= plan_beats_c[BURST_BEATS_W-1:0];
             end
 
             if (aw_fire) begin
@@ -289,11 +308,11 @@ always @(posedge clk or negedge rstn) begin
 
             case ({aw_fire, source_fire})
             2'b10: reserved_source_beats_q <=
-                       reserved_source_beats_q + aw_plan_beats_q;
+                       reserved_source_beats_q + aw_plan_beats_reserved;
             2'b01: reserved_source_beats_q <=
                        reserved_source_beats_q - 1'b1;
             2'b11: reserved_source_beats_q <=
-                       reserved_source_beats_q + aw_plan_beats_q - 1'b1;
+                       reserved_source_beats_q + aw_plan_beats_reserved - 1'b1;
             default: begin
             end
             endcase
@@ -333,7 +352,7 @@ always @(posedge clk or negedge rstn) begin
                     w_burst_beats_left_q <= plan_beats_mem[plan_rd_ptr_q];
                 end else begin
                     w_burst_active_q <= 1'b0;
-                    w_burst_beats_left_q <= 8'h0;
+                    w_burst_beats_left_q <= {BURST_BEATS_W{1'b0}};
                 end
             end
 

@@ -20,6 +20,7 @@ binding maps 65,536 fixed-payload bits plus 36,864 shared payload/keep bits to
 | DC stress | 600 MHz, 0.200/0.050 ns setup/hold uncertainty | `TIMING_FAIL`, setup WNS `-0.0554587 ns`; no tool fatal |
 | DC handoff | 550 MHz, ordinary `compile_ultra` | setup/hold WNS `+0.000284/+0.044102 ns`; 113,741 registers; 102,400 payload/keep bits preserved |
 | OpenROAD/OpenRCX | 450 MHz, mapped-netlist handoff | detail-route DRC `0`, antenna `0`, electrical violations `0` |
+| Physical footprint | ORFS automatic floorplan: 35% initial core utilization, 1:1 aspect ratio, 20 um core margin | die `1684.865 x 1684.865 um` (`2.83877 mm^2`); core `1644.640 x 1643.600 um` (`2.70313 mm^2`); standard-cell area `1.04207 mm^2`; final utilization `38.5506%` |
 | PrimeTime | same-run routed V/SDC/SPEF | setup/hold WNS `+0.041322/+0.000341 ns`; TNS `0`; synchronous endpoint coverage 100% |
 
 The public flow keeps synthesis and physical clocks explicit. DC's 550 MHz
@@ -35,7 +36,8 @@ but the artifacts themselves are not distributed.
 
 This verified implementation point applies only to the two-channel RX512
 memory subsystem. It is not C4B4, the complete DMA, Fmax, power, IO timing,
-OCV/MMMC, foundry signoff, or silicon validation.
+OCV/MMMC, foundry signoff, or silicon validation. The reported die is this
+internal implementation block's floorplan boundary, not packaged-chip area.
 
 ## SRAM A5 Research
 

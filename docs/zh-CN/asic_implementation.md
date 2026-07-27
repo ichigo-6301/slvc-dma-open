@@ -20,6 +20,7 @@ SRAM macro。
 | DC stress | 600 MHz，setup/hold uncertainty 0.200/0.050 ns | `TIMING_FAIL`，setup WNS `-0.0554587 ns`；不是工具 fatal |
 | DC handoff | 550 MHz，普通 `compile_ultra` | setup/hold WNS `+0.000284/+0.044102 ns`；113,741 registers；102,400 payload/keep bits 保留 |
 | OpenROAD/OpenRCX | 450 MHz，mapped-netlist handoff | detail-route DRC `0`、antenna `0`、electrical violation `0` |
+| Physical footprint | ORFS 自动 floorplan：35% 初始 core utilization、1:1 aspect ratio、20 um core margin | die `1684.865 x 1684.865 um`（`2.83877 mm^2`）；core `1644.640 x 1643.600 um`（`2.70313 mm^2`）；standard-cell area `1.04207 mm^2`；最终 utilization `38.5506%` |
 | PrimeTime | 同一次 route 的 V/SDC/SPEF | setup/hold WNS `+0.041322/+0.000341 ns`；TNS `0`；同步 endpoint coverage 100% |
 
 公开 flow 明确分开综合和后端时钟：550 MHz DC mapped netlist 交给 450 MHz 物理
@@ -32,7 +33,8 @@ ECO 绑定测量网表 SHA 和精确 endpoint manifest，默认不会应用到�
 
 该 verified implementation point 只适用于两通道 RX512 memory subsystem，不是
 C4B4、完整 DMA、Fmax、功耗、IO timing、OCV/MMMC、foundry signoff 或 silicon
-validation。
+validation。表中的 die 是该内部 implementation block 的 floorplan 边界，不是封装
+芯片面积。
 
 ## SRAM A5 研究
 

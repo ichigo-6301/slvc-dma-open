@@ -28,6 +28,13 @@ completion queue.
 | Async64 FPGA OOC | Vivado 2022.2 routed OOC at 200 MHz; WNS/WHS `+0.152/+0.059 ns`; 39,299 LUTs, 43,671 FFs, 54 BRAM tiles | Retains 52 classified OOC DRC warnings; not a bitstream or board implementation | `slvc_dma_async64_vivado_2022_2_ooc_200m` |
 | SRAM A5 research | Audited 512x128 model; macro leaf reduced clock slew from `86.384 ps` to `16.434 ps`; generated 256x128 area reduced `37.74%` | `partial/blocked`: proxy min-pulse remains `1.5625 ns`; C4B4 SRAM DC/P&R/PT was not started | `slvc_dma_sram_a5_clock_delivery_canary` |
 
+The same-run C2B4 450 MHz route used an automatic
+`1684.865 x 1684.865 um` die (`2.83877 mm^2`) and a
+`1644.640 x 1643.600 um` core (`2.70313 mm^2`). Final standard-cell area is
+`1.04207 mm^2` at `38.5506%` core utilization. Here, die means the internal
+implementation-block boundary for the two-channel RX512 memory subsystem,
+not the complete DMA or a packaged chip.
+
 The ASIC data is internal implementation evidence on the Nangate45/OpenRAM
 reference platform. See [ASIC Implementation](docs/en/asic_implementation.md)
 and [Results](docs/en/results.md) for methods, same-run hashes, and nonclaims.

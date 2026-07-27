@@ -65,6 +65,16 @@ physical_450mhz:
   setup_uncertainty_ns: 0.200
   hold_uncertainty_ns: 0.000
   hold_methodology: ideal_nominal_no_ocv_or_jitter
+  floorplan_method: orfs_core_utilization
+  configured_core_utilization_percent: 35
+  configured_core_aspect_ratio: 1.0
+  configured_core_margin_um: 20
+  die_bbox_um: [0.000, 0.000, 1684.865, 1684.865]
+  die_dimensions_um: [1684.865, 1684.865]
+  die_area_um2: 2838770.0
+  core_bbox_um: [20.140, 21.000, 1664.780, 1664.600]
+  core_dimensions_um: [1644.640, 1643.600]
+  core_area_um2: 2703130.0
   detail_route_drc_count: 0
   antenna_violation_count: 0
   electrical_violation_count: 0
@@ -97,6 +107,8 @@ flow_hashes:
   dc_mapped_ddc_sha256: bdf312da0398965029396e46e038bec57ddd128ee0d0349aa6294345d3ef30aa
   eco_manifest_sha256: cbd6e1ea4bf8084fd0330619e86538dafe3569aa30cfe2eb6c7d9eb70af49530
   eco3_tcl_sha256: 644cc3dfd27bcf67baec7f7bb4bd0c483fe5c63ea75d8b24a8cbf5a80450cd93
+  orfs_floorplan_log_sha256: fd1e47e218ee467affaed3108d73262cea2a04a304a872eb3443681b1d08ba88
+  orfs_final_metrics_json_sha256: e1ae197fd9248fca885c042ddfec5959f3bad0a424743b309cf459bd85947088
 same_run_artifacts_not_distributed:
   routed_odb_sha256: 8646de13454ee2932b0b6f9ab3b0a7f80e1fbd0af03638c6426da25f033535f8
   routed_netlist_sha256: a5798bc086548616bc3cdf48b17afe28658b674ed4cdfd112f074797e78f706b

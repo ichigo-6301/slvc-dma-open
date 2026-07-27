@@ -25,6 +25,12 @@ ring 之间搬运 payload，并通过 completion queue 向软件发布完成事�
 | Async64 FPGA OOC | Vivado 2022.2 routed OOC 200 MHz；WNS/WHS `+0.152/+0.059 ns`；39,299 LUT、43,671 FF、54 BRAM tile | 保留 52 条分类 OOC DRC warning；不是 bitstream 或板级实现 | `slvc_dma_async64_vivado_2022_2_ooc_200m` |
 | SRAM A5 research | 512x128 模型通过审计；macro leaf 将 clock slew 从 `86.384 ps` 降到 `16.434 ps`；256x128 生成面积降低 `37.74%` | `partial/blocked`：proxy min-pulse 仍为 `1.5625 ns`，未启动 C4B4 SRAM DC/P&R/PT | `slvc_dma_sram_a5_clock_delivery_canary` |
 
+C2B4 450 MHz 同次 route 的自动 floorplan 为 `1684.865 x 1684.865 um`
+die（`2.83877 mm^2`）和 `1644.640 x 1643.600 um` core（`2.70313 mm^2`）；
+最终 standard-cell area 为 `1.04207 mm^2`，core utilization 为 `38.5506%`。
+这里的 die 是两通道 RX512 memory-subsystem 的内部 implementation block 边界，
+不是完整 DMA 或封装芯片面积。
+
 ASIC 结果属于 Nangate45/OpenRAM 参考平台的内部实现证据。详细方法、same-run
 handoff 哈希和 nonclaim 见 [ASIC 实现](docs/zh-CN/asic_implementation.md) 与
 [结果](docs/zh-CN/results.md)。

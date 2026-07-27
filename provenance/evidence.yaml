@@ -93,6 +93,7 @@ evidence:
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     claims:
       - slvc_dma_udp_adapter_directed_regression
+      - slvc_dma_channel_admission_isolation_directed
     sha256: null
     public: true
   - id: slvc_dma_v1_ooc_200m_summary

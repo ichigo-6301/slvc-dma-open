@@ -1,164 +1,134 @@
 # Verified Results
 
+## Interpretation
+
+- `verified` applies only to the recorded source, profile, tool, and workload, not every parameter combination.
+- RTL ideal-memory throughput, FPGA routed OOC, DC synthesis estimates, and post-route PrimeTime are different methodologies and cannot be collapsed into one PPA conclusion.
+- Frequencies are fixed tested points, not Fmax claims.
+- C2B4 is a two-channel RX512 memory subsystem, not C4B4 or the complete DMA.
+- Board DDR/10G, power, IO timing, OCV/MMMC, foundry signoff, and silicon readiness are not claimed.
+
+All source commits, tool identities, artifact SHA-256 values, and caveats are under `evidence/` and `provenance/`.
+
+## RTL Function And Interface Throughput
+
+<!-- claim:slvc_dma_rx_payload_cdc_regression maturity:verified -->
+<!-- claim:slvc_dma_rx_payload_cdc_ideal_throughput maturity:verified -->
+<!-- claim:slvc_dma_channel_admission_isolation_directed maturity:verified -->
+
+Windows ModelSim 2020.4 and Linux Questa 10.7c pass the fixed markers for the frozen core, adapter, same-clock 512, async64, async512, and C2 focused regressions at their evidence-bound commits.
+
+| Test | Fixed result | Interpretation boundary |
+| --- | --- | --- |
+| 512-bit writer | `PASS tb_rtl_rx_payload_writer_512 cases=2028` | Length, tail, 4 KiB, outstanding, backpressure, error, reset, and throughput |
+| Writer integration | `directed_lengths=18 mixed_frames=256` | Fixed/shared source selection and completion ordering |
+| Channel admission | `packets=2 channels=2 cqes=2 ch0_full_then_ch1=1` | Only one directed progress scenario while channel 0 ring space is unavailable |
+| CDC bridge | `frames=452 bytes=925001 clock_profiles=6 clock_stops=2` | Directed/deterministic stress, not complete CDC/RDC signoff |
+| Async backend stress | `2000` frames each for async64 and async512 | Response errors, clock/reset, and randomized backpressure |
+
+Ideal 1 MiB memory-model interface throughput is:
+
+| Profile | AXI bytes/cycle | W utilization | Peak outstanding | Interface rate at 200 MHz |
+| --- | ---: | ---: | ---: | ---: |
+| Same-clock 512 | 64 | 100% | 4 | 12.8 GB/s |
+| Async64 | 8 | 100% | 4 | 1.6 GB/s |
+| Async512 | 64 | 100% | 4 | 12.8 GB/s |
+
+Async64 issues 8,192 16-beat bursts and observes 8,192 planner bubble cycles. Four outstanding slots hide those AW intervals from W-channel delivery. These are ready-memory-model RTL/interface rates, not measured board DDR throughput.
+
+Evidence: [RX memory regression](../../evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml) · [Adapter regression](../../evidence/slvc_dma_udp_adapter_regression_summary.yaml)
+
+## FPGA Routed OOC
+
+### Vivado 2022.2 Async64
+
+<!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
+
+| Profile | WNS | TNS | WHS | THS | LUT | FF | BRAM tiles | DRC warning entries |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Async64, 200 MHz | +0.152 ns | 0 | +0.059 ns | 0 | 39,299 | 43,671 | 54 | 52 |
+
+This run uses Vivado 2022.2, `xc7z100ffg900-2`, 5.000 ns `aclk/mem_clk`, and `ExtraNetDelay_high / AggressiveExplore / Explore`. Failed, unrouted, and partially routed net counts are zero. All four Gray-bus constraints pass, with +4.431 ns worst bus-skew slack.
+
+The 52 OOC DRC warnings remain classified under CHECK/RBOR/REQP/RTSTAT/ZPS7, so zero DRC, bitstream, and board implementation are not claimed. These values are not numerically merged with Vivado 2018.3.
+
+Evidence: [Vivado 2022.2 Async64 summary](../../evidence/slvc_dma_async64_vivado_2022_2_ooc_summary.yaml)
+
+### Vivado 2018.3 RX Memory Development Profiles
+
+All profiles below use `xc7z100ffg900-2` and 5.000 ns. They are independent development results and do not replace the 2022.2 run above.
+
+| Profile | WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Same-clock 512 | +0.089 ns | 0 | +0.069 ns | 0 | 38,045 | 42,514 | 44 | 3 | 0 |
+| Async64 | +0.109 ns | 0 | +0.065 ns | 0 | 39,554 | 43,562 | 52 | 4 | 0 |
+| Async512 | +0.060 ns | 0 | +0.058 ns | 0 | 40,020 | 43,316 | 52 | 4 | 0 |
+
+The same-clock netlist contains zero RX-payload CDC cells. Both async profiles have no unconstrained internal endpoint, no Critical CDC entry, and pass Gray-pointer bus-skew checks. The four optimized Async64 strategies report WNS `+0.138/+0.122/+0.109/+0.223 ns`; the pre-pipeline `+0.004/+0.003/-0.019/-0.004 ns` matrix remains retained as baseline evidence.
+
+### Frozen-Core Vivado 2018.3
+
 | Strategy | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Explore | +0.226 ns | +0.045 ns | 38,074 | 40,787 | 44 | 3 | 0 |
 | Performance_Explore | +0.173 ns | +0.046 ns | 38,087 | 40,787 | 44 | 3 | 0 |
 | ExtraNetDelay_high | +0.162 ns | +0.054 ns | 38,088 | 40,785 | 44 | 3 | 0 |
 
-TNS and THS are zero in all runs. The minimum WNS is `+0.162 ns`; the earlier
-preferred `+0.300 ns` margin was not reached. The long multi-burst W prefetch
-test observed 48 contiguous 512-bit AXI W beats.
+All three routed OOC runs have zero TNS and THS. The optional UDP adapter is outside `frame_dma_wrapper`, so these frozen-core resource values exclude adapter logic.
 
-Each claim has a fixed source commit, tool, report checksum, and caveat in
-`provenance/` and `evidence/`.
-
-## Current Showcase Results
+## ASIC C2B4 Register-Expanded
 
 <!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->
 
-The C2B4 register-expanded RX512 memory subsystem used a 550 MHz DC handoff for
-a 450 MHz OpenROAD/OpenRCX/PrimeTime point. All 102,400 payload/keep bits were
-preserved as registers and the mapped design contains zero SRAM macros.
+Profile `dma_rx512_reg_c2_b4_m2_sp64` uses two channels, 4 KiB fixed payload per channel, metadata depth two, and a 64-block shared pool. All 102,400 payload/keep bits remain registers and the SRAM macro count is zero.
 
-| DC setup WNS | PT setup WNS | PT hold WNS | Registers | Route DRC | Antenna | Electrical |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| +0.000284 ns at 550 MHz | +0.041322 ns at 450 MHz | +0.000341 ns | 113,741 | 0 | 0 | 0 |
+| Stage | Target | Setup WNS/TNS | Hold WNS/TNS | Other gates |
+| --- | ---: | --- | --- | --- |
+| Design Compiler handoff | 550 MHz | +0.000284 ns / 0 | +0.044102 ns / 0 | 113,741 registers; zero design-rule violations |
+| OpenROAD/OpenRCX/PrimeTime | 450 MHz | +0.041322 ns / 0 | +0.000341 ns / 0 | route DRC 0; antenna 0; electrical 0; coverage 100% |
 
-The 600 MHz DC stress point failed setup with `-0.0554587 ns` WNS and was not a
-tool crash. The physical result uses zero hold uncertainty at a nominal
-single corner. It is not C4B4, complete-DMA closure, Fmax, power, or signoff.
+The 600 MHz DC stress point reports setup WNS/TNS `-0.0554587 ns / -5.93551556 ns` across 388 violating paths. This is a timing failure, not a tool crash. The 550 MHz mapped netlist is the physical handoff.
 
-<!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
+Physical metrics from the same 450 MHz route are:
 
-Vivado 2022.2 independently routed the async64 OOC profile at 200 MHz:
+| Die | Core | Standard-cell area | Cell count | Core utilization |
+| --- | --- | ---: | ---: | ---: |
+| 1684.865 x 1684.865 um (`2.83877 mm^2`) | 1644.640 x 1643.600 um (`2.70313 mm^2`) | `1.04207 mm^2` | 555,849 | 38.5506% |
 
-| Version | WNS | TNS | WHS | THS | LUT | FF | BRAM tiles | DRC warnings |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vivado 2022.2 | +0.152 ns | 0 | +0.059 ns | 0 | 39,299 | 43,671 | 54 | 52 |
+This block contains only the RX512 memory subsystem. PrimeTime uses a nominal single corner and 0 ns physical hold uncertainty. The result excludes top-level IO timing, OCV/MMMC, power, and foundry extraction.
 
-The 52 warning entries are retained and classified in evidence. This row is
-not merged numerically with the historical Vivado 2018.3 matrix and does not
-claim a bitstream, board implementation, or zero DRC.
+Evidence: [C2B4 same-run post-route summary](../../evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml)
+
+## SRAM A5 Research
 
 <!-- claim:slvc_dma_sram_a5_clock_delivery_canary maturity:verified -->
 <!-- claim:slvc_dma_sram_a5_256_area_reduction maturity:verified -->
 
-SRAM A5 is a partial research result. The audited 512x128 model and routed
-boundary canary reduced macro clock slew from `86.384 ps` to `16.434 ps` using
-`d200 + macro_x3`. A generated 256x128 macro was 37.7383% smaller than the
-generated 512x128 macro, but its proxy minimum pulse remained 1.5625 ns. C4B4
-SRAM synthesis and physical implementation were not started. See
-[ASIC Implementation](asic_implementation.md) for the model and nonclaim
-boundary.
+SRAM A5 remains `partial/blocked`:
 
-## Optional RX-Wide Development Profile
+| Item | Completed result | Open boundary |
+| --- | --- | --- |
+| 512x128 model | TT/1.1 V/25 C transistor-level trimmed-SPICE 4x4 table with 80 ps / 4.182 fF coverage | Analytical/OpenRAM reference flow; macro DRC/LVS/PEX open |
+| Clock-delivery canary | `d200 + macro_x3` reduces macro clock slew `86.384 -> 16.434 ps`; positive setup/hold; DRC/antenna/RC-004 0 | Four proxy minimum-pulse violations |
+| 256x128 generation | Macro area `195801.79 -> 121909.43 um^2`, a 37.7383% reduction | Full 4x4 characterization, performance, and power unverified |
 
-These branch-local measurements are separate from the frozen RC1 claims above.
-They apply to the optional same-clock 512-bit RX payload backend documented in
-[its profile guide](rx_payload_512_backend.md).
+Both macro organizations retain a 1.5625 ns proxy high/low minimum pulse. This blocks the 300 MHz C4B4 start. Independent true-pulse characterization is incomplete, so the model cannot be promoted by a waiver or text substitution.
 
-The two new Windows ModelSim 2020.4 and Linux Questa 10.7c regressions passed:
+Evidence: [SRAM A5 development summary](../../evidence/slvc_dma_sram_a5_development_summary.yaml)
 
-```text
-PASS tb_rtl_rx_payload_writer_512 cases=2028
-PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256
-```
+## Design Compiler Frontend Reference
 
-The ideal-memory 1 MiB test observed 64 byte/cycle and 100% W-channel active
-utilization, with 16-beat average bursts and four peak outstanding bursts. The
-corresponding 12.8 GB/s at 200 MHz is an RTL/model interface rate, not board
-DDR throughput.
+Async64 at 5.000 ns OOC synthesis reports source/memory setup WNS `+2.948/+1.682 ns`, hold WNS `+0.039 ns`, area 172,104.93, 20,602 registers, and zero latches. Async512 source is unchanged and retains its prior `+3.011/+1.393 ns` setup WNS and 170,410.51 area. Generic FIFO arrays are included, so these values are not macro-backed ASIC PPA.
 
-Vivado 2018.3 routed `frame_dma_rx_top` on `xc7z100ffg900-2` at 5.000 ns:
-
-| WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| +0.089 ns | 0 | +0.069 ns | 0 | 38,045 | 42,514 | 44 | 3 | 0 |
-
-The same-clock synthesis audit found zero RX payload CDC cells. Explore,
-NoTimingRelaxation, and MoreGlobalIterations all closed setup and hold with
-WNS of `+0.089`, `+0.088`, and `+0.144 ns` respectively.
-
-## Optional Dual-Clock RX Memory Profiles
-
-These branch-local results do not modify the frozen RC1 evidence above. Both
-profiles passed ten frozen-core tests plus the common CDC bridge and two
-width-specific commands on Windows ModelSim 2020.4 and Linux Questa 10.7c.
-Each integration command emits a second quiesce marker. Async64 now also
-requires a dedicated AW-candidate marker from its backend command, so it
-requires 15 markers from 13 commands; async512 remains 14 from 13.
-
-| Profile | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Async64 | +0.109 ns | +0.065 ns | 39,554 | 43,562 | 52 | 4 | 0 |
-| Async512 | +0.060 ns | +0.058 ns | 40,020 | 43,316 | 52 | 4 | 0 |
-
-Both Vivado 2018.3 routed runs use 5.000 ns `aclk` and `mem_clk`, have zero
-TNS/THS, no unconstrained internal endpoint, no Critical CDC entry, and met
-their Gray-pointer bus-skew checks. Async512 retained three setup/hold-closed
-strategies with WNS `+0.060/+0.084/+0.081 ns`. After inserting one registered
-AW-plan candidate stage, Async64 closed all four measured strategies with WNS
-`+0.138/+0.122/+0.109/+0.223 ns` and minimum WHS `+0.065 ns`. The earlier
-pre-pipeline results (`+0.004/+0.003/-0.019/-0.004 ns`) remain in evidence as
-the timing baseline rather than being overwritten. The Vivado flow uses point-to-point exceptions
-for actual non-Gray crossings; it does not use a blanket asynchronous clock
-group that would override the four project Gray max-delay constraints. The
-ideal-memory tests sustained 8 and 64 byte/cycle respectively at 100%
-W-channel utilization. Async64 issued 8,192 sixteen-beat bursts for the 1 MiB
-test and observed 8,192 planner-bubble cycles; four outstanding bursts hid
-those AW intervals from the W channel. The same-clock 512 test independently
-sustained 64 byte/cycle at 100% W-channel utilization and four peak outstanding
-bursts.
-
-The selected worst setup paths belong to the same-clock reset distribution,
-the async64 ingress payload-RAM address route, and the async512 RX/flow-control
-resume calculation. The original `issue_beats_left_q -> m_axi_awaddr/CE` path
-is absent from every optimized top-100 report. A planner-internal path from
-`issue_beats_left_q` to `aw_candidate_valid_q` remains visible below the global
-worst path at `+0.268 ns` in MoreGlobalIterations. Neither quiesce nor CDC
-protocol-error detection appears in these paths. Relative to the `79a5366`
-resource baseline, current async64 LUT use is up 0.21% while async512 remains up
-2.21%; BRAM and DSP are unchanged. Relative to the immediate pre-pipeline
-async64 result, the routed design uses 848 fewer LUTs and 11 more FFs.
-
-Design Compiler 5.000 ns OOC recompiled async64 and reported
-`+2.948/+1.682 ns` source/memory setup WNS, `+0.039 ns` hold WNS, zero setup
-violations, 172,104.93 cell area, 20,602 registers, and zero latches. This is a
-0.231% area and 0.204% register increase versus the immediate pre-pipeline
-async64 result. Async512 source is unchanged and retains its existing
-`+3.011/+1.393 ns`, 170,410.51-area result rather than being presented as a
-new run. Generic FIFO arrays are included in both totals. These totals are
-not macro-backed ASIC area and are not comparable to writer-only synthesis.
-See the [dual-clock backend guide](rx_payload_cdc_backends.md).
-
-## Same-Clock Writer-Only DC Sweep
-
-The writer-only Design Compiler OOC sweep used O-2018.06-SP1, Nangate45
-typical, 0.200 ns setup uncertainty, 0.050 ns hold uncertainty, and identical
-I/O assumptions at every point:
+The writer-only OOC sweep uses DC O-2018.06-SP1, Nangate45 typical, 0.200 ns setup uncertainty, and 0.050 ns hold uncertainty:
 
 | Target period | Setup WNS | Hold WNS | Cell area | Leaf cells |
 | ---: | ---: | ---: | ---: | ---: |
 | 5.000 ns | +2.059 ns | +0.047 ns | 6,860.41 | 3,352 |
-| 4.000 ns | +1.059 ns | +0.047 ns | 6,860.41 | 3,352 |
 | 3.333 ns | +0.393 ns | +0.047 ns | 6,860.67 | 3,352 |
 | 2.500 ns | +0.028 ns | +0.047 ns | 6,579.24 | 2,764 |
-| 2.400 ns | +0.086 ns | +0.047 ns | 6,581.37 | 2,785 |
-| 2.250 ns | +0.038 ns | +0.047 ns | 6,966.01 | 3,393 |
 | 2.000 ns | +0.013 ns | +0.046 ns | 6,669.95 | 2,795 |
-| 1.800 ns | +0.015 ns | +0.046 ns | 6,692.29 | 2,863 |
 | 1.500 ns | +0.013 ns | +0.046 ns | 6,795.24 | 2,975 |
 | 1.250 ns | -0.033 ns | +0.046 ns | 7,195.57 | 3,622 |
 
-At 5.000 ns, the comparable legacy 64-bit writer configuration reports
-12,548.55 total cell area, 5,706 leaf cells, 1,678 registers, and 30 logic
-levels. The wide writer reports 6,860.41 area, 3,352 leaf cells, 832 registers,
-and 37 logic levels. This writer-only result does not show that wider systems
-are generally smaller: the legacy comparison enables its 16x64-bit prefetch
-FIFO, and neither synthesis includes the full DMA or physical memories.
-
-The sweep recompiles for each target, so non-monotonic area and slack are
-expected. The 1.500 ns point is the last tested setup-closed target and
-1.250 ns is the first tested failure; this is not routed ASIC Fmax, physical
-implementation, or signoff evidence.
+Each target recompiles the design, so non-monotonic area/slack is expected. 1.500 ns is the last setup-closed tested point and 1.250 ns is the first failure. This is not routed Fmax or a complete-DMA result.

@@ -1,5 +1,11 @@
 # 限制
 
+- README 中多个单通道 DMA、MCDMA 类方案和 SLVC DMA 的比较是定性架构分析，
+  不是对某个厂商 IP 的实测 benchmark。MCDMA 的 HOL/backpressure 行为取决于具体
+  queue、scheduler、共享 AXI 和软件配置。
+- `ch0_full_then_ch1=1` 只验证 channel 0 ring space 不足时 channel 1 的一项
+  directed admission 场景。它不证明 shared pool、CQ、AXI 或 reset/quiesce 条件下
+  的 universal channel isolation。
 - 本版本仅冻结 512-bit SLVC profile；128-bit standard profile 尚未实现。
 - 200 MHz 结果是 OOC，不是 board implementation 或 10G lossless claim。
 - 精选仿真是 directed regression，不是 functional coverage 或 formal closure。

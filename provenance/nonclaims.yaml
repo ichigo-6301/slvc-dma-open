@@ -1,6 +1,18 @@
 kind: nonclaims
 schema_version: 1.0.0
 nonclaims:
+  - id: slvc_dma_universal_channel_isolation
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: "Universal non-blocking isolation across all channels and shared-resource exhaustion modes is not claimed."
+    reason: "The published ch0_full_then_ch1 case covers one per-channel ring-space scenario; the shared pool, CQ, AXI path, and reset/quiesce controls remain shared resources."
+    status: not_claimed
+    public: true
+  - id: slvc_dma_mcdma_comparative_performance
+    profile: slvc_dma_v1_512
+    statement: "Measured performance, area, latency, or blocking superiority over a vendor MCDMA is not claimed."
+    reason: "The public comparison is qualitative architecture analysis and no competing MCDMA implementation was benchmarked under matching traffic and implementation conditions."
+    status: not_claimed
+    public: true
   - id: slvc_dma_rx_payload_cdc_arbitrary_width
     profile: slvc_dma_v1_512_rx_payload_cdc_development
     statement: Arbitrary 64/128/256/512-bit RX memory-width parameterization is not claimed.

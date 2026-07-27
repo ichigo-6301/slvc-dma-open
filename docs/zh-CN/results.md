@@ -1,148 +1,134 @@
 # 已核验结果
 
+## 结果解释
+
+- `verified` 只适用于表中固定 source、profile、tool 和 workload，不代表所有参数组合。
+- RTL ideal-memory throughput、FPGA routed OOC、DC synthesis estimate 和 post-route PrimeTime 是不同方法学，不能直接混为一个 PPA 结论。
+- 频率是已测试通过的固定点，不是 Fmax。
+- C2B4 是两通道 RX512 memory subsystem，不是 C4B4 或完整 DMA。
+- 公开仓库不声明板级 DDR/10G、功耗、IO timing、OCV/MMMC、foundry signoff 或 silicon readiness。
+
+所有 source commit、工具身份、artifact SHA-256 与 caveat 位于 `evidence/` 和 `provenance/`。
+
+## RTL 功能与接口吞吐
+
+<!-- claim:slvc_dma_rx_payload_cdc_regression maturity:verified -->
+<!-- claim:slvc_dma_rx_payload_cdc_ideal_throughput maturity:verified -->
+<!-- claim:slvc_dma_channel_admission_isolation_directed maturity:verified -->
+
+Windows ModelSim 2020.4 与 Linux Questa 10.7c 均通过 frozen core、adapter、same-clock 512、async64、async512 和 C2 focused regression 的各自固定 marker。
+
+| 测试 | 固定结果 | 解释边界 |
+| --- | --- | --- |
+| 512-bit writer | `PASS tb_rtl_rx_payload_writer_512 cases=2028` | 长度、tail、4 KiB、outstanding、backpressure、error、reset 与 throughput |
+| Writer integration | `directed_lengths=18 mixed_frames=256` | fixed/shared source selection 与完成顺序 |
+| Channel admission | `packets=2 channels=2 cqes=2 ch0_full_then_ch1=1` | 只证明 channel 0 ring full 时 channel 1 的一项 directed progress 场景 |
+| CDC bridge | `frames=452 bytes=925001 clock_profiles=6 clock_stops=2` | directed/deterministic stress，不是完整 CDC/RDC signoff |
+| Async backend stress | async64/async512 各 `2000` frames | 覆盖 response error、clock/reset 和 random backpressure |
+
+理想 1 MiB memory model 的接口吞吐为：
+
+| Profile | AXI bytes/cycle | W 利用率 | Peak outstanding | 200 MHz interface rate |
+| --- | ---: | ---: | ---: | ---: |
+| Same-clock 512 | 64 | 100% | 4 | 12.8 GB/s |
+| Async64 | 8 | 100% | 4 | 1.6 GB/s |
+| Async512 | 64 | 100% | 4 | 12.8 GB/s |
+
+Async64 发出 8,192 个 16-beat burst，并观察到 8,192 个 planner bubble cycle；4 个 outstanding slot 把这些 AW 间隔隐藏在 W channel 供数之外。这些都是 ready memory model 下的 RTL/interface rate，不是板级 DDR 实测。
+
+证据：[RX memory regression](../../evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml) · [Adapter regression](../../evidence/slvc_dma_udp_adapter_regression_summary.yaml)
+
+## FPGA Routed OOC
+
+### Vivado 2022.2 Async64
+
+<!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
+
+| Profile | WNS | TNS | WHS | THS | LUT | FF | BRAM tiles | DRC warning entries |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Async64, 200 MHz | +0.152 ns | 0 | +0.059 ns | 0 | 39,299 | 43,671 | 54 | 52 |
+
+该 run 使用 Vivado 2022.2、`xc7z100ffg900-2`、5.000 ns `aclk/mem_clk` 和 `ExtraNetDelay_high / AggressiveExplore / Explore`。failed/unrouted/partially routed net 均为 0；4 条 Gray bus constraint 全部通过，worst bus-skew slack 为 +4.431 ns。
+
+52 条 OOC DRC warning 已按 CHECK/RBOR/REQP/RTSTAT/ZPS7 分类保留，因此不声明 zero-DRC、bitstream 或 board implementation。该结果不与 Vivado 2018.3 数值直接合并。
+
+证据：[Vivado 2022.2 Async64 summary](../../evidence/slvc_dma_async64_vivado_2022_2_ooc_summary.yaml)
+
+### Vivado 2018.3 RX Memory Development Profiles
+
+以下 profile 均使用 `xc7z100ffg900-2` 和 5.000 ns。它们是独立开发结果，不覆盖上方 2022.2 run。
+
+| Profile | WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Same-clock 512 | +0.089 ns | 0 | +0.069 ns | 0 | 38,045 | 42,514 | 44 | 3 | 0 |
+| Async64 | +0.109 ns | 0 | +0.065 ns | 0 | 39,554 | 43,562 | 52 | 4 | 0 |
+| Async512 | +0.060 ns | 0 | +0.058 ns | 0 | 40,020 | 43,316 | 52 | 4 | 0 |
+
+同频 netlist 中 RX payload CDC cell 数为 0。两个 async profile 无未约束 internal endpoint、无 Critical CDC entry，并通过 Gray-pointer bus-skew 检查。Async64 的四条优化后 strategy WNS 为 `+0.138/+0.122/+0.109/+0.223 ns`，流水化前的 `+0.004/+0.003/-0.019/-0.004 ns` 仍作为 baseline evidence 保留。
+
+### 冻结 Core Vivado 2018.3
+
 | Strategy | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Explore | +0.226 ns | +0.045 ns | 38,074 | 40,787 | 44 | 3 | 0 |
 | Performance_Explore | +0.173 ns | +0.046 ns | 38,087 | 40,787 | 44 | 3 | 0 |
 | ExtraNetDelay_high | +0.162 ns | +0.054 ns | 38,088 | 40,785 | 44 | 3 | 0 |
 
-三组 TNS/THS 均为 0。最小 WNS `+0.162 ns`，未达到原先偏好的 `+0.300 ns` margin。
-W prefetch smoke 的 long multi-burst case 观测到 48 个连续 512-bit AXI W beat。
+三组 routed OOC 的 TNS/THS 均为 0。Optional UDP adapter 不在 `frame_dma_wrapper` 内，因此这些 core 资源不包含 adapter logic。
 
-所有 claim 的工具、固定 source commit、报告 checksum 与 caveat 位于
-`provenance/` 和 `evidence/`。
-
-## 当前成果展示
+## ASIC C2B4 Register-Expanded
 
 <!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->
 
-C2B4 register-expanded RX512 memory subsystem 使用 550 MHz DC handoff 完成
-450 MHz OpenROAD/OpenRCX/PrimeTime 点。102,400 payload/keep bits 全部保留为
-register，mapped design 中 SRAM macro 数量为 0。
+Profile `dma_rx512_reg_c2_b4_m2_sp64` 使用 2 channels、每通道 4 KiB fixed payload、metadata depth 2 和 64-block shared pool。102,400 payload/keep bits 全部保留为 register，SRAM macro 数为 0。
 
-| DC setup WNS | PT setup WNS | PT hold WNS | Registers | Route DRC | Antenna | Electrical |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 550 MHz 下 +0.000284 ns | 450 MHz 下 +0.041322 ns | +0.000341 ns | 113,741 | 0 | 0 | 0 |
+| Stage | Target | Setup WNS/TNS | Hold WNS/TNS | 其它门禁 |
+| --- | ---: | --- | --- | --- |
+| Design Compiler handoff | 550 MHz | +0.000284 ns / 0 | +0.044102 ns / 0 | 113,741 registers；design-rule violation 0 |
+| OpenROAD/OpenRCX/PrimeTime | 450 MHz | +0.041322 ns / 0 | +0.000341 ns / 0 | route DRC 0；antenna 0；electrical 0；coverage 100% |
 
-600 MHz DC stress 的 setup WNS 为 `-0.0554587 ns`，不是工具崩溃。物理结果在
-nominal single corner 下使用 0 hold uncertainty；它不是 C4B4、完整 DMA closure、
-Fmax、功耗或 signoff。
+600 MHz DC stress 的 setup WNS/TNS 为 `-0.0554587 ns / -5.93551556 ns`，388 条 violating path；这是 timing fail，不是工具崩溃。550 MHz mapped netlist 才是物理实现 handoff。
 
-<!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
+同次 450 MHz route 的物理指标：
 
-Vivado 2022.2 独立完成 async64 OOC 200 MHz route：
+| Die | Core | Standard-cell area | Cell count | Core utilization |
+| --- | --- | ---: | ---: | ---: |
+| 1684.865 x 1684.865 um (`2.83877 mm^2`) | 1644.640 x 1643.600 um (`2.70313 mm^2`) | `1.04207 mm^2` | 555,849 | 38.5506% |
 
-| Version | WNS | TNS | WHS | THS | LUT | FF | BRAM tiles | DRC warnings |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vivado 2022.2 | +0.152 ns | 0 | +0.059 ns | 0 | 39,299 | 43,671 | 54 | 52 |
+该 block 只包含 RX512 memory subsystem。PrimeTime 使用 nominal single corner 和 0 ns physical hold uncertainty；结果不包含 top-level IO timing、OCV/MMMC、功耗或 foundry extraction。
 
-52 条 warning entry 均在 evidence 中分类保留。该行不与历史 Vivado 2018.3 矩阵
-直接合并数值，也不声明 bitstream、board implementation 或 zero DRC。
+证据：[C2B4 same-run post-route summary](../../evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml)
+
+## SRAM A5 Research
 
 <!-- claim:slvc_dma_sram_a5_clock_delivery_canary maturity:verified -->
 <!-- claim:slvc_dma_sram_a5_256_area_reduction maturity:verified -->
 
-SRAM A5 是 partial 研究结果。经过审计的 512x128 model 与 routed boundary canary
-使用 `d200 + macro_x3` 将 macro clock slew 从 `86.384 ps` 降到 `16.434 ps`。
-生成的 256x128 macro 比生成的 512x128 macro 小 37.7383%，但 proxy minimum pulse
-仍为 1.5625 ns；没有启动 C4B4 SRAM 综合与物理实现。模型和 nonclaim 边界见
-[ASIC 实现](asic_implementation.md)。
+SRAM A5 保持 `partial/blocked`：
 
-## 可选 RX-Wide 开发 Profile
+| 项目 | 已完成结果 | 未闭合边界 |
+| --- | --- | --- |
+| 512x128 model | TT/1.1 V/25 C transistor-level trimmed-SPICE 4x4 table；80 ps / 4.182 fF 覆盖 | analytical/OpenRAM reference flow；macro DRC/LVS/PEX 未闭合 |
+| Clock delivery canary | `d200 + macro_x3` 将 macro clock slew `86.384 -> 16.434 ps`；setup/hold 正 slack；DRC/antenna/RC-004 0 | 4 条 proxy min-pulse violation |
+| 256x128 generation | macro area `195801.79 -> 121909.43 um^2`，降低 37.7383% | full 4x4 characterization、性能和功耗未验证 |
 
-以下开发分支测量与上方冻结 RC1 claim 相互独立，只适用于
-[可选同频 512-bit RX payload 后端](rx_payload_512_backend.md)。
+两类 macro 的 proxy high/low minimum pulse 都是 1.5625 ns。该值阻止 300 MHz C4B4 启动；independent true-pulse characterization 尚未完成，不能以 waiver 或文本替换升级模型。
 
-新增两项 regression 在 Windows ModelSim 2020.4 和 Linux Questa 10.7c 均通过：
+证据：[SRAM A5 development summary](../../evidence/slvc_dma_sram_a5_development_summary.yaml)
 
-```text
-PASS tb_rtl_rx_payload_writer_512 cases=2028
-PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256
-```
+## Design Compiler Frontend Reference
 
-理想 memory model 的 1 MiB test 测得 64 byte/cycle、W channel active 利用率
-100%、平均 burst 16 beat、峰值 outstanding 4。按 200 MHz 换算的 12.8 GB/s 是
-RTL/model interface rate，不是板级 DDR throughput。
+Async64 在 5.000 ns OOC synthesis 中 source/memory setup WNS 为 `+2.948/+1.682 ns`，hold WNS `+0.039 ns`，area 172,104.93、register 20,602、latch 0。Async512 源码未变化，保留已有 `+3.011/+1.393 ns` setup WNS 和 170,410.51 area。generic FIFO array 已计入，不能解释为 macro-backed ASIC PPA。
 
-Vivado 2018.3 在 `xc7z100ffg900-2` 上以 5.000 ns 完成 `frame_dma_rx_top` 布局
-布线：
-
-| WNS | TNS | WHS | THS | LUT | FF | RAMB36 | RAMB18 | DSP |
-| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| +0.089 ns | 0 | +0.069 ns | 0 | 38,045 | 42,514 | 44 | 3 | 0 |
-
-同频综合网表审计得到 RX payload CDC cell 数为 0。Explore、
-NoTimingRelaxation 和 MoreGlobalIterations 均通过 setup/hold，WNS 分别为
-`+0.089`、`+0.088` 和 `+0.144 ns`。
-
-## 可选双时钟 RX Memory Profile
-
-以下开发分支结果不修改上方冻结 RC1 evidence。两个 profile 均在 Windows
-ModelSim 2020.4 和 Linux Questa 10.7c 上通过 10 项 frozen-core test、1 条公共
-CDC bridge command 和 2 条 width-specific command。每条 integration command
-会额外输出 quiesce marker；Async64 backend command 现在还要求独立的 AW candidate
-marker，因此 Async64 从 13 条 command 要求 15 个 marker，Async512 仍为 14 个。
-
-| Profile | WNS | WHS | LUT | FF | RAMB36 | RAMB18 | DSP |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Async64 | +0.109 ns | +0.065 ns | 39,554 | 43,562 | 52 | 4 | 0 |
-| Async512 | +0.060 ns | +0.058 ns | 40,020 | 43,316 | 52 | 4 | 0 |
-
-两个 Vivado 2018.3 routed run 均使用 5.000 ns `aclk`/`mem_clk`，TNS/THS 为 0，
-无未约束 internal endpoint、无 Critical CDC entry，并通过 Gray-pointer bus-skew
-检查。Async512 的三条 setup/hold 收敛策略 WNS 为
-`+0.060/+0.084/+0.081 ns`。增加一级 registered AW plan candidate 后，Async64
-四条实测策略全部收敛，WNS 为 `+0.138/+0.122/+0.109/+0.223 ns`，最小 WHS
-为 `+0.065 ns`。流水化前的 `+0.004/+0.003/-0.019/-0.004 ns` 仍作为 timing
-baseline 保留在 evidence 中，没有被覆盖。Vivado
-flow 只对实际非 Gray crossing 使用 point-to-point exception，不使用会覆盖 4 条
-项目 Gray max-delay constraint 的 blanket asynchronous clock group。理想 memory
-test 分别持续输出 8 和 64 byte/cycle，W-channel 利用率 100%。Async64 的 1 MiB
-测试发出 8,192 个 16-beat burst，并观察到 8,192 个 planner bubble cycle；4 个
-outstanding burst 将这些 AW 间隔隐藏在 W channel 供数之外。同频 512 test 也独立
-达到 64 byte/cycle、100% W-channel 利用率和 4 个 peak outstanding。
-
-选定 worst setup path 分别属于同频 reset distribution、async64 ingress payload
-RAM address route，以及 async512 RX/FC resume calculation。原
-`issue_beats_left_q -> m_axi_awaddr/CE` 路径已从全部优化后 top-100 report 消失；
-MoreGlobalIterations 中仍可看到 `issue_beats_left_q -> aw_candidate_valid_q` 的
-planner 内部路径，但其 slack 为 `+0.268 ns`，不是全局最差路径。quiesce 与 CDC
-protocol-error detection 均未进入这些路径。相对 `79a5366` 资源基线，当前 async64
-LUT 增加 0.21%，async512 仍增加 2.21%，BRAM/DSP 不变。相对流水化前的 Async64，
-当前实现减少 848 LUT、增加 11 FF。
-
-Design Compiler 5.000 ns OOC 重新编译 Async64，source/memory setup WNS 为
-`+2.948/+1.682 ns`，hold WNS `+0.039 ns`，setup violation 为 0，cell area
-172,104.93、register 20,602、latch 0。相对流水化前 Async64，area 增加 0.231%，
-register 增加 0.204%。Async512 源码未变化，因此保留已有
-`+3.011/+1.393 ns`、170,410.51-area 结果，不表述为本轮新 run。generic FIFO
-array 已计入两个结果；这些数值不是 macro-backed ASIC area，也不能与 writer-only
-综合直接比较。详见[双时钟后端指南](rx_payload_cdc_backends.md)。
-
-## 同频 Writer-Only DC Sweep
-
-writer-only Design Compiler OOC sweep 使用 O-2018.06-SP1、Nangate45 typical、
-0.200 ns setup uncertainty、0.050 ns hold uncertainty，各点 I/O 假设一致：
+Writer-only OOC sweep 使用 O-2018.06-SP1、Nangate45 typical、0.200 ns setup uncertainty 和 0.050 ns hold uncertainty：
 
 | Target period | Setup WNS | Hold WNS | Cell area | Leaf cells |
 | ---: | ---: | ---: | ---: | ---: |
 | 5.000 ns | +2.059 ns | +0.047 ns | 6,860.41 | 3,352 |
-| 4.000 ns | +1.059 ns | +0.047 ns | 6,860.41 | 3,352 |
 | 3.333 ns | +0.393 ns | +0.047 ns | 6,860.67 | 3,352 |
 | 2.500 ns | +0.028 ns | +0.047 ns | 6,579.24 | 2,764 |
-| 2.400 ns | +0.086 ns | +0.047 ns | 6,581.37 | 2,785 |
-| 2.250 ns | +0.038 ns | +0.047 ns | 6,966.01 | 3,393 |
 | 2.000 ns | +0.013 ns | +0.046 ns | 6,669.95 | 2,795 |
-| 1.800 ns | +0.015 ns | +0.046 ns | 6,692.29 | 2,863 |
 | 1.500 ns | +0.013 ns | +0.046 ns | 6,795.24 | 2,975 |
 | 1.250 ns | -0.033 ns | +0.046 ns | 7,195.57 | 3,622 |
 
-在 5.000 ns 下，可比 legacy 64-bit writer 配置为 12,548.55 total cell area、
-5,706 leaf cell、1,678 register 和 30 logic level；wide writer 为 6,860.41 area、
-3,352 leaf cell、832 register 和 37 logic level。该 writer-only 结果不能推广成
-“位宽越宽面积越小”：legacy 对比配置启用了 16x64-bit prefetch FIFO，且两者均不
-包含完整 DMA 或物理 memory。
-
-sweep 会针对每个 target 重新 compile，因此 area/slack 非单调属于预期。1.500 ns
-是最后一个 setup-closed 测试点，1.250 ns 是首个失败点；该结论不是 routed ASIC
-Fmax、physical implementation 或 signoff evidence。
+每个 target 都重新 compile，因此 area/slack 非单调是预期行为。1.500 ns 是最后一个 setup-closed 测试点，1.250 ns 是首个失败点；这不是 routed Fmax 或完整 DMA 结果。

@@ -1,5 +1,12 @@
 # Limitations
 
+- The README comparison among multiple single-channel DMAs, MCDMA-class
+  designs, and SLVC DMA is qualitative architecture analysis, not a measured
+  vendor-IP benchmark. MCDMA HOL/backpressure behavior depends on its queues,
+  scheduler, shared AXI resources, and software configuration.
+- `ch0_full_then_ch1=1` verifies one directed admission scenario while channel
+  0 lacks ring space. It does not prove universal channel isolation under
+  shared-pool, CQ, AXI, or reset/quiesce conditions.
 - This release freezes only the 512-bit SLVC profile; a 128-bit standard RTL
   profile is not implemented.
 - The 200 MHz result is OOC, not a board implementation or lossless 10G claim.

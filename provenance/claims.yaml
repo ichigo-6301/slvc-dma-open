@@ -91,6 +91,21 @@ claims:
     status: verified
     caveat: "The tests are directed and deterministic stress tests, not coverage closure, formal proof, or board-level Ethernet validation."
     public: true
+  - id: slvc_dma_channel_admission_isolation_directed
+    profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
+    statement: "A directed adapter-to-DMA scenario accepted and completed a channel-1 packet while channel 0 had no available ring space."
+    metric: directed_channel_admission_progress
+    value: pass
+    unit: result
+    benchmark: "two-packet, two-channel adapter-to-DMA smoke with ch0_full_then_ch1=1"
+    configuration: "512-bit SHDR64 DMA path with per-channel ring-space admission and two expected CQEs"
+    source_ref: 709e1c102af3cc8a195bae5dc126bd2c3cf23eb7
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
+    evidence:
+      - slvc_dma_udp_adapter_regression_summary
+    status: verified
+    caveat: "This proves one directed per-channel ring-space scenario, not universal non-blocking behavior, formal channel isolation, or performance relative to an MCDMA implementation."
+    public: true
   - id: slvc_dma_udp_adapter_dc_ooc_200m
     profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
     statement: The adapter-only Design Compiler run met a 5.000 ns clock with +0.39 ns WNS and zero setup TNS in a 55 nm TT standard-cell library.

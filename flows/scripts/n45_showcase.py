@@ -45,24 +45,61 @@ def require_file(path, label, expected_sha=None):
     return path
 
 
+def strip_matching_quotes(value):
+    if (len(value) >= 2 and value[0] == value[-1] and
+            value[0] in ("'", '"')):
+        return value[1:-1]
+    return value
+
+
 def split_tool(value):
-    candidate = Path(value.strip('"'))
+    value = value.strip()
+    if not value:
+        raise RuntimeError("tool command is empty")
+    candidate = Path(strip_matching_quotes(value))
     if candidate.is_file():
         return [str(candidate)]
-    return shlex.split(value, posix=(os.name != "nt"))
+    try:
+        command = shlex.split(value, posix=(os.name != "nt"))
+    except ValueError as error:
+        raise RuntimeError("invalid tool command: {}".format(error))
+    if os.name == "nt":
+        command = [strip_matching_quotes(item) for item in command]
+    if not command or not command[0]:
+        raise RuntimeError("tool command is empty")
+    shell_operator_chars = "|&;<>\n\r"
+    if any(any(char in item for char in shell_operator_chars)
+           for item in command):
+        raise RuntimeError("tool command must not contain shell operators")
+    return command
 
 
 def print_command(command):
-    print("command: " + " ".join(str(item) for item in command))
+    if os.name == "nt":
+        rendered = subprocess.list2cmdline([str(item) for item in command])
+    else:
+        rendered = " ".join(shlex.quote(str(item)) for item in command)
+    print("command: " + rendered)
+
+
+def wrap_windows_batch(command, resolved_executable=None):
+    executable = resolved_executable or command[0]
+    if os.name == "nt" and Path(executable).suffix.lower() in (".bat", ".cmd"):
+        return ["cmd", "/c"] + command
+    return command
 
 
 def run_command(command, root, environment, dry_run, cwd=None):
-    print_command(command)
     if dry_run:
+        print_command(wrap_windows_batch(command))
         return
     executable = command[0]
-    if not Path(executable).is_file() and not shutil.which(executable):
+    resolved = (str(Path(executable).resolve())
+                if Path(executable).is_file() else shutil.which(executable))
+    if not resolved:
         raise RuntimeError("tool not found: {}".format(executable))
+    command = wrap_windows_batch([resolved] + command[1:], resolved)
+    print_command(command)
     subprocess.run(
         command, cwd=str(cwd or root), env=environment, check=True
     )

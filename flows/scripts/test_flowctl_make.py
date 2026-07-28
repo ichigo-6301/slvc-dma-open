@@ -291,7 +291,10 @@ class ToolCommandContractTest(unittest.TestCase):
             self.assertEqual(wrapped, command)
 
 
-@unittest.skipUnless(MAKE, "GNU Make is unavailable on this host")
+@unittest.skipUnless(
+    MAKE and os.name != "nt",
+    "GNU Make external-CWD contracts run on Linux",
+)
 class ExternalMakeInvocationTest(unittest.TestCase):
     def setUp(self):
         self.status_before = git_status()

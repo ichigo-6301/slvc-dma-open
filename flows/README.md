@@ -19,6 +19,14 @@ make list-stages
 make selected-dry-run
 ```
 
+`CONFIG`, `LOCAL_CONFIG`, and `DEFCONFIG` are resolved relative to the
+repository root unless they are absolute paths. This remains true when the
+Makefile is invoked from another working directory, for example
+`make -f /path/to/slvc-dma-open/Makefile showconfig`. The Make include,
+Python backend, `DMA_FLOW_CONFIG`, `KCONFIG_CONFIG`, and Kconfig frontend all
+receive the same canonical config path; `menuconfig` always reads the
+repository's `Kconfig`.
+
 `sim` requires `vsim` on `PATH`;
 `fpga-ooc` requires `vivado` on `PATH` or an explicit `VIVADO` environment
 variable and writes only ignored `build/` and
@@ -34,6 +42,15 @@ Command-line Make assignments override `flows/local/toolchain.mk`, which in
 turn supplies local tool/path values after the tracked `.config`. Linux and
 WSL examples use `PYTHON=python3`; native Windows installations with GNU Make
 can use `PYTHON=python`.
+
+`VSIM`, `VIVADO`, `VIVADO_2022_2`, `DC_SHELL`, and `PT_SHELL` accept a literal
+executable-and-arguments prefix such as `DC_SHELL="dc_shell -64"`. Quote an
+executable path that contains spaces, for example
+`VIVADO_2022_2='"C:/Program Files/Xilinx/Vivado/2022.2/bin/vivado.bat" -nolog'`.
+The fixed startup arguments are placed before stage-specific arguments, and
+only the executable token is checked as a file or `PATH` entry. Windows
+`.bat`/`.cmd` launchers are executed through `cmd /c`. These values are not
+shell snippets: pipes, redirects, and command chaining fail closed.
 
 The selected simulation runner always validates the ten frozen core tests. When
 `CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y`, it appends four optional adapter tests;
@@ -131,9 +148,11 @@ make showcase-check
 ```
 
 It retains the 48 C2 flow-contract tests plus three identity/dry-run tests and
-adds ten Make/backend interface contracts. It verifies published adapters,
-hashes, defconfigs, stage gating, command equivalence, and compatibility
-aliases; it does not rerun RTL simulation or commercial/long physical tools.
+adds 22 Make/backend interface contracts. It verifies published adapters,
+hashes, defconfigs, stage gating, rooted external invocation, tool-prefix
+parsing, command equivalence, and compatibility aliases; it does not rerun RTL
+simulation or commercial/long physical tools. GNU Make-specific contracts are
+skipped on native Windows and run in the Ubuntu CI job.
 
 `make public-hygiene` verifies the tracked public release checksum manifest and
 local Markdown links without invoking an EDA tool. It is the same check used by

@@ -1,5 +1,7 @@
 # Copy this file to flows/local/toolchain.mk for local overrides. Do not commit it.
 # Public commands use `make <stage>`; command-line assignments override this file.
+# CONFIG, LOCAL_CONFIG, and DEFCONFIG paths are relative to the repository root
+# unless absolute. Tool values are literal argv prefixes, not shell commands.
 PYTHON ?= python3
 KCONFIG_MCONF ?= mconf
 VSIM ?= vsim
@@ -7,6 +9,12 @@ VIVADO ?= vivado
 VIVADO_2022_2 ?= vivado
 DC_SHELL ?= dc_shell
 PT_SHELL ?= pt_shell
+
+# Fixed startup flags are supported. Quote executable paths that contain spaces:
+# VSIM := vsim -64
+# DC_SHELL := dc_shell -64
+# VIVADO_2022_2 := "C:/Program Files/Xilinx/Vivado/2022.2/bin/vivado.bat" -nolog -nojournal
+# Pipes, redirects, command chaining, and other shell expressions are rejected.
 DMA_N45_STDCELL_DB ?=
 DMA_N45_LIBERTY ?=
 DMA_ORFS_ROOT ?=

@@ -1,67 +1,101 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+CONFIG ?= .config
+DEFCONFIG ?= configs/slvc_dma_512_defconfig
+LOCAL_CONFIG ?= flows/local/toolchain.mk
 PYTHON ?= python3
-FLOWCTL := $(PYTHON) flows/scripts/flowctl.py --root "$(ROOT)" --config "$(ROOT)/.config"
+KCONFIG_MCONF ?= mconf
+FLOWCTL := $(PYTHON) flows/scripts/flowctl.py --root "$(ROOT)" --config "$(CONFIG)"
 
--include $(ROOT)/flows/local/toolchain.mk
+-include $(CONFIG)
+-include $(LOCAL_CONFIG)
+
+export DMA_FLOW_ROOT := $(ROOT)
+export DMA_FLOW_CONFIG := $(abspath $(CONFIG))
+export PYTHON VSIM VIVADO VIVADO_2022_2 DC_SHELL PT_SHELL
+export DMA_DC_TARGET_LIBRARY DMA_N45_STDCELL_DB DMA_N45_LIBERTY DMA_ORFS_ROOT
+export DMA_C2_BUILD_ROOT DMA_C2_MAPPED_NETLIST DMA_C2_ALLOW_UNMEASURED_ROUTE
+export DMA_C2_DESIGN_NAME DMA_DC_MAX_CORES DMA_A5_512_LIBERTY
+export DMA_A5_CLOCK_AUDIT_REPORT REPORT_TAG
+
+FLOW_STAGES := sim fpga-ooc adapter-dc-ooc rx-payload-writer-dc-ooc \
+               n45-c2-reg-audit n45-c2-reg-sim n45-c2-reg-dc \
+               n45-c2-reg-pnr n45-c2-reg-sta \
+               vivado-async64-2022.2-ooc \
+               n45-a5-model-audit n45-a5-clock-delivery-audit
+DRY_RUN_STAGES := $(filter-out n45-c2-reg-audit,$(FLOW_STAGES))
+DRY_RUN_TARGETS := $(addsuffix -dry-run,$(DRY_RUN_STAGES))
+DEFCONFIG_TARGETS := slvc_dma_512_core_only_defconfig \
+                     slvc_dma_512_defconfig \
+                     slvc_dma_512_rx_wide_defconfig \
+                     slvc_dma_512_rx_async64_defconfig \
+                     slvc_dma_512_rx_async512_defconfig \
+                     dma_rx512_reg_c2_b4_m2_sp64_defconfig
 
 .RECIPEPREFIX := >
 .DEFAULT_GOAL := help
-.PHONY: help showcase-check defconfig slvc_dma_512_defconfig slvc_dma_512_rx_wide_defconfig slvc_dma_512_rx_async64_defconfig slvc_dma_512_rx_async512_defconfig showconfig public-hygiene sim sim-dry-run fpga-ooc fpga-ooc-dry-run adapter-dc-ooc adapter-dc-ooc-dry-run rx-payload-writer-dc-ooc rx-payload-writer-dc-ooc-dry-run n45-c2-reg-sim n45-c2-reg-sim-dry-run n45-c2-reg-dc n45-c2-reg-dc-dry-run n45-c2-reg-pnr n45-c2-reg-pnr-dry-run n45-c2-reg-sta n45-c2-reg-sta-dry-run n45-c2-reg-audit vivado-async64-2022.2-ooc vivado-async64-2022.2-ooc-dry-run n45-a5-model-audit n45-a5-model-audit-dry-run n45-a5-clock-delivery-audit n45-a5-clock-delivery-audit-dry-run
+.PHONY: help showcase-check public-hygiene \
+        defconfig $(DEFCONFIG_TARGETS) menuconfig showconfig validate-profile \
+        list-stages selected selected-dry-run $(FLOW_STAGES) $(DRY_RUN_TARGETS)
 
 help:
-> @printf '%s\n' 'SLVC DMA public flow' '' '  make showcase-check' '  make slvc_dma_512_defconfig' '  make slvc_dma_512_rx_wide_defconfig' '  make slvc_dma_512_rx_async64_defconfig' '  make slvc_dma_512_rx_async512_defconfig' '  make showconfig' '  make public-hygiene' '  make sim[-dry-run]' '  make fpga-ooc[-dry-run]' '  make adapter-dc-ooc[-dry-run]' '  make rx-payload-writer-dc-ooc[-dry-run]' '  make n45-c2-reg-{sim,dc,pnr,sta}[-dry-run]' '  make n45-c2-reg-audit' '  make vivado-async64-2022.2-ooc[-dry-run]' '  make n45-a5-{model,clock-delivery}-audit[-dry-run]'
+> @printf '%s\n' \
+>   'SLVC DMA public implementation flow' \
+>   '' \
+>   '  make slvc_dma_512_defconfig       Select the public 512-bit profile' \
+>   '  make <profile>_defconfig          Select a tracked implementation profile' \
+>   '  make menuconfig                   Edit .config with a Kconfig frontend' \
+>   '  make showconfig                   Display profile, backend, and enabled stages' \
+>   '  make validate-profile             Validate the selected configuration' \
+>   '  make list-stages                  List stages and controlling config symbols' \
+>   '  make <stage>-dry-run              Print one bounded tool invocation' \
+>   '  make <stage>                      Run one enabled stage' \
+>   '  make selected[-dry-run]           Run enabled stages in dependency order' \
+>   '  make showcase-check               Run public integrity and flow contracts' \
+>   '' \
+>   'Stages: sim fpga-ooc adapter-dc-ooc rx-payload-writer-dc-ooc' \
+>   '        n45-c2-reg-{audit,sim,dc,pnr,sta}' \
+>   '        vivado-async64-2022.2-ooc' \
+>   'Utilities: n45-a5-{model,clock-delivery}-audit' \
+>   'Local tools, PDKs, and libraries belong in flows/local/ (ignored).'
 
 showcase-check: public-hygiene
 > @$(PYTHON) -m unittest flows.scripts.test_n45_showcase
 > @printf '%s\n' 'SHOWCASE_CHECK_PASS'
 
-defconfig slvc_dma_512_defconfig:
-> @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_defconfig"
+public-hygiene:
+> @$(PYTHON) flows/scripts/public_hygiene.py --root "$(ROOT)"
 
-slvc_dma_512_rx_wide_defconfig:
-> @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_rx_wide_defconfig"
+defconfig:
+> @$(FLOWCTL) defconfig --source "$(DEFCONFIG)"
 
-slvc_dma_512_rx_async64_defconfig:
-> @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_rx_async64_defconfig"
+$(DEFCONFIG_TARGETS):
+> @$(FLOWCTL) defconfig --source "$(ROOT)/configs/$@"
 
-slvc_dma_512_rx_async512_defconfig:
-> @$(FLOWCTL) defconfig --source "$(ROOT)/configs/slvc_dma_512_rx_async512_defconfig"
+menuconfig:
+> @test -f "$(CONFIG)" || $(FLOWCTL) defconfig --source "$(DEFCONFIG)"
+> @command -v "$(KCONFIG_MCONF)" >/dev/null 2>&1 || { \
+>   echo 'Kconfig frontend not found; install mconf/kconfig-frontends or set KCONFIG_MCONF.'; \
+>   exit 2; \
+> }
+> @KCONFIG_CONFIG="$(abspath $(CONFIG))" "$(KCONFIG_MCONF)" Kconfig
 
 showconfig:
 > @$(FLOWCTL) show-config
 
-public-hygiene:
-> @$(PYTHON) flows/scripts/public_hygiene.py --root "$(ROOT)"
+validate-profile:
+> @$(FLOWCTL) validate-config
 
-sim:
-> @$(FLOWCTL) sim
+list-stages:
+> @$(FLOWCTL) list-stages
 
-sim-dry-run:
-> @$(FLOWCTL) sim-dry-run
+selected:
+> @$(FLOWCTL) run-selected
 
-fpga-ooc:
-> @$(FLOWCTL) fpga-ooc
+selected-dry-run:
+> @$(FLOWCTL) run-selected --dry-run
 
-fpga-ooc-dry-run:
-> @$(FLOWCTL) fpga-ooc-dry-run
+$(FLOW_STAGES):
+> @$(FLOWCTL) run --stage "$@"
 
-adapter-dc-ooc:
-> @$(FLOWCTL) adapter-dc-ooc
-
-adapter-dc-ooc-dry-run:
-> @$(FLOWCTL) adapter-dc-ooc-dry-run
-
-rx-payload-writer-dc-ooc:
-> @$(FLOWCTL) rx-payload-writer-dc-ooc
-
-rx-payload-writer-dc-ooc-dry-run:
-> @$(FLOWCTL) rx-payload-writer-dc-ooc-dry-run
-
-n45-c2-reg-sim n45-c2-reg-sim-dry-run n45-c2-reg-dc n45-c2-reg-dc-dry-run n45-c2-reg-pnr n45-c2-reg-pnr-dry-run n45-c2-reg-sta n45-c2-reg-sta-dry-run n45-c2-reg-audit:
-> @$(FLOWCTL) $@
-
-vivado-async64-2022.2-ooc vivado-async64-2022.2-ooc-dry-run:
-> @$(FLOWCTL) $@
-
-n45-a5-model-audit n45-a5-model-audit-dry-run n45-a5-clock-delivery-audit n45-a5-clock-delivery-audit-dry-run:
-> @$(FLOWCTL) $@
+$(DRY_RUN_TARGETS):
+> @$(FLOWCTL) run --stage "$(patsubst %-dry-run,%,$@)" --dry-run

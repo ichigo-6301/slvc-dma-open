@@ -1,5 +1,7 @@
 # Copy this file to flows/local/toolchain.mk for local overrides. Do not commit it.
+# Public commands use `make <stage>`; command-line assignments override this file.
 PYTHON ?= python3
+KCONFIG_MCONF ?= mconf
 VSIM ?= vsim
 VIVADO ?= vivado
 VIVADO_2022_2 ?= vivado
@@ -8,6 +10,12 @@ PT_SHELL ?= pt_shell
 DMA_N45_STDCELL_DB ?=
 DMA_N45_LIBERTY ?=
 DMA_ORFS_ROOT ?=
+
+# Optional ignored build/handoff overrides for the C2B4 implementation profile.
+DMA_C2_BUILD_ROOT ?=
+DMA_C2_MAPPED_NETLIST ?=
+DMA_C2_ALLOW_UNMEASURED_ROUTE ?=
+DMA_DC_MAX_CORES ?=
 
 export VIVADO VIVADO_2022_2 DC_SHELL PT_SHELL
 export DMA_N45_STDCELL_DB DMA_N45_LIBERTY DMA_ORFS_ROOT

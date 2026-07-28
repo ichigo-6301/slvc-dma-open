@@ -2,7 +2,9 @@
 """Public-safe SLVC DMA flow dispatcher."""
 
 import argparse
+from collections import OrderedDict
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -10,6 +12,16 @@ from pathlib import Path
 
 
 MIN_PYTHON = (3, 6)
+C2_PROFILE_ID = "dma_rx512_reg_c2_b4_m2_sp64"
+
+PROFILE_CONTRACTS = {
+    "slvc_dma_512_core_only": ("legacy64", "frame_dma_wrapper"),
+    "slvc_dma_512": ("legacy64", "frame_dma_wrapper"),
+    "slvc_dma_512_rx_wide": ("same_clock_512", "frame_dma_rx_top"),
+    "slvc_dma_512_rx_async64": ("async64", "frame_dma_rx_top"),
+    "slvc_dma_512_rx_async512": ("async512", "frame_dma_rx_top"),
+    C2_PROFILE_ID: ("legacy64", "dma_rx512_memory_subsystem_top"),
+}
 
 SIM_CASES = [
     ("run_rtl_v33c_tx_channel_table.do", "PASS: v33c TX channel table ownership split directed test"),
@@ -70,19 +82,37 @@ def marker_count(cases):
 def parse_config(path):
     values = {}
     if not path.is_file():
-        raise RuntimeError("missing .config; run defconfig first")
+        raise RuntimeError(
+            "missing {}; run 'make <profile>_defconfig' first".format(path)
+        )
     for raw in path.read_text(encoding="utf-8").splitlines():
-        if raw.startswith("CONFIG_") and "=" in raw:
-            key, value = raw.split("=", 1)
-            values[key] = value.strip().strip('"')
+        line = raw.strip()
+        if line.startswith("# CONFIG_") and line.endswith(" is not set"):
+            key = line[2:-11]
+            value = "n"
+        elif line.startswith("CONFIG_") and "=" in line:
+            key, value = line.split("=", 1)
+            value = value.strip().strip('"')
+        else:
+            continue
+        if key in values:
+            raise RuntimeError("duplicate config symbol: {}".format(key))
+        values[key] = value
     return values
 
 
-def require_tool(name):
-    tool = shutil.which(name)
-    if not tool:
-        raise RuntimeError("tool not found on PATH: {}".format(name))
-    return tool
+def split_tool(value):
+    candidate = Path(value.strip('"'))
+    if candidate.is_file():
+        return [str(candidate)]
+    return shlex.split(value, posix=(os.name != "nt"))
+
+
+def require_tool(command):
+    executable = command[0]
+    if not Path(executable).is_file() and not shutil.which(executable):
+        raise RuntimeError("tool not found on PATH: {}".format(executable))
+    return executable
 
 
 def rx_memory_profile(config):
@@ -126,8 +156,77 @@ def simulation_profile(config):
     }
 
 
+def validate_config(config):
+    if config.get("CONFIG_SLVC_DMA_V1_512") != "y":
+        raise RuntimeError("CONFIG_SLVC_DMA_V1_512 must be enabled")
+
+    profile_id = config.get("CONFIG_SLVC_DMA_PROFILE_ID", "")
+    if profile_id not in PROFILE_CONTRACTS:
+        raise RuntimeError("unknown or missing public profile: {}".format(profile_id))
+
+    backend = rx_memory_profile(config)
+    expected_backend, expected_top = PROFILE_CONTRACTS[profile_id]
+    if backend != expected_backend:
+        raise RuntimeError(
+            "profile {} requires RX backend {}, got {}".format(
+                profile_id, expected_backend, backend
+            )
+        )
+    if config.get("CONFIG_SLVC_DMA_TOP") != expected_top:
+        raise RuntimeError(
+            "profile {} requires top {}, got {}".format(
+                profile_id, expected_top, config.get("CONFIG_SLVC_DMA_TOP")
+            )
+        )
+
+    if (config.get("CONFIG_SLVC_DMA_ADAPTER_DC_OOC") == "y" and
+            config.get("CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER") != "y"):
+        raise RuntimeError(
+            "adapter-dc-ooc requires CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y"
+        )
+    if (config.get("CONFIG_SLVC_DMA_VIVADO_ASYNC64_2022_2_OOC") == "y" and
+            backend != "async64"):
+        raise RuntimeError(
+            "vivado-async64-2022.2-ooc requires the async64 backend"
+        )
+
+    c2_symbols = (
+        "CONFIG_SLVC_DMA_N45_C2_REG_AUDIT",
+        "CONFIG_SLVC_DMA_N45_C2_REG_SIM",
+        "CONFIG_SLVC_DMA_N45_C2_REG_DC",
+        "CONFIG_SLVC_DMA_N45_C2_REG_PNR",
+        "CONFIG_SLVC_DMA_N45_C2_REG_STA",
+    )
+    c2_enabled = [symbol for symbol in c2_symbols if config.get(symbol) == "y"]
+    if c2_enabled and profile_id != C2_PROFILE_ID:
+        raise RuntimeError(
+            "C2B4 stages require profile {}".format(C2_PROFILE_ID)
+        )
+    if (any(config.get(symbol) == "y" for symbol in c2_symbols[1:]) and
+            config.get(c2_symbols[0]) != "y"):
+        raise RuntimeError("C2B4 execution stages require the C2 audit stage")
+    if profile_id == C2_PROFILE_ID:
+        unrelated = (
+            "CONFIG_SLVC_DMA_SIM",
+            "CONFIG_SLVC_DMA_FPGA_OOC",
+            "CONFIG_SLVC_DMA_ADAPTER_DC_OOC",
+            "CONFIG_SLVC_DMA_RX_WRITER_DC_OOC",
+            "CONFIG_SLVC_DMA_VIVADO_ASYNC64_2022_2_OOC",
+        )
+        enabled = [symbol for symbol in unrelated if config.get(symbol) == "y"]
+        if enabled:
+            raise RuntimeError(
+                "C2B4 profile enables unrelated stages: {}".format(
+                    ", ".join(enabled)
+                )
+            )
+    return config
+
+
 def show_config(config):
+    validate_config(config)
     profile = simulation_profile(config)
+    print("profile_id: {}".format(config["CONFIG_SLVC_DMA_PROFILE_ID"]))
     print("top: {}".format(config.get("CONFIG_SLVC_DMA_TOP", "frame_dma_wrapper")))
     print("clock_period_ns: {}".format(config.get("CONFIG_SLVC_DMA_CLOCK_PERIOD_NS", "5.000")))
     print("mem_clock_period_ns: {}".format(config.get("CONFIG_SLVC_DMA_MEM_CLOCK_PERIOD_NS", "5.000")))
@@ -150,6 +249,12 @@ def show_config(config):
     print("required_rx_backend_markers: {}".format(profile["rx_count"]))
     print("scheduled_rx_backend_tests: {}".format(profile["rx_test_count"]))
     print("required_total_markers: {}".format(profile["total_count"]))
+    print("enabled_stages: {}".format(
+        ", ".join(
+            stage for stage, spec in STAGES.items()
+            if spec.get("symbol") and config.get(spec["symbol"]) == "y"
+        ) or "none"
+    ))
 
 
 def run_sim(root, config, dry_run):
@@ -168,13 +273,14 @@ def run_sim(root, config, dry_run):
     if profile["adapter_enabled"]:
         cases.extend(ADAPTER_SIM_CASES)
     cases.extend(profile["rx_cases"])
-    commands = [(["vsim", "-c", "-do", script], markers)
+    tool = split_tool(os.environ.get("VSIM", "vsim"))
+    commands = [(tool + ["-c", "-do", script], markers)
                 for script, markers in cases]
     for command, _ in commands:
         print("command: " + " ".join(command))
     if dry_run:
         return
-    require_tool("vsim")
+    require_tool(tool)
     for command, markers in commands:
         completed = subprocess.run(
             command,
@@ -278,21 +384,90 @@ def run_rx_payload_writer_dc_ooc(root, config, dry_run):
 
 
 SHOWCASE_COMMANDS = {
+    "n45-c2-reg-audit": "c2-audit",
     "n45-c2-reg-sim": "c2-sim",
     "n45-c2-reg-dc": "c2-dc",
     "n45-c2-reg-pnr": "c2-pnr",
     "n45-c2-reg-sta": "c2-sta",
-    "n45-c2-reg-audit": "c2-audit",
     "vivado-async64-2022.2-ooc": "vivado-async64-2022.2-ooc",
     "n45-a5-model-audit": "a5-model-audit",
     "n45-a5-clock-delivery-audit": "a5-clock-delivery-audit",
 }
 
 
-def run_showcase(root, command):
-    dry_run = command.endswith("-dry-run")
-    base = command[:-8] if dry_run else command
-    showcase_command = SHOWCASE_COMMANDS[base]
+STAGES = OrderedDict([
+    ("n45-c2-reg-audit", {
+        "symbol": "CONFIG_SLVC_DMA_N45_C2_REG_AUDIT",
+        "selected": True,
+        "kind": "showcase",
+    }),
+    ("sim", {
+        "symbol": "CONFIG_SLVC_DMA_SIM",
+        "selected": True,
+        "kind": "sim",
+    }),
+    ("n45-c2-reg-sim", {
+        "symbol": "CONFIG_SLVC_DMA_N45_C2_REG_SIM",
+        "selected": True,
+        "kind": "showcase",
+    }),
+    ("fpga-ooc", {
+        "symbol": "CONFIG_SLVC_DMA_FPGA_OOC",
+        "selected": True,
+        "kind": "fpga-ooc",
+    }),
+    ("vivado-async64-2022.2-ooc", {
+        "symbol": "CONFIG_SLVC_DMA_VIVADO_ASYNC64_2022_2_OOC",
+        "selected": True,
+        "kind": "showcase",
+    }),
+    ("adapter-dc-ooc", {
+        "symbol": "CONFIG_SLVC_DMA_ADAPTER_DC_OOC",
+        "selected": True,
+        "kind": "adapter-dc-ooc",
+    }),
+    ("rx-payload-writer-dc-ooc", {
+        "symbol": "CONFIG_SLVC_DMA_RX_WRITER_DC_OOC",
+        "selected": True,
+        "kind": "rx-writer-dc-ooc",
+    }),
+    ("n45-c2-reg-dc", {
+        "symbol": "CONFIG_SLVC_DMA_N45_C2_REG_DC",
+        "selected": True,
+        "kind": "showcase",
+    }),
+    ("n45-c2-reg-pnr", {
+        "symbol": "CONFIG_SLVC_DMA_N45_C2_REG_PNR",
+        "selected": True,
+        "kind": "showcase",
+    }),
+    ("n45-c2-reg-sta", {
+        "symbol": "CONFIG_SLVC_DMA_N45_C2_REG_STA",
+        "selected": True,
+        "kind": "showcase",
+    }),
+    ("n45-a5-model-audit", {
+        "symbol": None,
+        "selected": False,
+        "kind": "showcase",
+    }),
+    ("n45-a5-clock-delivery-audit", {
+        "symbol": None,
+        "selected": False,
+        "kind": "showcase",
+    }),
+])
+
+
+LEGACY_COMMANDS = {}
+for _stage in STAGES:
+    LEGACY_COMMANDS[_stage] = (_stage, False)
+    if _stage != "n45-c2-reg-audit":
+        LEGACY_COMMANDS[_stage + "-dry-run"] = (_stage, True)
+
+
+def run_showcase(root, stage, dry_run):
+    showcase_command = SHOWCASE_COMMANDS[stage]
     invocation = [
         sys.executable,
         str(root / "flows/scripts/n45_showcase.py"),
@@ -300,7 +475,68 @@ def run_showcase(root, command):
     ]
     if dry_run:
         invocation.append("--dry-run")
-    return subprocess.run(invocation, cwd=str(root)).returncode
+    completed = subprocess.run(invocation, cwd=str(root))
+    if completed.returncode:
+        raise RuntimeError(
+            "{} failed with exit status {}".format(stage, completed.returncode)
+        )
+
+
+def run_stage(root, config_path, config, stage, dry_run, enforce_enabled=True):
+    spec = STAGES[stage]
+    symbol = spec.get("symbol")
+    if enforce_enabled and symbol and config.get(symbol) != "y":
+        raise RuntimeError(
+            "{} is disabled by {} in {}".format(stage, symbol, config_path)
+        )
+
+    print("stage: {}".format(stage))
+    print("config_symbol: {}".format(symbol or "utility"))
+    print("dry_run: {}".format("y" if dry_run else "n"))
+    sys.stdout.flush()
+
+    kind = spec["kind"]
+    if kind == "sim":
+        run_sim(root, config, dry_run)
+    elif kind == "fpga-ooc":
+        run_ooc(root, config, dry_run)
+    elif kind == "adapter-dc-ooc":
+        run_adapter_dc_ooc(root, dry_run)
+    elif kind == "rx-writer-dc-ooc":
+        run_rx_payload_writer_dc_ooc(root, config, dry_run)
+    else:
+        run_showcase(root, stage, dry_run)
+
+
+def run_selected(root, config_path, config, dry_run):
+    selected = [
+        stage for stage, spec in STAGES.items()
+        if spec.get("selected") and spec.get("symbol") and
+        config.get(spec["symbol"]) == "y"
+    ]
+    if not selected:
+        raise RuntimeError("selected profile enables no executable stages")
+    print("selected_stages: {}".format(", ".join(selected)))
+    for stage in selected:
+        run_stage(root, config_path, config, stage, dry_run)
+
+
+def list_stages():
+    for stage, spec in STAGES.items():
+        print("{:<38} symbol={:<49} selected={}".format(
+            stage,
+            spec.get("symbol") or "utility",
+            "y" if spec.get("selected") else "n",
+        ))
+
+
+def write_defconfig(source, destination):
+    source = source.resolve()
+    if not source.is_file():
+        raise RuntimeError("missing defconfig: {}".format(source))
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    print("wrote {}".format(destination))
 
 
 def main():
@@ -314,53 +550,72 @@ def main():
     defconfig = sub.add_parser("defconfig")
     defconfig.add_argument("--source", required=True)
     sub.add_parser("show-config")
-    sub.add_parser("sim")
-    sub.add_parser("sim-dry-run")
-    sub.add_parser("fpga-ooc")
-    sub.add_parser("fpga-ooc-dry-run")
-    sub.add_parser("adapter-dc-ooc")
-    sub.add_parser("adapter-dc-ooc-dry-run")
-    sub.add_parser("rx-payload-writer-dc-ooc")
-    sub.add_parser("rx-payload-writer-dc-ooc-dry-run")
-    for command in sorted(SHOWCASE_COMMANDS):
+    sub.add_parser("validate-config")
+    sub.add_parser("list-stages")
+    run = sub.add_parser("run")
+    run.add_argument("--stage", choices=tuple(STAGES), required=True)
+    run.add_argument("--dry-run", action="store_true")
+    selected = sub.add_parser("run-selected")
+    selected.add_argument("--dry-run", action="store_true")
+    for command in sorted(LEGACY_COMMANDS):
         sub.add_parser(command)
-        if command != "n45-c2-reg-audit":
-            sub.add_parser(command + "-dry-run")
     args = parser.parse_args()
     if args.command is None:
         parser.print_help()
         return 2
     root = Path(args.root).resolve()
-    showcase_base = (
-        args.command[:-8] if args.command.endswith("-dry-run")
-        else args.command
-    )
-    if showcase_base in SHOWCASE_COMMANDS:
-        return run_showcase(root, args.command)
     config_path = Path(args.config)
     if not config_path.is_absolute():
         config_path = root / config_path
-    if args.command == "defconfig":
-        source = Path(args.source).resolve()
-        config_path.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-        print("wrote {}".format(config_path))
-        return 0
     try:
+        if args.command == "defconfig":
+            write_defconfig(Path(args.source), config_path)
+            return 0
+        if args.command == "list-stages":
+            list_stages()
+            return 0
+
+        if args.command in LEGACY_COMMANDS:
+            stage, dry_run = LEGACY_COMMANDS[args.command]
+            print(
+                "flowctl: warning: '{}' is a compatibility alias; use "
+                "'make {}{}'".format(
+                    args.command, stage, "-dry-run" if dry_run else ""
+                ),
+                file=sys.stderr,
+            )
+            if stage in SHOWCASE_COMMANDS and not config_path.is_file():
+                config = {}
+            else:
+                config = parse_config(config_path)
+            run_stage(
+                root, config_path, config, stage, dry_run,
+                enforce_enabled=False,
+            )
+            return 0
+
         config = parse_config(config_path)
+        validate_config(config)
         if args.command == "show-config":
             show_config(config)
-        elif args.command.startswith("sim"):
-            run_sim(root, config, args.command.endswith("dry-run"))
-        elif args.command.startswith("fpga-ooc"):
-            run_ooc(root, config, args.command.endswith("dry-run"))
-        elif args.command.startswith("adapter-dc-ooc"):
-            run_adapter_dc_ooc(root, args.command.endswith("dry-run"))
-        else:
-            run_rx_payload_writer_dc_ooc(
-                root, config, args.command.endswith("dry-run")
+        elif args.command == "validate-config":
+            print(
+                "DMA_FLOW_CONFIG_VALID profile={} backend={} stages={}".format(
+                    config["CONFIG_SLVC_DMA_PROFILE_ID"],
+                    rx_memory_profile(config),
+                    sum(
+                        1 for spec in STAGES.values()
+                        if spec.get("symbol") and
+                        config.get(spec["symbol"]) == "y"
+                    ),
+                )
             )
+        elif args.command == "run":
+            run_stage(root, config_path, config, args.stage, args.dry_run)
+        else:
+            run_selected(root, config_path, config, args.dry_run)
         return 0
-    except RuntimeError as error:
+    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
         print("flowctl: error: {}".format(error), file=sys.stderr)
         return 2
 

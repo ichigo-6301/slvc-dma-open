@@ -253,6 +253,14 @@ class ToolCommandContractTest(unittest.TestCase):
                 "dc_shell && other_tool"):
             with self.assertRaisesRegex(RuntimeError, "shell operators"):
                 flowctl.split_tool(value)
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / "tool&chain.cmd"
+            executable.write_text("@echo off\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "shell operators"):
+                flowctl.split_tool(str(executable))
+            if os.name == "nt":
+                with self.assertRaisesRegex(RuntimeError, "shell operators"):
+                    flowctl.wrap_windows_batch([str(executable), "-64"])
 
     def test_require_tool_checks_only_executable_token(self):
         with mock.patch.object(
@@ -260,6 +268,11 @@ class ToolCommandContractTest(unittest.TestCase):
             resolved = flowctl.require_tool(["dc_shell", "-64"])
         self.assertEqual(resolved, "/tools/dc_shell")
         which.assert_called_once_with("dc_shell")
+        with mock.patch.object(
+                flowctl.shutil, "which",
+                return_value="C:/EDA&Tools/dc_shell.exe"):
+            with self.assertRaisesRegex(RuntimeError, "shell operators"):
+                flowctl.require_tool(["dc_shell", "-64"])
 
     def test_public_stage_dry_runs_preserve_prefix_argument_order(self):
         config = flowctl.parse_config(ROOT / "configs/slvc_dma_512_rx_wide_defconfig")
@@ -408,6 +421,58 @@ class ExternalMakeInvocationTest(unittest.TestCase):
         self.assertEqual(
             log.read_text(encoding="utf-8").splitlines(),
             [str(config.resolve()), str((ROOT / "Kconfig").resolve())],
+        )
+
+    def test_windows_rooted_unc_and_relative_paths_are_classified_from_root(self):
+        evaluation = (
+            "print-path-contract: ; @printf '%s\\n' "
+            "'CONFIG_PATH=$(CONFIG_PATH)' "
+            "'LOCAL_CONFIG_PATH=$(LOCAL_CONFIG_PATH)' "
+            "'DEFCONFIG_PATH=$(DEFCONFIG_PATH)'"
+        )
+
+        def read_paths(assignments):
+            completed = self.run_make(
+                ["--eval=" + evaluation] + assignments + ["print-path-contract"]
+            )
+            self.assertEqual(completed.returncode, 0, completed.stdout)
+            values = {}
+            for line in completed.stdout.splitlines():
+                if "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                if key in ("CONFIG_PATH", "LOCAL_CONFIG_PATH", "DEFCONFIG_PATH"):
+                    values[key] = value
+            self.assertEqual(len(values), 3, completed.stdout)
+            return values
+
+        absolute = read_paths([
+            r"CONFIG=\\server\share\profile.config",
+            r"LOCAL_CONFIG=\rooted\toolchain.mk",
+            r"DEFCONFIG=C:\profiles\default_defconfig",
+        ])
+        self.assertEqual(absolute["CONFIG_PATH"], "//server/share/profile.config")
+        self.assertEqual(absolute["LOCAL_CONFIG_PATH"], "/rooted/toolchain.mk")
+        self.assertEqual(
+            absolute["DEFCONFIG_PATH"], "C:/profiles/default_defconfig"
+        )
+
+        relative = read_paths([
+            r"CONFIG=configs\selected.config",
+            r"LOCAL_CONFIG=flows\local\toolchain.mk",
+            r"DEFCONFIG=configs\selected_defconfig",
+        ])
+        self.assertEqual(
+            relative["CONFIG_PATH"],
+            (ROOT / "configs/selected.config").as_posix(),
+        )
+        self.assertEqual(
+            relative["LOCAL_CONFIG_PATH"],
+            (ROOT / "flows/local/toolchain.mk").as_posix(),
+        )
+        self.assertEqual(
+            relative["DEFCONFIG_PATH"],
+            (ROOT / "configs/selected_defconfig").as_posix(),
         )
 
 

@@ -59,7 +59,7 @@ help:
 >   'Local tools, PDKs, and libraries belong in flows/local/ (ignored).'
 
 showcase-check: public-hygiene
-> @$(PYTHON) -m unittest flows.scripts.test_n45_showcase
+> @$(PYTHON) -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase
 > @printf '%s\n' 'SHOWCASE_CHECK_PASS'
 
 public-hygiene:

@@ -24,41 +24,23 @@ jobs:
         name: Verify showcase, provenance, links, assets, and flow contracts
         run: make showcase-check PYTHON=python3
       -
-        name: Generate public defconfig
-        run: python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
+        name: Exercise public Make profile
+        run: make slvc_dma_512_defconfig PYTHON=python3
       -
         name: Show public configuration
-        run: python3 flows/scripts/flowctl.py show-config
+        run: make showconfig validate-profile list-stages PYTHON=python3
       -
-        name: Inspect simulator dry-run
-        run: python3 flows/scripts/flowctl.py sim-dry-run
+        name: Inspect selected public stages
+        run: make selected-dry-run PYTHON=python3
       -
-        name: Inspect OOC dry-run
-        run: python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+        name: Exercise async64 Make profile
+        run: make slvc_dma_512_rx_async64_defconfig selected-dry-run PYTHON=python3
       -
-        name: Audit C2B4 register profile
-        run: python3 flows/scripts/flowctl.py n45-c2-reg-audit
+        name: Exercise C2B4 Make profile
+        run: make dma_rx512_reg_c2_b4_m2_sp64_defconfig selected-dry-run PYTHON=python3
       -
-        name: Inspect C2B4 simulation dry-run
-        run: python3 flows/scripts/flowctl.py n45-c2-reg-sim-dry-run
-      -
-        name: Inspect C2B4 DC dry-run
-        run: python3 flows/scripts/flowctl.py n45-c2-reg-dc-dry-run
-      -
-        name: Inspect C2B4 P&R dry-run
-        run: python3 flows/scripts/flowctl.py n45-c2-reg-pnr-dry-run
-      -
-        name: Inspect C2B4 STA dry-run
-        run: python3 flows/scripts/flowctl.py n45-c2-reg-sta-dry-run
-      -
-        name: Inspect Vivado 2022.2 OOC dry-run
-        run: python3 flows/scripts/flowctl.py vivado-async64-2022.2-ooc-dry-run
-      -
-        name: Inspect A5 model-audit dry-run
-        run: python3 flows/scripts/flowctl.py n45-a5-model-audit-dry-run
-      -
-        name: Inspect A5 clock-delivery dry-run
-        run: python3 flows/scripts/flowctl.py n45-a5-clock-delivery-audit-dry-run
+        name: Inspect A5 audit utilities
+        run: make n45-a5-model-audit-dry-run n45-a5-clock-delivery-audit-dry-run PYTHON=python3
       -
         name: Confirm tracked worktree hygiene
         run: test -z "$(git status --porcelain)"
@@ -75,10 +57,13 @@ jobs:
         name: Verify provenance and documentation links
         run: python flows/scripts/public_hygiene.py --root .
       -
-        name: Verify showcase contracts and dry-runs
-        run: python -m unittest flows.scripts.test_n45_showcase
+        name: Verify backend, compatibility aliases, and showcase contracts
+        run: python -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase
       -
-        name: Audit C2B4 register profile
+        name: Verify generic C2B4 backend without GNU Make
+        run: python flows/scripts/flowctl.py --config configs/dma_rx512_reg_c2_b4_m2_sp64_defconfig run-selected --dry-run
+      -
+        name: Verify one-release compatibility alias
         run: python flows/scripts/flowctl.py n45-c2-reg-audit
       -
         name: Confirm tracked worktree hygiene

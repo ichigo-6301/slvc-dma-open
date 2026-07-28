@@ -1,0 +1,35 @@
+kind: public_flow_interface
+schema_version: 1.0.0
+repository: slvc-dma-open
+baseline_commit: 56f0bef7b43fdb7ab0e872ca6ca682e276b88e62
+canonical_frontend: gnu_make
+internal_backend: python_3_6_or_newer
+configuration:
+  default: configs/slvc_dma_512_defconfig
+  local_toolchain: flows/local/toolchain.mk
+  ignored_config: .config
+interfaces:
+  - make_defconfig
+  - make_stage
+  - make_stage_dry_run
+  - make_selected
+  - make_selected_dry_run
+compatibility:
+  legacy_python_subcommands: deprecated_until_next_tagged_release
+  public_documentation_uses_make_only: true
+verification_scope:
+  long_eda_tools_run: false
+  bounded_checks:
+    - config_contracts
+    - stage_enable_fail_closed
+    - dry_run_command_equivalence
+    - legacy_alias_equivalence
+    - windows_python_backend
+    - linux_make_frontend
+deltas:
+  production_rtl_files: 0
+  constraints: 0
+  measured_evidence: 0
+nonclaims:
+  - The bounded interface checks do not rerun RTL simulation or EDA measurements.
+  - The Make migration does not upgrade any implementation maturity claim.

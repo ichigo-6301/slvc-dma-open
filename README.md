@@ -125,12 +125,12 @@ make showcase-check
 生成默认配置并查看可执行命令：
 
 ```bash
-python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
-python3 flows/scripts/flowctl.py show-config
-python3 flows/scripts/flowctl.py sim-dry-run
+make slvc_dma_512_defconfig
+make showconfig
+make selected-dry-run
 ```
 
-安装 ModelSim/Questa 后运行 `make sim`。Vivado、DC/PT、ORFS、PDK 和 library 路径只允许出现在 ignored `flows/local/`；公开仓库不分发商业工具产物或工艺数据。
+GNU Make 是公开 flow 的统一入口；Python 仅作为内部配置、日志 marker 与审计 backend。安装 ModelSim/Questa 后运行 `make sim`。Vivado、DC/PT、ORFS、PDK 和 library 路径只允许出现在 ignored `flows/local/`；公开仓库不分发商业工具产物或工艺数据。
 
 ## 文档与发行边界
 

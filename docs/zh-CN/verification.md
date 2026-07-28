@@ -45,9 +45,9 @@ PASS tb_rtl_v33e20a107_udp_to_dma_smoke packets=2 channels=2 cqes=2 ch0_full_the
 ## 运行入口
 
 ```text
-python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
-python3 flows/scripts/flowctl.py sim-dry-run
-python3 flows/scripts/flowctl.py sim
+make slvc_dma_512_defconfig
+make sim-dry-run
+make sim
 ```
 
 公开展示与 flow-contract 检查不需要 simulator：

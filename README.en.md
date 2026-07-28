@@ -125,12 +125,12 @@ make showcase-check
 Generate the default configuration and inspect executable commands:
 
 ```bash
-python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
-python3 flows/scripts/flowctl.py show-config
-python3 flows/scripts/flowctl.py sim-dry-run
+make slvc_dma_512_defconfig
+make showconfig
+make selected-dry-run
 ```
 
-Run `make sim` after installing ModelSim or Questa. Vivado, DC/PT, ORFS, PDK, and library paths are permitted only under ignored `flows/local/`; this public repository does not distribute commercial-tool artifacts or technology data.
+GNU Make is the single public flow interface; Python remains an internal configuration, log-marker, and audit backend. Run `make sim` after installing ModelSim or Questa. Vivado, DC/PT, ORFS, PDK, and library paths are permitted only under ignored `flows/local/`; this public repository does not distribute commercial-tool artifacts or technology data.
 
 ## Documentation And Release Boundary
 

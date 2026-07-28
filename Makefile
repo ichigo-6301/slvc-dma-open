@@ -5,6 +5,7 @@ LOCAL_CONFIG ?= flows/local/toolchain.mk
 PYTHON ?= python3
 KCONFIG_MCONF ?= mconf
 FLOWCTL := $(PYTHON) flows/scripts/flowctl.py --root "$(ROOT)" --config "$(CONFIG)"
+CHECKSUM_GENERATOR := $(PYTHON) provenance/generate_checksums.py --root "$(ROOT)"
 
 -include $(CONFIG)
 -include $(LOCAL_CONFIG)
@@ -33,7 +34,7 @@ DEFCONFIG_TARGETS := slvc_dma_512_core_only_defconfig \
 
 .RECIPEPREFIX := >
 .DEFAULT_GOAL := help
-.PHONY: help showcase-check public-hygiene \
+.PHONY: help showcase-check public-hygiene refresh-checksums verify-current-checksums \
         defconfig $(DEFCONFIG_TARGETS) menuconfig showconfig validate-profile \
         list-stages selected selected-dry-run $(FLOW_STAGES) $(DRY_RUN_TARGETS)
 
@@ -50,7 +51,8 @@ help:
 >   '  make <stage>-dry-run              Print one bounded tool invocation' \
 >   '  make <stage>                      Run one enabled stage' \
 >   '  make selected[-dry-run]           Run enabled stages in dependency order' \
->   '  make showcase-check               Run public integrity and flow contracts' \
+>   '  make showcase-check               Run public integrity and interface contracts' \
+>   '  make verify-current-checksums      Verify the tracked checksum manifest' \
 >   '' \
 >   'Stages: sim fpga-ooc adapter-dc-ooc rx-payload-writer-dc-ooc' \
 >   '        n45-c2-reg-{audit,sim,dc,pnr,sta}' \
@@ -64,6 +66,12 @@ showcase-check: public-hygiene
 
 public-hygiene:
 > @$(PYTHON) flows/scripts/public_hygiene.py --root "$(ROOT)"
+
+refresh-checksums:
+> @$(CHECKSUM_GENERATOR) --include-untracked
+
+verify-current-checksums:
+> @$(CHECKSUM_GENERATOR) --check
 
 defconfig:
 > @$(FLOWCTL) defconfig --source "$(DEFCONFIG)"

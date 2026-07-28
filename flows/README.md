@@ -6,9 +6,20 @@ entrypoints. It never carries tools,
 PDKs, libraries, generated IP, board
 projects, implementation databases, or credentials.
 
-`python3 flows/scripts/flowctl.py <command>` is the portable entrypoint and
-requires Python 3.6 or newer. GNU Make targets are convenience wrappers. `sim`
-requires `vsim` on `PATH`;
+GNU Make is the canonical public interface. It loads the selected `.config`,
+then the ignored `flows/local/toolchain.mk`, exports local tool options, and
+delegates fail-closed execution to the Python 3.6-or-newer backend. Select a
+tracked defconfig before running or inspecting a stage:
+
+```text
+make slvc_dma_512_defconfig
+make showconfig
+make validate-profile
+make list-stages
+make selected-dry-run
+```
+
+`sim` requires `vsim` on `PATH`;
 `fpga-ooc` requires `vivado` on `PATH` or an explicit `VIVADO` environment
 variable and writes only ignored `build/` and
 `reports/` outputs. `adapter-dc-ooc` requires `dc_shell` and an untracked
@@ -19,8 +30,10 @@ module-only frontend synthesis, not full-DMA area or signoff flows. The
 `*-dry-run` commands print the exact invocation
 without calling a commercial tool.
 
-Linux examples use `python3`. On Windows, use `python` directly or invoke Make
-with `PYTHON=python` when that command resolves to Python 3.6 or newer.
+Command-line Make assignments override `flows/local/toolchain.mk`, which in
+turn supplies local tool/path values after the tracked `.config`. Linux and
+WSL examples use `PYTHON=python3`; native Windows installations with GNU Make
+can use `PYTHON=python`.
 
 The selected simulation runner always validates the ten frozen core tests. When
 `CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y`, it appends four optional adapter tests;
@@ -40,11 +53,9 @@ error summary, and every exact marker configured for each test. It has no depend
 Select and inspect the optional same-clock wide RX profile with:
 
 ```text
-python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_wide_defconfig
-python3 flows/scripts/flowctl.py show-config
-python3 flows/scripts/flowctl.py sim-dry-run
-python3 flows/scripts/flowctl.py fpga-ooc-dry-run
-python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
+make slvc_dma_512_rx_wide_defconfig
+make showconfig
+make sim-dry-run fpga-ooc-dry-run rx-payload-writer-dc-ooc-dry-run
 ```
 
 The profile adds a dedicated 512-bit AXI4 write master at `frame_dma_rx_top`.
@@ -54,12 +65,10 @@ memory path remain the default release configuration.
 Select either dual-clock profile with:
 
 ```text
-python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_async64_defconfig
-# or: configs/slvc_dma_512_rx_async512_defconfig
-python3 flows/scripts/flowctl.py show-config
-python3 flows/scripts/flowctl.py sim-dry-run
-python3 flows/scripts/flowctl.py fpga-ooc-dry-run
-python3 flows/scripts/flowctl.py rx-payload-writer-dc-ooc-dry-run
+make slvc_dma_512_rx_async64_defconfig
+# or: make slvc_dma_512_rx_async512_defconfig
+make showconfig
+make selected-dry-run
 ```
 
 These profiles add `mem_clk`/`mem_aresetn`, keep AXI AW/W/B in the memory
@@ -85,11 +94,9 @@ The C2B4 register-expanded profile exposes the measured DC-to-physical method
 without distributing technology data or implementation artifacts:
 
 ```text
-python3 flows/scripts/flowctl.py n45-c2-reg-audit
-python3 flows/scripts/flowctl.py n45-c2-reg-sim-dry-run
-python3 flows/scripts/flowctl.py n45-c2-reg-dc-dry-run
-python3 flows/scripts/flowctl.py n45-c2-reg-pnr-dry-run
-python3 flows/scripts/flowctl.py n45-c2-reg-sta-dry-run
+make dma_rx512_reg_c2_b4_m2_sp64_defconfig
+make showconfig validate-profile
+make selected-dry-run
 ```
 
 The profile contains two channels, 4 KiB per channel, metadata depth 2, 64
@@ -107,9 +114,10 @@ The commands fail closed on missing or mismatched libraries and handoffs.
 Vivado 2022.2 and SRAM research methods have separate entries:
 
 ```text
-python3 flows/scripts/flowctl.py vivado-async64-2022.2-ooc-dry-run
-python3 flows/scripts/flowctl.py n45-a5-model-audit-dry-run
-python3 flows/scripts/flowctl.py n45-a5-clock-delivery-audit-dry-run
+make slvc_dma_512_rx_async64_defconfig
+make vivado-async64-2022.2-ooc-dry-run
+make n45-a5-model-audit-dry-run
+make n45-a5-clock-delivery-audit-dry-run
 ```
 
 The A5 commands audit model and clock-delivery contracts only. They do not
@@ -119,14 +127,23 @@ remain operator-provided and untracked.
 Run the public contract suite with:
 
 ```text
-python3 -m unittest flows.scripts.test_n45_showcase
+make showcase-check
 ```
 
-It contains exactly 48 C2 flow-contract tests plus three identity/dry-run
-tests. It verifies published adapters and hashes; it does not rerun the
-commercial or long physical measurements.
+It retains the 48 C2 flow-contract tests plus three identity/dry-run tests and
+adds ten Make/backend interface contracts. It verifies published adapters,
+hashes, defconfigs, stage gating, command equivalence, and compatibility
+aliases; it does not rerun RTL simulation or commercial/long physical tools.
 
-`python3 flows/scripts/public_hygiene.py --root .` verifies the tracked public
-release checksum manifest and local Markdown links without invoking an EDA
-tool. `make public-hygiene` is its Make wrapper and is the same check used by
+`make public-hygiene` verifies the tracked public release checksum manifest and
+local Markdown links without invoking an EDA tool. It is the same check used by
 the public GitHub Actions workflow.
+
+## Internal Compatibility Interface
+
+`flows/scripts/flowctl.py` remains the implementation backend and is not a
+second public flow surface. Direct legacy subcommands remain accepted until
+the next tagged release and print a migration warning, for example
+`python3 flows/scripts/flowctl.py sim-dry-run`. New automation should use
+`make sim-dry-run`; both paths reach the same stage registry during the
+transition.

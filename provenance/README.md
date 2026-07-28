@@ -20,3 +20,9 @@ Optional RX payload memory backends are branch-local development profiles.
 [`rx_payload_cdc_development.yaml`](rx_payload_cdc_development.yaml) binds
 their implementation commit and four evidence summaries without changing
 `release.yaml`, public `main`, or the frozen RC1 tag.
+
+Current `main` exposes implementation stages through GNU Make. Python remains
+an internal fail-closed dispatcher for configuration, native log markers, and
+artifact audits. [`make_flow_interface.yaml`](make_flow_interface.yaml) records
+that interface-only migration separately from measured RTL, FPGA, and ASIC
+evidence.

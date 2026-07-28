@@ -45,9 +45,9 @@ The ideal 1 MiB workload measures 64 B/cycle for same-clock 512 and async512, an
 ## Entrypoints
 
 ```text
-python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_defconfig
-python3 flows/scripts/flowctl.py sim-dry-run
-python3 flows/scripts/flowctl.py sim
+make slvc_dma_512_defconfig
+make sim-dry-run
+make sim
 ```
 
 The public presentation and flow-contract check does not require a simulator:

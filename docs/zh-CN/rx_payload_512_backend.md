@@ -35,10 +35,10 @@ B response 后，才发布 frame completion。
 `frame_dma_rx_top`。公开 flow 通过 `configs/slvc_dma_512_rx_wide_defconfig` 选择：
 
 ```text
-python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_wide_defconfig
-python3 flows/scripts/flowctl.py show-config
-python3 flows/scripts/flowctl.py sim-dry-run
-python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+make slvc_dma_512_rx_wide_defconfig
+make showconfig
+make sim-dry-run
+make fpga-ooc-dry-run
 ```
 
 该 profile 执行 10 项 frozen-core regression 和 2 项 wide-backend test，不启用可选

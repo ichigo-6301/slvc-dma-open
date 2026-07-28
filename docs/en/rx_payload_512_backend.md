@@ -40,10 +40,10 @@ The feature is default-off and compiled into `frame_dma_rx_top` only with
 `configs/slvc_dma_512_rx_wide_defconfig`:
 
 ```text
-python3 flows/scripts/flowctl.py defconfig --source configs/slvc_dma_512_rx_wide_defconfig
-python3 flows/scripts/flowctl.py show-config
-python3 flows/scripts/flowctl.py sim-dry-run
-python3 flows/scripts/flowctl.py fpga-ooc-dry-run
+make slvc_dma_512_rx_wide_defconfig
+make showconfig
+make sim-dry-run
+make fpga-ooc-dry-run
 ```
 
 That profile runs ten frozen-core regressions plus two wide-backend tests. It

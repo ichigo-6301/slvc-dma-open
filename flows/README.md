@@ -25,7 +25,10 @@ Makefile is invoked from another working directory, for example
 `make -f /path/to/slvc-dma-open/Makefile showconfig`. The Make include,
 Python backend, `DMA_FLOW_CONFIG`, `KCONFIG_CONFIG`, and Kconfig frontend all
 receive the same canonical config path; `menuconfig` always reads the
-repository's `Kconfig`.
+repository's `Kconfig`. Backslashes are normalized to `/` before this
+classification, so relative Windows paths remain repository-rooted while
+drive paths, backslash-rooted paths, and UNC paths such as
+`\\server\share\profile` remain absolute (`//server/share/profile`).
 
 `sim` requires `vsim` on `PATH`;
 `fpga-ooc` requires `vivado` on `PATH` or an explicit `VIVADO` environment
@@ -50,7 +53,9 @@ executable path that contains spaces, for example
 The fixed startup arguments are placed before stage-specific arguments, and
 only the executable token is checked as a file or `PATH` entry. Windows
 `.bat`/`.cmd` launchers are executed through `cmd /c`. These values are not
-shell snippets: pipes, redirects, and command chaining fail closed.
+shell snippets: pipes, redirects, and command chaining fail closed. This
+restriction also applies when the executable is an existing file, so tool
+paths containing `|`, `&`, `;`, `<`, or `>` must be relocated or renamed.
 
 The selected simulation runner always validates the ten frozen core tests. When
 `CONFIG_SLVC_DMA_UDP_IPV4_ADAPTER=y`, it appends four optional adapter tests;
@@ -148,7 +153,7 @@ make showcase-check
 ```
 
 It retains the 48 C2 flow-contract tests plus three identity/dry-run tests and
-adds 22 Make/backend interface contracts. It verifies published adapters,
+adds 24 Make/backend interface contracts. It verifies published adapters,
 hashes, defconfigs, stage gating, rooted external invocation, tool-prefix
 parsing, command equivalence, and compatibility aliases; it does not rerun RTL
 simulation or commercial/long physical tools. GNU Make-specific contracts are

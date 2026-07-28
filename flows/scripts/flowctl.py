@@ -108,26 +108,31 @@ def strip_matching_quotes(value):
     return value
 
 
+def validate_tool_command(command):
+    if not command or not command[0]:
+        raise RuntimeError("tool command is empty")
+    shell_operator_chars = "|&;<>\n\r"
+    if any(any(char in str(item) for char in shell_operator_chars)
+           for item in command):
+        raise RuntimeError("tool command must not contain shell operators")
+    return command
+
+
 def split_tool(value):
     value = value.strip()
     if not value:
         raise RuntimeError("tool command is empty")
     candidate = Path(strip_matching_quotes(value))
     if candidate.is_file():
-        return [str(candidate)]
-    try:
-        command = shlex.split(value, posix=(os.name != "nt"))
-    except ValueError as error:
-        raise RuntimeError("invalid tool command: {}".format(error))
-    if os.name == "nt":
-        command = [strip_matching_quotes(item) for item in command]
-    if not command or not command[0]:
-        raise RuntimeError("tool command is empty")
-    shell_operator_chars = "|&;<>\n\r"
-    if any(any(char in item for char in shell_operator_chars)
-           for item in command):
-        raise RuntimeError("tool command must not contain shell operators")
-    return command
+        command = [str(candidate)]
+    else:
+        try:
+            command = shlex.split(value, posix=(os.name != "nt"))
+        except ValueError as error:
+            raise RuntimeError("invalid tool command: {}".format(error))
+        if os.name == "nt":
+            command = [strip_matching_quotes(item) for item in command]
+    return validate_tool_command(command)
 
 
 def format_command(command):
@@ -144,12 +149,14 @@ def require_tool(command):
                 if Path(executable).is_file() else shutil.which(executable))
     if not resolved:
         raise RuntimeError("tool not found on PATH: {}".format(executable))
+    validate_tool_command([resolved] + command[1:])
     return resolved
 
 
 def wrap_windows_batch(command, resolved_executable=None):
     executable = resolved_executable or command[0]
     if os.name == "nt" and Path(executable).suffix.lower() in (".bat", ".cmd"):
+        validate_tool_command(command)
         return ["cmd", "/c"] + command
     return command
 

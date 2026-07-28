@@ -52,26 +52,31 @@ def strip_matching_quotes(value):
     return value
 
 
+def validate_tool_command(command):
+    if not command or not command[0]:
+        raise RuntimeError("tool command is empty")
+    shell_operator_chars = "|&;<>\n\r"
+    if any(any(char in str(item) for char in shell_operator_chars)
+           for item in command):
+        raise RuntimeError("tool command must not contain shell operators")
+    return command
+
+
 def split_tool(value):
     value = value.strip()
     if not value:
         raise RuntimeError("tool command is empty")
     candidate = Path(strip_matching_quotes(value))
     if candidate.is_file():
-        return [str(candidate)]
-    try:
-        command = shlex.split(value, posix=(os.name != "nt"))
-    except ValueError as error:
-        raise RuntimeError("invalid tool command: {}".format(error))
-    if os.name == "nt":
-        command = [strip_matching_quotes(item) for item in command]
-    if not command or not command[0]:
-        raise RuntimeError("tool command is empty")
-    shell_operator_chars = "|&;<>\n\r"
-    if any(any(char in item for char in shell_operator_chars)
-           for item in command):
-        raise RuntimeError("tool command must not contain shell operators")
-    return command
+        command = [str(candidate)]
+    else:
+        try:
+            command = shlex.split(value, posix=(os.name != "nt"))
+        except ValueError as error:
+            raise RuntimeError("invalid tool command: {}".format(error))
+        if os.name == "nt":
+            command = [strip_matching_quotes(item) for item in command]
+    return validate_tool_command(command)
 
 
 def print_command(command):
@@ -85,19 +90,28 @@ def print_command(command):
 def wrap_windows_batch(command, resolved_executable=None):
     executable = resolved_executable or command[0]
     if os.name == "nt" and Path(executable).suffix.lower() in (".bat", ".cmd"):
+        validate_tool_command(command)
         return ["cmd", "/c"] + command
     return command
+
+
+def require_tool(command):
+    if not command:
+        raise RuntimeError("tool command is empty")
+    executable = command[0]
+    resolved = (str(Path(executable).resolve())
+                if Path(executable).is_file() else shutil.which(executable))
+    if not resolved:
+        raise RuntimeError("tool not found: {}".format(executable))
+    validate_tool_command([resolved] + command[1:])
+    return resolved
 
 
 def run_command(command, root, environment, dry_run, cwd=None):
     if dry_run:
         print_command(wrap_windows_batch(command))
         return
-    executable = command[0]
-    resolved = (str(Path(executable).resolve())
-                if Path(executable).is_file() else shutil.which(executable))
-    if not resolved:
-        raise RuntimeError("tool not found: {}".format(executable))
+    resolved = require_tool(command)
     command = wrap_windows_batch([resolved] + command[1:], resolved)
     print_command(command)
     subprocess.run(
@@ -140,8 +154,15 @@ def run_c2_sim(root, dry_run):
     )
     tool = split_tool(os.environ.get("VSIM", "vsim"))
     environment = c2_environment(root)
+    resolved_tool = None if dry_run else require_tool(tool)
     for script, marker in cases:
         command = tool + ["-c", "-do", script]
+        if dry_run:
+            command = wrap_windows_batch(command)
+        else:
+            command = wrap_windows_batch(
+                [resolved_tool] + command[1:], resolved_tool
+            )
         print_command(command)
         print("required_marker: " + marker)
         if dry_run:

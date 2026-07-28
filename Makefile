@@ -2,10 +2,10 @@ ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 CONFIG ?= .config
 LOCAL_CONFIG ?= flows/local/toolchain.mk
 
-# POSIX absolute paths begin with '/', while native Windows paths carry a
-# drive colon. GNU Make normalizes either form without consulting the caller's
-# working directory.
-root_path = $(abspath $(if $(or $(filter /%,$(1)),$(findstring :,$(1))),$(1),$(ROOT)/$(1)))
+# Normalize Windows separators before classifying paths. UNC and drive paths
+# stay absolute on every host; relative paths remain rooted at this checkout.
+normalize_path = $(subst \,/,$(strip $(1)))
+root_path = $(if $(filter //%,$(call normalize_path,$(1))),$(call normalize_path,$(1)),$(if $(findstring :,$(call normalize_path,$(1))),$(call normalize_path,$(1)),$(abspath $(if $(filter /%,$(call normalize_path,$(1))),$(call normalize_path,$(1)),$(ROOT)/$(call normalize_path,$(1))))))
 CONFIG_PATH := $(call root_path,$(CONFIG))
 LOCAL_CONFIG_PATH := $(call root_path,$(LOCAL_CONFIG))
 

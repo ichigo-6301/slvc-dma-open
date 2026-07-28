@@ -42,6 +42,13 @@ jobs:
         name: Inspect A5 audit utilities
         run: make n45-a5-model-audit-dry-run n45-a5-clock-delivery-audit-dry-run PYTHON=python3
       -
+        name: Exercise Makefile from outside the repository
+        run: |
+          external_dir="$(mktemp -d)"
+          make -C "$external_dir" -f "$GITHUB_WORKSPACE/Makefile" \
+            CONFIG=configs/slvc_dma_512_rx_async64_defconfig \
+            showconfig validate-profile selected-dry-run PYTHON=python3
+      -
         name: Confirm tracked worktree hygiene
         run: test -z "$(git status --porcelain)"
   public-windows:

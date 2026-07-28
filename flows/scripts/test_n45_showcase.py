@@ -5,8 +5,11 @@ import hashlib
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+
+from flows.scripts import n45_showcase
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -114,6 +117,25 @@ class ShowcaseIdentityTest(unittest.TestCase):
                 stderr=subprocess.STDOUT, universal_newlines=True,
             )
             self.assertEqual(completed.returncode, 0, completed.stdout)
+
+
+class ShowcaseToolCommandTest(unittest.TestCase):
+    def test_tool_prefix_accepts_quoted_path_and_arguments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / "EDA tool with spaces"
+            executable.write_text("bounded test tool\n", encoding="utf-8")
+            value = '"{}" -64'.format(executable)
+            self.assertEqual(
+                n45_showcase.split_tool(value),
+                [str(executable), "-64"],
+            )
+
+    def test_tool_prefix_rejects_empty_and_shell_expressions(self):
+        with self.assertRaisesRegex(RuntimeError, "empty"):
+            n45_showcase.split_tool("")
+        for value in ("pt_shell | tee pt.log", "dc_shell > dc.log"):
+            with self.assertRaisesRegex(RuntimeError, "shell operators"):
+                n45_showcase.split_tool(value)
 
 
 if __name__ == "__main__":

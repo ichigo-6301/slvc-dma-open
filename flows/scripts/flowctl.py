@@ -101,18 +101,64 @@ def parse_config(path):
     return values
 
 
+def strip_matching_quotes(value):
+    if (len(value) >= 2 and value[0] == value[-1] and
+            value[0] in ("'", '"')):
+        return value[1:-1]
+    return value
+
+
+def validate_tool_command(command):
+    if not command or not command[0]:
+        raise RuntimeError("tool command is empty")
+    shell_operator_chars = "|&;<>\n\r"
+    if any(any(char in str(item) for char in shell_operator_chars)
+           for item in command):
+        raise RuntimeError("tool command must not contain shell operators")
+    return command
+
+
 def split_tool(value):
-    candidate = Path(value.strip('"'))
+    value = value.strip()
+    if not value:
+        raise RuntimeError("tool command is empty")
+    candidate = Path(strip_matching_quotes(value))
     if candidate.is_file():
-        return [str(candidate)]
-    return shlex.split(value, posix=(os.name != "nt"))
+        command = [str(candidate)]
+    else:
+        try:
+            command = shlex.split(value, posix=(os.name != "nt"))
+        except ValueError as error:
+            raise RuntimeError("invalid tool command: {}".format(error))
+        if os.name == "nt":
+            command = [strip_matching_quotes(item) for item in command]
+    return validate_tool_command(command)
+
+
+def format_command(command):
+    if os.name == "nt":
+        return subprocess.list2cmdline([str(item) for item in command])
+    return " ".join(shlex.quote(str(item)) for item in command)
 
 
 def require_tool(command):
+    if not command:
+        raise RuntimeError("tool command is empty")
     executable = command[0]
-    if not Path(executable).is_file() and not shutil.which(executable):
+    resolved = (str(Path(executable).resolve())
+                if Path(executable).is_file() else shutil.which(executable))
+    if not resolved:
         raise RuntimeError("tool not found on PATH: {}".format(executable))
-    return executable
+    validate_tool_command([resolved] + command[1:])
+    return resolved
+
+
+def wrap_windows_batch(command, resolved_executable=None):
+    executable = resolved_executable or command[0]
+    if os.name == "nt" and Path(executable).suffix.lower() in (".bat", ".cmd"):
+        validate_tool_command(command)
+        return ["cmd", "/c"] + command
+    return command
 
 
 def rx_memory_profile(config):
@@ -276,11 +322,22 @@ def run_sim(root, config, dry_run):
     tool = split_tool(os.environ.get("VSIM", "vsim"))
     commands = [(tool + ["-c", "-do", script], markers)
                 for script, markers in cases]
+    if not dry_run:
+        resolved_tool = require_tool(tool)
+        commands = [
+            (wrap_windows_batch([resolved_tool] + command[1:], resolved_tool),
+             markers)
+            for command, markers in commands
+        ]
+    else:
+        commands = [
+            (wrap_windows_batch(command), markers)
+            for command, markers in commands
+        ]
     for command, _ in commands:
-        print("command: " + " ".join(command))
+        print("command: " + format_command(command))
     if dry_run:
         return
-    require_tool(tool)
     for command, markers in commands:
         completed = subprocess.run(
             command,
@@ -303,8 +360,7 @@ def run_sim(root, config, dry_run):
 
 
 def run_ooc(root, config, dry_run):
-    tool_name = os.environ.get("VIVADO", "vivado")
-    tool = shutil.which(tool_name) or tool_name
+    tool = split_tool(os.environ.get("VIVADO", "vivado"))
     rx_profile = rx_memory_profile(config)
     if rx_profile == "same_clock_512":
         script = "fpga/xilinx/synth_rx_payload_512_ooc_2018_3.tcl"
@@ -314,12 +370,12 @@ def run_ooc(root, config, dry_run):
         script = "fpga/xilinx/synth_rx_payload_async512_ooc_2018_3.tcl"
     else:
         script = "fpga/xilinx/synth_frame_dma_ooc_2018_3.tcl"
-    command = [tool, "-mode", "batch", "-source", script]
-    print("command: " + " ".join(command))
+    command = tool + ["-mode", "batch", "-source", script]
+    display_command = wrap_windows_batch(command)
+    print("command: " + format_command(display_command))
     if dry_run:
         return
-    if not shutil.which(tool_name) and not Path(tool_name).is_file():
-        raise RuntimeError("tool not found on PATH: {}".format(tool_name))
+    resolved_tool = require_tool(tool)
     environment = os.environ.copy()
     environment["DMA_ROOT"] = str(root)
     environment.setdefault("REPORT_TAG", "fresh_clone_explore")
@@ -331,29 +387,27 @@ def run_ooc(root, config, dry_run):
         "DMA_MEM_CLOCK_PERIOD_NS",
         config.get("CONFIG_SLVC_DMA_MEM_CLOCK_PERIOD_NS", "5.000"),
     )
-    if Path(tool).suffix.lower() in (".bat", ".cmd"):
-        command = ["cmd", "/c", *command]
+    command = wrap_windows_batch([resolved_tool] + command[1:], resolved_tool)
     subprocess.run(command, cwd=str(root), env=environment, check=True)
 
 
 def run_adapter_dc_ooc(root, dry_run):
-    tool_name = os.environ.get("DC_SHELL", "dc_shell")
-    tool = shutil.which(tool_name) or tool_name
-    command = [tool, "-f", "run_udp_to_shdr_ooc.tcl"]
-    print("command: " + " ".join(command))
+    tool = split_tool(os.environ.get("DC_SHELL", "dc_shell"))
+    command = tool + ["-f", "run_udp_to_shdr_ooc.tcl"]
+    display_command = wrap_windows_batch(command)
+    print("command: " + format_command(display_command))
     if dry_run:
         return
     if not os.environ.get("DMA_DC_TARGET_LIBRARY"):
         raise RuntimeError("DMA_DC_TARGET_LIBRARY must name a local standard-cell .db library")
-    if not shutil.which(tool_name) and not Path(tool_name).is_file():
-        raise RuntimeError("tool not found on PATH: {}".format(tool_name))
+    resolved_tool = require_tool(tool)
+    command = wrap_windows_batch([resolved_tool] + command[1:], resolved_tool)
     subprocess.run(command, cwd=str(root / "asic" / "dc"), check=True)
 
 
 def run_rx_payload_writer_dc_ooc(root, config, dry_run):
-    tool_name = os.environ.get("DC_SHELL", "dc_shell")
-    tool = shutil.which(tool_name) or tool_name
-    command = [tool, "-f", "run_rx_payload_writer_ooc.tcl"]
+    tool = split_tool(os.environ.get("DC_SHELL", "dc_shell"))
+    command = tool + ["-f", "run_rx_payload_writer_ooc.tcl"]
     environment = os.environ.copy()
     default_profile = {
         "legacy64": "wide512",
@@ -368,13 +422,14 @@ def run_rx_payload_writer_dc_ooc(root, config, dry_run):
     )
     print("writer_profile: {}".format(environment["DMA_DC_WRITER_PROFILE"]))
     print("clock_period_ns: {}".format(environment["DMA_DC_CLOCK_PERIOD_NS"]))
-    print("command: " + " ".join(command))
+    display_command = wrap_windows_batch(command)
+    print("command: " + format_command(display_command))
     if dry_run:
         return
     if not environment.get("DMA_DC_TARGET_LIBRARY"):
         raise RuntimeError("DMA_DC_TARGET_LIBRARY must name a local standard-cell .db library")
-    if not shutil.which(tool_name) and not Path(tool_name).is_file():
-        raise RuntimeError("tool not found on PATH: {}".format(tool_name))
+    resolved_tool = require_tool(tool)
+    command = wrap_windows_batch([resolved_tool] + command[1:], resolved_tool)
     subprocess.run(
         command,
         cwd=str(root / "asic" / "dc"),

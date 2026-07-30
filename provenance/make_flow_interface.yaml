@@ -24,6 +24,11 @@ verification_scope:
     - stage_enable_fail_closed
     - dry_run_command_equivalence
     - legacy_alias_equivalence
+    - external_working_directory_make_invocation
+    - rooted_config_kconfig_identity
+    - windows_rooted_and_unc_path_identity
+    - literal_tool_command_prefixes
+    - c2_windows_batch_launcher
     - windows_python_backend
     - linux_make_frontend
 deltas:

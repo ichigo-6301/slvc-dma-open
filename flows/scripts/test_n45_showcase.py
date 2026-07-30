@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """Public flow-contract and profile tests for the current showcase."""
 
+import contextlib
 import hashlib
+import io
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
+
+from flows.scripts import n45_showcase
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -114,6 +120,108 @@ class ShowcaseIdentityTest(unittest.TestCase):
                 stderr=subprocess.STDOUT, universal_newlines=True,
             )
             self.assertEqual(completed.returncode, 0, completed.stdout)
+
+
+class ShowcaseToolCommandTest(unittest.TestCase):
+    def test_tool_prefix_accepts_quoted_path_and_arguments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / "EDA tool with spaces"
+            executable.write_text("bounded test tool\n", encoding="utf-8")
+            value = '"{}" -64'.format(executable)
+            self.assertEqual(
+                n45_showcase.split_tool(value),
+                [str(executable), "-64"],
+            )
+
+    def test_tool_prefix_rejects_empty_and_shell_expressions(self):
+        with self.assertRaisesRegex(RuntimeError, "empty"):
+            n45_showcase.split_tool("")
+        for value in ("pt_shell | tee pt.log", "dc_shell > dc.log"):
+            with self.assertRaisesRegex(RuntimeError, "shell operators"):
+                n45_showcase.split_tool(value)
+        with tempfile.TemporaryDirectory() as directory:
+            executable = Path(directory) / "tool&chain.cmd"
+            executable.write_text("@echo off\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "shell operators"):
+                n45_showcase.split_tool(str(executable))
+            if os.name == "nt":
+                with self.assertRaisesRegex(RuntimeError, "shell operators"):
+                    n45_showcase.wrap_windows_batch([str(executable), "-64"])
+        with mock.patch.object(
+                n45_showcase.shutil, "which",
+                return_value="C:/EDA&Tools/vsim.exe"):
+            with self.assertRaisesRegex(RuntimeError, "shell operators"):
+                n45_showcase.require_tool(["vsim", "-64"])
+
+    def test_c2_sim_uses_resolved_batch_launcher_and_preserves_markers(self):
+        markers = {
+            "run_rtl_rx_payload_writer_512.do": (
+                "PASS tb_rtl_rx_payload_writer_512 cases=2028"
+            ),
+            "run_rtl_rx_payload_writer_512_integration.do": (
+                "PASS tb_rtl_rx_payload_writer_512_integration"
+            ),
+            "run_rtl_rx_mem_async64_backend.do": (
+                "PASS tb_rtl_rx_mem_async64_backend"
+            ),
+            "run_rtl_rx_mem_async64_integration.do": (
+                "PASS tb_rtl_rx_mem_async64_integration"
+            ),
+            "run_rtl_rx_mem_async512_backend.do": (
+                "PASS tb_rtl_rx_mem_async512_backend"
+            ),
+            "run_rtl_rx_mem_async512_integration.do": (
+                "PASS tb_rtl_rx_mem_async512_integration"
+            ),
+            "run_dma_a3_profile.do": "PASS tb_dma_rx512_memory_subsystem",
+            "run_dma_a3_config_contract.do": (
+                "PASS tb_dma_a3_config_contract channels=2"
+            ),
+            "run_dma_a3_banked_memory_contract.do": (
+                "PASS tb_dma_a3_banked_memory_contract depth=128"
+            ),
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            launcher = Path(directory) / "vsim launcher.cmd"
+            launcher.write_text("@echo off\n", encoding="utf-8")
+            environment = {"VSIM": '"{}" -64'.format(launcher)}
+
+            dry_output = io.StringIO()
+            with mock.patch.dict(os.environ, environment, clear=False):
+                with contextlib.redirect_stdout(dry_output):
+                    n45_showcase.run_c2_sim(ROOT, True)
+            self.assertEqual(dry_output.getvalue().count("required_marker: "), 9)
+            if os.name == "nt":
+                self.assertIn("command: cmd /c", dry_output.getvalue())
+            else:
+                self.assertNotIn("command: cmd /c", dry_output.getvalue())
+            self.assertIn("-64 -c -do", dry_output.getvalue())
+
+            def completed(command, **_kwargs):
+                marker = markers[command[-1]]
+                return mock.Mock(
+                    returncode=0,
+                    stdout=marker + "\n# Errors: 0\n",
+                )
+
+            run_output = io.StringIO()
+            with mock.patch.dict(os.environ, environment, clear=False):
+                with mock.patch.object(
+                        n45_showcase.subprocess, "run", side_effect=completed) as run:
+                    with contextlib.redirect_stdout(run_output):
+                        n45_showcase.run_c2_sim(ROOT, False)
+            self.assertEqual(run.call_count, 9)
+            for invocation in run.call_args_list:
+                command = invocation[0][0]
+                offset = 2 if os.name == "nt" else 0
+                if os.name == "nt":
+                    self.assertEqual(command[:2], ["cmd", "/c"])
+                self.assertEqual(command[offset], str(launcher.resolve()))
+                self.assertEqual(
+                    command[offset + 1:offset + 4], ["-64", "-c", "-do"]
+                )
+                self.assertIn(command[-1], markers)
 
 
 if __name__ == "__main__":

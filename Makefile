@@ -1,17 +1,32 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 CONFIG ?= .config
-DEFCONFIG ?= configs/slvc_dma_512_defconfig
 LOCAL_CONFIG ?= flows/local/toolchain.mk
+
+# Normalize Windows separators before classifying paths. UNC and drive paths
+# stay absolute on every host; relative paths remain rooted at this checkout.
+normalize_path = $(subst \,/,$(strip $(1)))
+root_path = $(if $(filter //%,$(call normalize_path,$(1))),$(call normalize_path,$(1)),$(if $(findstring :,$(call normalize_path,$(1))),$(call normalize_path,$(1)),$(abspath $(if $(filter /%,$(call normalize_path,$(1))),$(call normalize_path,$(1)),$(ROOT)/$(call normalize_path,$(1))))))
+CONFIG_PATH := $(call root_path,$(CONFIG))
+LOCAL_CONFIG_PATH := $(call root_path,$(LOCAL_CONFIG))
+
+-include $(CONFIG_PATH)
+-include $(LOCAL_CONFIG_PATH)
+
+DEFCONFIG ?= configs/slvc_dma_512_defconfig
 PYTHON ?= python3
 KCONFIG_MCONF ?= mconf
-FLOWCTL := $(PYTHON) flows/scripts/flowctl.py --root "$(ROOT)" --config "$(CONFIG)"
-CHECKSUM_GENERATOR := $(PYTHON) provenance/generate_checksums.py --root "$(ROOT)"
-
--include $(CONFIG)
--include $(LOCAL_CONFIG)
+VSIM ?= vsim
+VIVADO ?= vivado
+VIVADO_2022_2 ?= vivado
+DC_SHELL ?= dc_shell
+PT_SHELL ?= pt_shell
+DEFCONFIG_PATH = $(call root_path,$(DEFCONFIG))
+KCONFIG_PATH := $(ROOT)/Kconfig
+FLOWCTL = $(PYTHON) "$(ROOT)/flows/scripts/flowctl.py" --root "$(ROOT)" --config "$(CONFIG_PATH)"
+CHECKSUM_GENERATOR = $(PYTHON) "$(ROOT)/provenance/generate_checksums.py" --root "$(ROOT)"
 
 export DMA_FLOW_ROOT := $(ROOT)
-export DMA_FLOW_CONFIG := $(abspath $(CONFIG))
+export DMA_FLOW_CONFIG := $(CONFIG_PATH)
 export PYTHON VSIM VIVADO VIVADO_2022_2 DC_SHELL PT_SHELL
 export DMA_DC_TARGET_LIBRARY DMA_N45_STDCELL_DB DMA_N45_LIBERTY DMA_ORFS_ROOT
 export DMA_C2_BUILD_ROOT DMA_C2_MAPPED_NETLIST DMA_C2_ALLOW_UNMEASURED_ROUTE
@@ -61,11 +76,11 @@ help:
 >   'Local tools, PDKs, and libraries belong in flows/local/ (ignored).'
 
 showcase-check: public-hygiene
-> @$(PYTHON) -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase
+> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase
 > @printf '%s\n' 'SHOWCASE_CHECK_PASS'
 
 public-hygiene:
-> @$(PYTHON) flows/scripts/public_hygiene.py --root "$(ROOT)"
+> @$(PYTHON) "$(ROOT)/flows/scripts/public_hygiene.py" --root "$(ROOT)"
 
 refresh-checksums:
 > @$(CHECKSUM_GENERATOR) --include-untracked
@@ -74,18 +89,18 @@ verify-current-checksums:
 > @$(CHECKSUM_GENERATOR) --check
 
 defconfig:
-> @$(FLOWCTL) defconfig --source "$(DEFCONFIG)"
+> @$(FLOWCTL) defconfig --source "$(DEFCONFIG_PATH)"
 
 $(DEFCONFIG_TARGETS):
 > @$(FLOWCTL) defconfig --source "$(ROOT)/configs/$@"
 
 menuconfig:
-> @test -f "$(CONFIG)" || $(FLOWCTL) defconfig --source "$(DEFCONFIG)"
+> @test -f "$(CONFIG_PATH)" || $(FLOWCTL) defconfig --source "$(DEFCONFIG_PATH)"
 > @command -v "$(KCONFIG_MCONF)" >/dev/null 2>&1 || { \
 >   echo 'Kconfig frontend not found; install mconf/kconfig-frontends or set KCONFIG_MCONF.'; \
 >   exit 2; \
 > }
-> @KCONFIG_CONFIG="$(abspath $(CONFIG))" "$(KCONFIG_MCONF)" Kconfig
+> @KCONFIG_CONFIG="$(CONFIG_PATH)" "$(KCONFIG_MCONF)" "$(KCONFIG_PATH)"
 
 showconfig:
 > @$(FLOWCTL) show-config

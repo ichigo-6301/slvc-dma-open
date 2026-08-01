@@ -77,12 +77,22 @@ EXPECTED_EVALUATIONS = {
         "top": "dma_axi_write_engine_512",
         "parameters": "MAX_BURST_BEATS=16;MAX_OUTSTANDING=4",
         "constraint_id": "writer_ooc_p1p5_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+        "constraint_values": {
+            "clock_period_ns": "1.5", "setup_uncertainty_ns": "0.2",
+            "hold_uncertainty_ns": "0.05", "io_delay_ns": "0.5",
+            "input_transition_ns": "0.1", "output_load": "0.05",
+            "max_fanout": "16", "max_transition_ns": "0.5",
+        },
         "claim_record": {
             "profile": "dma_axi_write_engine_512_component_eval",
             "statement": "\"At the same 1.500 ns Nangate45 DC OOC constraint, the reservation candidate reduced Writer total cell area by 7.966353 percent and combinational area by 15.838902 percent; both points remained setup-closed.\"",
             "metric": "component_paired_dc_total_cell_area",
             "value": "-7.966353",
             "unit": "percent candidate-minus-baseline",
+            "benchmark": "dma_axi_write_engine_512 W0 versus W1",
+            "configuration": "\"MAX_OUTSTANDING=4; MAX_BURST_BEATS=16; register-expanded component; identical tool, library, and constraints\"",
+            "tool": "Design Compiler O-2018.06-SP1",
+            "caveat": "\"Component-level DC OOC only; this does not establish C2B4 or complete-DMA area reduction, Fmax, P&R, power, or signoff.\"",
         },
         "claim_values": {
             "total_cell_area": {"delta_percent": "-7.966353"},
@@ -108,12 +118,22 @@ EXPECTED_EVALUATIONS = {
         "top": "dma_rx512_memory_subsystem_top",
         "parameters": "CHANNELS=2;FIXED_META_AW=1;FIXED_META_DEPTH=2;FIXED_PAYLOAD_AW=9;FIXED_PAYLOAD_WORDS=512;MAX_BURST_BEATS=16;MAX_OUTSTANDING=4;SHARED_BLOCK_AW=6;SHARED_BLOCK_NUM=64",
         "constraint_id": "c2b4_writer_subsystem_p1p818182_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+        "constraint_values": {
+            "clock_period_ns": "1.818182", "setup_uncertainty_ns": "0.2",
+            "hold_uncertainty_ns": "0.05", "io_delay_ns": "0.5",
+            "input_transition_ns": "0.1", "output_load": "0.05",
+            "max_fanout": "16", "max_transition_ns": "0.5",
+        },
         "claim_record": {
             "profile": "dma_rx512_reg_c2_b4_m2_sp64",
             "statement": "\"At the same 1.818182 ns C2B4 DC constraint, W0 and W1 both closed setup; W1 increased Writer hierarchy area by 54.393209 percent and reduced setup margin, so subsystem promotion was not supported.\"",
             "metric": "subsystem_paired_dc_promotion",
             "value": "not_promoted",
             "unit": "result",
+            "benchmark": "C2B4 register-expanded RX512 subsystem W0 versus W1",
+            "configuration": "\"2 channels; 4 KiB fixed payload per channel; 64 shared blocks; identical tool, library, and constraints\"",
+            "tool": "Design Compiler O-2018.06-SP1",
+            "caveat": "\"W2 is a numeric anchor match only, not a methodology-identical reproduction; no complete-DMA, Fmax, P&R, power, or signoff conclusion is made.\"",
         },
         "claim_values": {
             "writer_area": {"delta_percent": "54.393209"},
@@ -147,12 +167,22 @@ EXPECTED_EVALUATIONS = {
         "top": "dma_frame_shared_pool",
         "parameters": "BLOCK_AW=6;BLOCK_NUM=64;CH_ID_W=4;CH_NUM=16;DATA_W=512;DEBUG_OWNERSHIP=0;KEEP_W=64;MAX_FRAME_BLOCKS=32;META_AW=2;META_DEPTH=4",
         "constraint_id": "spdc_scheduler_n45_2p5ns_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+        "constraint_values": {
+            "clock_period_ns": "2.5", "setup_uncertainty_ns": "0.2",
+            "hold_uncertainty_ns": "0.05", "io_delay_ns": "0.5",
+            "input_transition_ns": "0.1", "output_load": "0.05",
+            "max_fanout": "16", "max_transition_ns": "0.5",
+        },
         "claim_record": {
             "profile": "dma_frame_shared_pool_register_expanded_eval",
             "statement": "\"At the same 2.500 ns Nangate45 DC OOC constraint, P7 improved setup WNS by 7.71332 ps while adding 52 registers and 0.019194 percent total cell area relative to P6.\"",
             "metric": "component_paired_dc_setup_wns",
             "value": "7.71332",
             "unit": "ps candidate-minus-baseline",
+            "benchmark": "dma_frame_shared_pool P6 versus P7",
+            "configuration": "\"16 channels; 64 by 512-bit blocks; metadata depth 4; DEBUG_OWNERSHIP=0; register-expanded storage\"",
+            "tool": "Design Compiler O-2018.06-SP1",
+            "caveat": "\"Component-level register-expanded DC OOC only; this is not SRAM-macro PPA, complete-DMA timing, Fmax, P&R, power, or signoff.\"",
         },
         "claim_values": {
             "setup_wns_ns": {"delta": "0.00771332"},
@@ -276,7 +306,7 @@ SENSITIVE_PATTERNS = (
     ("Windows absolute path", re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/]")),
     ("UNC path", re.compile(r"(?m)(?:^|[\s\"'])\\\\[^\\\s]+\\[^\\\s]+")),
     ("POSIX absolute path", re.compile(
-        r"(?m)(?:^|(?<=[\s\"'=(:]))/(?![/\s])[^\s\"'<>]*"
+        r"(?m)(?<![A-Za-z0-9._/])/(?![/\s])[^\s\"'<>]*"
     )),
     ("private Git remote", re.compile(r"(?i)(?:git@|ssh://|file://)")),
     ("private branch", re.compile(r"(?i)\b(?:eval|archive|fix)/[A-Za-z0-9_.\-/]+")),
@@ -451,6 +481,13 @@ def _validate_points(rows, evaluations):
         for field in ("top", "parameters", "constraint_id"):
             if row[field] != EXPECTED_EVALUATIONS[evaluation_id][field]:
                 _fail("{} fixed {} mismatch".format(point_id, field))
+        for field, value in EXPECTED_EVALUATIONS[evaluation_id][
+            "constraint_values"
+        ].items():
+            if row[field] != value:
+                _fail("{} fixed numeric constraint mismatch: {}".format(
+                    point_id, field
+                ))
         for field in NUMERIC_FIELDS:
             if row[field] != "":
                 _decimal(row[field], "{}.{}".format(point_id, field))
@@ -961,8 +998,9 @@ def _validate_sanitization(root, extra_paths=None):
             paths.append(candidate)
     for path in paths:
         text = path.read_text(encoding="utf-8", errors="replace")
+        scan_text = text.replace("100*(candidate-baseline)/baseline", "")
         for label, pattern in SENSITIVE_PATTERNS:
-            if pattern.search(text):
+            if pattern.search(scan_text):
                 _fail("{} contains {}".format(path.relative_to(root), label))
 
 

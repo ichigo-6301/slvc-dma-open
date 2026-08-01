@@ -154,6 +154,35 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             )
         self.assert_fails("fixed top mismatch")
 
+    def test_numeric_constraint_tuple_drift_together_fails(self):
+        mutations = {
+            "clock_period_ns": "2.0", "setup_uncertainty_ns": "0.3",
+            "hold_uncertainty_ns": "0.1", "io_delay_ns": "0.6",
+            "input_transition_ns": "0.2", "output_load": "0.1",
+            "max_fanout": "32", "max_transition_ns": "0.6",
+        }
+        for field, value in mutations.items():
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as directory:
+                    nested = Path(directory) / "repo"
+                    shutil.copytree(self.root, nested)
+                    original_root = self.root
+                    self.root = nested
+                    try:
+                        for point_id in (
+                            "writer_component_w0", "writer_component_w1"
+                        ):
+                            self.mutate_csv(
+                                "points.csv",
+                                lambda row, point_id=point_id: (
+                                    row["point_id"] == point_id
+                                ),
+                                field, value,
+                            )
+                        self.assert_fails("fixed numeric constraint mismatch")
+                    finally:
+                        self.root = original_root
+
     def test_private_evidence_commit_cannot_drift_with_publication(self):
         replacement = "0" * 40
         def mutate(data):
@@ -386,6 +415,29 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("fixed statement mismatch")
 
+    def test_claim_identity_metadata_is_fixed(self):
+        mutations = {
+            "benchmark": "different benchmark",
+            "configuration": "\"different configuration\"",
+            "tool": "Vivado 2022.2",
+            "caveat": "\"scope caveat removed\"",
+        }
+        for field, value in mutations.items():
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as directory:
+                    nested = Path(directory) / "repo"
+                    shutil.copytree(self.root, nested)
+                    original_root = self.root
+                    self.root = nested
+                    try:
+                        expected = validator.EXPECTED_EVALUATIONS[
+                            "writer_component"
+                        ]["claim_record"][field]
+                        self.replace_provenance("claims.yaml", expected, value)
+                        self.assert_fails("fixed {} mismatch".format(field))
+                    finally:
+                        self.root = original_root
+
     def test_paired_claim_must_remain_verified(self):
         self.replace_provenance(
             "claims.yaml", "    status: verified", "    status: rejected",
@@ -437,6 +489,26 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             )
         self.mutate_manifest(mutate)
         self.assert_fails("POSIX absolute path")
+
+    def test_delimited_posix_absolute_path_injection_fails(self):
+        for delimiter in (",", ":", ";", "(", "~", "-"):
+            with self.subTest(delimiter=delimiter):
+                with tempfile.TemporaryDirectory() as directory:
+                    nested = Path(directory) / "repo"
+                    shutil.copytree(self.root, nested)
+                    original_root = self.root
+                    self.root = nested
+                    try:
+                        def mutate(data):
+                            data["evaluations"][0]["nonclaims"].append(
+                                "internal archive{}/root/private/design.v".format(
+                                    delimiter
+                                )
+                            )
+                        self.mutate_manifest(mutate)
+                        self.assert_fails("POSIX absolute path")
+                    finally:
+                        self.root = original_root
 
     def test_comparison_formula_mutation_fails(self):
         self.mutate_csv(

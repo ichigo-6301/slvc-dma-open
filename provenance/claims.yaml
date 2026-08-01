@@ -1,6 +1,51 @@
 kind: claims
 schema_version: 1.0.0
 claims:
+  - id: slvc_dma_writer_reservation_component_paired_dc
+    profile: dma_axi_write_engine_512_component_eval
+    statement: "At the same 1.500 ns Nangate45 DC OOC constraint, the reservation candidate reduced Writer total cell area by 7.966353 percent and combinational area by 15.838902 percent; both points remained setup-closed."
+    metric: component_paired_dc_total_cell_area
+    value: -7.966353
+    unit: percent candidate-minus-baseline
+    benchmark: dma_axi_write_engine_512 W0 versus W1
+    configuration: "MAX_OUTSTANDING=4; MAX_BURST_BEATS=16; register-expanded component; identical tool, library, and constraints"
+    source_ref: adbc36aa92c6fee11253fbae31ec77216dae91cc
+    tool: Design Compiler O-2018.06-SP1
+    evidence:
+      - slvc_dma_asic_paired_dc_publication
+    status: verified
+    caveat: "Component-level DC OOC only; this does not establish C2B4 or complete-DMA area reduction, Fmax, P&R, power, or signoff."
+    public: true
+  - id: slvc_dma_c2b4_writer_subsystem_paired_dc
+    profile: dma_rx512_reg_c2_b4_m2_sp64
+    statement: "At the same 1.818182 ns C2B4 DC constraint, W0 and W1 both closed setup; W1 increased Writer hierarchy area by 54.393209 percent and reduced setup margin, so subsystem promotion was not supported."
+    metric: subsystem_paired_dc_promotion
+    value: not_promoted
+    unit: result
+    benchmark: C2B4 register-expanded RX512 subsystem W0 versus W1
+    configuration: "2 channels; 4 KiB fixed payload per channel; 64 shared blocks; identical tool, library, and constraints"
+    source_ref: a630b1462efcc57d4e2748804ed652517da22a4b
+    tool: Design Compiler O-2018.06-SP1
+    evidence:
+      - slvc_dma_asic_paired_dc_publication
+    status: verified
+    caveat: "W2 is a numeric anchor match only, not a methodology-identical reproduction; no complete-DMA, Fmax, P&R, power, or signoff conclusion is made."
+    public: true
+  - id: slvc_dma_shared_pool_scheduler_paired_dc
+    profile: dma_frame_shared_pool_register_expanded_eval
+    statement: "At the same 2.500 ns Nangate45 DC OOC constraint, P7 improved setup WNS by 7.71332 ps while adding 52 registers and 0.019194 percent total cell area relative to P6."
+    metric: component_paired_dc_setup_wns
+    value: 7.71332
+    unit: ps candidate-minus-baseline
+    benchmark: dma_frame_shared_pool P6 versus P7
+    configuration: "16 channels; 64 by 512-bit blocks; metadata depth 4; DEBUG_OWNERSHIP=0; register-expanded storage"
+    source_ref: ac046053a5d959f265568e2ad6f1acf45b349be4
+    tool: Design Compiler O-2018.06-SP1
+    evidence:
+      - slvc_dma_asic_paired_dc_publication
+    status: verified
+    caveat: "Component-level register-expanded DC OOC only; this is not SRAM-macro PPA, complete-DMA timing, Fmax, P&R, power, or signoff."
+    public: true
   - id: slvc_dma_rtl_comment_only_equivalence
     profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
     statement: The Chinese-comment RTL source has zero functional Verilog token differences from the prior function baseline.

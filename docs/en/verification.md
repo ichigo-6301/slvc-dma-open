@@ -20,6 +20,34 @@ The runner always requires ten frozen-core PASS markers. The default adapter-ena
 
 See the [Verification Matrix](verification_matrix.md) for every command, behavior, and marker.
 
+## ASIC Paired-DC Evidence Contract
+
+The public paired-DC bundle binds every point to a fixed source commit, source
+file SHA-256, tool/library/constraint identity, simulation marker set, semantic
+trace digest, lint boundary, and commercial-report digest. Raw commercial EDA
+logs and reports are not published.
+
+Windows ModelSim SE-64 2020.4 and Linux Questa Sim-64 10.7c use the same
+sources, parameters, testbenches, and required markers. A normalized semantic
+trace retains only ordered case/phase, throughput, final-count, and PASS
+records; simulator prompts, timestamps, paths, and platform noise are removed.
+Every point in an equivalence group must have the same trace SHA-256.
+
+The Writer suites require the 2,028-case marker, the 64 B/cycle ideal-model
+throughput marker, the directed integration marker, and both A3 profile
+markers. P6 and P7 each require nine Shared Pool case markers plus the final
+PASS marker on both platforms.
+
+SpyGlass scope is intentionally not collapsed: bounded Writer lint has zero
+fatal and zero error with reviewed warnings, while the full C2B4 common scope
+remains `BLOCKED_COMMON_SCOPE` with 0 fatal, 15 errors, 202 warnings, and zero
+waivers. No waiver converts that full scope into a lint-clean claim.
+
+`make asic-evidence-check` validates the schema and identities, regenerates
+all comparisons from `points.csv` using `Decimal`, checks markers and trace
+equivalence, enforces the lint boundary, rejects sensitive data and raw EDA
+payloads, and can restrict a PR to the approved evidence-only path set.
+
 ## Channel-Admission Isolation Scenario
 
 The fixed adapter-to-DMA smoke marker is:

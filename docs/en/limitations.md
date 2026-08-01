@@ -1,5 +1,22 @@
 # Limitations
 
+## ASIC Paired-DC Publication
+
+- The Writer reservation comparison is component-level DC OOC only. Its area
+  reduction is not a C2B4 or complete-DMA area result.
+- The C2B4 comparison is a register-expanded two-channel RX512 subsystem
+  result. W0 already closes the fixed point; the evidence does not claim that
+  W1 enabled 550 MHz closure or reduced Writer hierarchy area.
+- The Shared Pool P6/P7 comparison is register-expanded component DC OOC. It
+  is not SRAM-macro PPA and discloses the 52-register and area cost.
+- These synthesis points are not Fmax, P&R, extracted STA, power, DFT,
+  MMMC/OCV, foundry, silicon, or signoff evidence.
+- Commercial logs, reports, netlists, DDC, SDC, libraries, host identity, and
+  license configuration remain private; the public bundle contains hashes and
+  normalized summaries only.
+- Bounded Writer lint is not full-subsystem lint closure. The full C2B4 common
+  scope remains blocked by 15 existing errors with zero waivers.
+
 - The README comparison among multiple single-channel DMAs, MCDMA-class
   designs, and SLVC DMA is qualitative architecture analysis, not a measured
   vendor-IP benchmark. MCDMA HOL/backpressure behavior depends on its queues,

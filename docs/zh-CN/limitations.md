@@ -1,5 +1,20 @@
 # 限制
 
+## ASIC Paired-DC 公开边界
+
+- Writer reservation 对比仅为组件级 DC OOC；面积降幅不能外推为 C2B4 或完整
+  DMA 面积结果。
+- C2B4 对比仅覆盖寄存器展开的两通道 RX512 子系统。W0 已闭合固定测试点，
+  证据不声明 W1 首次支撑 550 MHz 或降低 Writer 层级面积。
+- Shared Pool P6/P7 是寄存器展开组件级 DC OOC，不是 SRAM macro PPA，并明确
+  披露增加 52 个寄存器及对应面积成本。
+- 这些综合点都不是 Fmax、P&R、提取后 STA、功耗、DFT、MMMC/OCV、foundry、
+  silicon 或 signoff 证据。
+- 商业日志、报告、netlist、DDC、SDC、library、主机身份和 license 配置均保持
+  私有；公开包只含哈希与规范化摘要。
+- bounded Writer lint 不代表完整子系统 lint 闭合；完整 C2B4 common scope 仍被
+  15 项既有 error 阻断，waiver 数为 0。
+
 - README 中多个单通道 DMA、MCDMA 类方案和 SLVC DMA 的比较是定性架构分析，
   不是对某个厂商 IP 的实测 benchmark。MCDMA 的 HOL/backpressure 行为取决于具体
   queue、scheduler、共享 AXI 和软件配置。

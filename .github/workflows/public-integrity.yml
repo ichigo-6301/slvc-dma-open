@@ -16,6 +16,8 @@ jobs:
     steps:
       -
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       -
         uses: actions/setup-python@v6
         with:
@@ -23,6 +25,10 @@ jobs:
       -
         name: Verify showcase, provenance, links, assets, and flow contracts
         run: make showcase-check PYTHON=python3
+      -
+        name: Enforce evidence-only pull-request scope
+        if: github.event_name == 'pull_request'
+        run: python3 flows/scripts/validate_asic_evidence.py --root . --base-ref "origin/${GITHUB_BASE_REF}"
       -
         name: Exercise public Make profile
         run: make slvc_dma_512_defconfig PYTHON=python3
@@ -64,8 +70,11 @@ jobs:
         name: Verify provenance and documentation links
         run: python flows/scripts/public_hygiene.py --root .
       -
+        name: Verify sanitized ASIC paired-DC evidence
+        run: python flows/scripts/validate_asic_evidence.py --root .
+      -
         name: Verify backend, compatibility aliases, and showcase contracts
-        run: python -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_pr_scope_policy
+        run: python -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy
       -
         name: Verify generic C2B4 backend without GNU Make
         run: python flows/scripts/flowctl.py --config configs/dma_rx512_reg_c2_b4_m2_sp64_defconfig run-selected --dry-run

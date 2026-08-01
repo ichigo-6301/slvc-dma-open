@@ -144,6 +144,32 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("canonical required markers mismatch")
 
+    def test_same_count_wrong_marker_text_fails(self):
+        self.mutate_csv(
+            "verification.csv",
+            lambda row: row["point_id"] == "c2b4_writer_w1"
+            and row["platform"] == "linux" and row["suite_id"] == "writer_2028",
+            "required_markers",
+            "PASS tb_rtl_rx_payload_writer_512 cases=2027|"
+            "WIDE512_THROUGHPUT bytes_per_cycle_x1000=64000",
+        )
+        self.assert_fails("canonical required markers mismatch")
+
+    def test_marker_order_swap_fails(self):
+        self.mutate_csv(
+            "verification.csv",
+            lambda row: row["point_id"] == "shared_pool_p7"
+            and row["platform"] == "linux",
+            "required_markers",
+            "OK: dma RTL v33e19 shared frame pool test passed.|"
+            "E19_CASE T0 reset_init|E19_CASE T1 single_frame|"
+            "E19_CASE T2 back_to_back|E19_CASE T3 multi_channel|"
+            "E19_CASE T4 pool_full_nodrop|E19_CASE T5 pool_full_drop|"
+            "E19_CASE T6 oversized_drop|E19_CASE T7 drain_stall|"
+            "E19_CASE T8 reset_recovery",
+        )
+        self.assert_fails("canonical required markers mismatch")
+
     def test_wrong_simulator_identity_fails(self):
         self.mutate_csv(
             "verification.csv",
@@ -196,6 +222,22 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("negative hold WNS")
 
+    def test_nonzero_setup_tns_fails(self):
+        self.mutate_csv(
+            "points.csv",
+            lambda row: row["point_id"] == "shared_pool_p7",
+            "setup_tns_ns", "-0.000001",
+        )
+        self.assert_fails("nonzero setup TNS")
+
+    def test_negative_writer_setup_wns_fails(self):
+        self.mutate_csv(
+            "points.csv",
+            lambda row: row["point_id"] == "c2b4_writer_w0",
+            "writer_setup_wns_ns", "-0.000001",
+        )
+        self.assert_fails("negative writer_setup_wns_ns")
+
     def test_c2b4_lint_cannot_be_disguised_as_pass(self):
         self.mutate_csv(
             "lint.csv",
@@ -232,7 +274,35 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         nested = self.csv_path("nested/raw/report.txt")
         nested.parent.mkdir(parents=True)
         nested.write_text("not inventoried\n", encoding="utf-8")
-        self.assert_fails("publication file inventory mismatch")
+        self.assert_fails("publication payload file set mismatch")
+
+    def test_nested_payload_fails_even_when_inventoried(self):
+        nested = self.csv_path("nested/note.txt")
+        nested.parent.mkdir(parents=True)
+        nested.write_text("inventoried but forbidden\n", encoding="utf-8")
+        publication = self.root / "provenance/asic_paired_dc_publication.yaml"
+        data = json.loads(publication.read_text(encoding="utf-8"))
+        data["files"]["evidence/asic_paired_dc/nested/note.txt"] = validator._sha256(nested)
+        publication.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        self.assert_fails("publication payload file set mismatch")
+
+    def test_duplicate_provenance_claims_field_fails(self):
+        self.replace_provenance(
+            "evidence.yaml",
+            "    claims:\n      - slvc_dma_writer_reservation_component_paired_dc",
+            "    claims:\n      - slvc_dma_writer_reservation_component_paired_dc\n"
+            "    claims:\n      - slvc_dma_writer_reservation_component_paired_dc",
+        )
+        self.assert_fails("has no claims list")
+
+    def test_duplicate_provenance_path_field_fails(self):
+        self.replace_provenance(
+            "evidence.yaml",
+            "    path: provenance/asic_paired_dc_publication.yaml",
+            "    path: provenance/asic_paired_dc_publication.yaml\n"
+            "    path: provenance/asic_paired_dc_publication.yaml",
+        )
+        self.assert_fails("invalid path field")
 
     def test_claim_evidence_misbinding_fails(self):
         self.replace_provenance(

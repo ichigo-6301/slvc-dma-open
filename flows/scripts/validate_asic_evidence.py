@@ -151,6 +151,17 @@ EXPECTED_SIMULATORS = {
     "linux": "Questa Sim-64 10.7c",
 }
 
+EXPECTED_PUBLICATION_FILES = frozenset({
+    "evidence/asic_paired_dc/README.md",
+    "evidence/asic_paired_dc/artifacts.csv",
+    "evidence/asic_paired_dc/comparisons.csv",
+    "evidence/asic_paired_dc/lint.csv",
+    "evidence/asic_paired_dc/manifest.yaml",
+    "evidence/asic_paired_dc/points.csv",
+    "evidence/asic_paired_dc/sources.csv",
+    "evidence/asic_paired_dc/verification.csv",
+})
+
 PAIR_IDENTITY_FIELDS = (
     "top", "parameters", "tool", "tool_version", "compile_mode", "library",
     "corner", "library_sha256", "constraint_id", "clock_period_ns",
@@ -557,10 +568,9 @@ def _registered_records(path):
 def _record_list(body, field, context):
     lines = body.splitlines()
     marker = "    {}:".format(field)
-    try:
-        start = lines.index(marker) + 1
-    except ValueError:
+    if lines.count(marker) != 1:
         _fail("{} has no {} list".format(context, field))
+    start = lines.index(marker) + 1
     values = []
     for line in lines[start:]:
         match = re.fullmatch(r"      - ([a-z0-9_.-]+)", line)
@@ -570,6 +580,15 @@ def _record_list(body, field, context):
     if not values or len(values) != len(set(values)):
         _fail("{} has invalid {} list".format(context, field))
     return values
+
+
+def _record_scalar(body, field, context, value_pattern):
+    matches = re.findall(
+        r"(?m)^    {}: ({})$".format(field, value_pattern), body
+    )
+    if len(matches) != 1:
+        _fail("{} has invalid {} field".format(context, field))
+    return matches[0]
 
 
 def _validate_publication(root, evaluations):
@@ -585,11 +604,17 @@ def _validate_publication(root, evaluations):
     if publication.get("raw_commercial_artifacts_published") is not False:
         _fail("raw commercial artifacts must remain unpublished")
 
-    expected_claims = {item["claim_id"] for item in evaluations.values()}
+    expected_claims_ordered = tuple(
+        EXPECTED_EVALUATIONS[evaluation_id]["claim_id"]
+        for evaluation_id in (
+            "writer_component", "c2b4_writer", "shared_pool_scheduler"
+        )
+    )
+    expected_claims = set(expected_claims_ordered)
     claim_ids = publication.get("claim_ids")
-    if not isinstance(claim_ids, list) or len(claim_ids) != len(set(claim_ids)):
+    if not isinstance(claim_ids, list):
         _fail("publication claim IDs are invalid")
-    if set(claim_ids) != expected_claims:
+    if tuple(claim_ids) != expected_claims_ordered:
         _fail("publication claim IDs mismatch")
     expected_commits = {item["private_evidence_commit"] for item in evaluations.values()}
     commits = publication.get("fixed_evidence_commits")
@@ -598,12 +623,17 @@ def _validate_publication(root, evaluations):
     for commit in commits:
         _validate_digest(commit, 160, "publication evidence commit")
 
-    expected_files = {
+    evidence_root = root / EVIDENCE_REL
+    if any(path.is_symlink() for path in evidence_root.rglob("*")):
+        _fail("publication payload must not contain symlinks")
+    actual_files = {
         str(path.relative_to(root)).replace("\\", "/")
-        for path in (root / EVIDENCE_REL).rglob("*") if path.is_file()
+        for path in evidence_root.rglob("*") if path.is_file()
     }
+    if actual_files != EXPECTED_PUBLICATION_FILES:
+        _fail("publication payload file set mismatch")
     files = publication.get("files")
-    if not isinstance(files, dict) or set(files) != expected_files:
+    if not isinstance(files, dict) or set(files) != EXPECTED_PUBLICATION_FILES:
         _fail("publication file inventory mismatch")
     for relative, digest in files.items():
         _validate_digest(digest, 256, "publication file hash")
@@ -630,21 +660,21 @@ def _validate_publication(root, evaluations):
         references = _record_list(claim_records[claim_id], "evidence", claim_id)
         if references != [publication_id]:
             _fail("paired-DC claims are not bound to publication evidence")
-    mapped_claims = set(_record_list(
+    mapped_claims = tuple(_record_list(
         evidence_records[publication_id], "claims", publication_id
     ))
-    if mapped_claims != expected_claims:
+    if mapped_claims != expected_claims_ordered:
         _fail("publication evidence claim mapping mismatch")
-    publication_path = re.search(
-        r"(?m)^    path: (\S+)\s*$", evidence_records[publication_id]
+    publication_path = _record_scalar(
+        evidence_records[publication_id], "path", publication_id, r"\S+"
     )
-    publication_hash = re.search(
-        r"(?m)^    sha256: ([0-9a-f]{64})\s*$", evidence_records[publication_id]
+    publication_hash = _record_scalar(
+        evidence_records[publication_id], "sha256", publication_id, r"[0-9a-f]{64}"
     )
     expected_path = str(PUBLICATION_REL).replace("\\", "/")
-    if not publication_path or publication_path.group(1) != expected_path:
+    if publication_path != expected_path:
         _fail("provenance evidence path must bind the publication manifest")
-    if not publication_hash or publication_hash.group(1) != _sha256(root / PUBLICATION_REL):
+    if publication_hash != _sha256(root / PUBLICATION_REL):
         _fail("provenance evidence hash must bind the publication manifest")
 
 

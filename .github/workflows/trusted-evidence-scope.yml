@@ -1,0 +1,38 @@
+name: Trusted Evidence Scope
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: trusted-evidence-scope-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  base-owned-scope:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Fetch immutable base policy only
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git init policy
+          git -C policy remote add origin "https://github.com/${REPOSITORY}.git"
+          git -C policy fetch --depth=1 origin "${BASE_SHA}"
+          git -C policy checkout --detach FETCH_HEAD
+          test "$(git -C policy rev-parse HEAD)" = "${BASE_SHA}"
+      -
+        name: Validate PR identity and changed paths with base-owned code
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python3 policy/flows/scripts/validate_pr_scope_policy.py
+          --event "${GITHUB_EVENT_PATH}"
+          --repository "${GITHUB_REPOSITORY}"

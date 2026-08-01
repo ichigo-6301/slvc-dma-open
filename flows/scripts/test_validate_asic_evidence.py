@@ -26,7 +26,8 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         provenance = self.root / "provenance"
         provenance.mkdir()
         for name in (
-            "asic_paired_dc_publication.yaml", "claims.yaml", "evidence.yaml"
+            "asic_paired_dc_publication.yaml", "checksums.sha256", "claims.yaml",
+            "evidence.yaml"
         ):
             shutil.copy2(ROOT / "provenance" / name, provenance / name)
 
@@ -45,6 +46,17 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         matches = [row for row in rows if predicate(row)]
         self.assertEqual(len(matches), 1, (name, field))
         matches[0][field] = value
+        with path.open("w", encoding="utf-8", newline="") as output:
+            writer = csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def filter_csv(self, name, keep):
+        path = self.csv_path(name)
+        with path.open("r", encoding="utf-8", newline="") as source:
+            reader = csv.DictReader(source)
+            fields = reader.fieldnames
+            rows = [row for row in reader if keep(row)]
         with path.open("w", encoding="utf-8", newline="") as output:
             writer = csv.DictWriter(output, fieldnames=fields, lineterminator="\n")
             writer.writeheader()
@@ -78,7 +90,7 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             lambda row: row["point_id"] == "writer_component_w1",
             "total_cell_area", "6926.641",
         )
-        self.assert_fails("Decimal recomputation")
+        self.assert_fails("fixed claim value mismatch")
 
     def test_commit_mapping_mismatch_fails(self):
         self.mutate_csv(
@@ -87,7 +99,7 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             and row["point_id"] == "writer_component_w0",
             "source_commit", "0" * 40,
         )
-        self.assert_fails("commit/source mapping mismatch")
+        self.assert_fails("fixed source inventory mismatch")
 
     def test_source_hash_cross_reference_mismatch_fails(self):
         self.mutate_csv(
@@ -96,7 +108,7 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             and row["point_id"] == "writer_component_w0",
             "sha256", "0" * 64,
         )
-        self.assert_fails("source hash mismatch")
+        self.assert_fails("fixed source inventory mismatch")
 
     def test_pair_identity_drift_fails(self):
         mutations = {
@@ -125,6 +137,46 @@ class AsicEvidenceMutationTest(unittest.TestCase):
                             validator.validate(self.root)
                     finally:
                         self.root = original_root
+
+    def test_manifest_and_points_identity_drift_together_fails(self):
+        def mutate(data):
+            data["evaluations"][0]["top"] = "different_top"
+            data["evaluations"][0]["parameters"] = "MAX_BURST_BEATS=8;MAX_OUTSTANDING=4"
+        self.mutate_manifest(mutate)
+        for point_id in ("writer_component_w0", "writer_component_w1"):
+            self.mutate_csv(
+                "points.csv", lambda row, point_id=point_id: row["point_id"] == point_id,
+                "top", "different_top",
+            )
+            self.mutate_csv(
+                "points.csv", lambda row, point_id=point_id: row["point_id"] == point_id,
+                "parameters", "MAX_BURST_BEATS=8;MAX_OUTSTANDING=4",
+            )
+        self.assert_fails("fixed top mismatch")
+
+    def test_private_evidence_commit_cannot_drift_with_publication(self):
+        replacement = "0" * 40
+        def mutate(data):
+            data["evaluations"][0]["private_evidence_commit"] = replacement
+        self.mutate_manifest(mutate)
+        publication = self.root / "provenance/asic_paired_dc_publication.yaml"
+        data = json.loads(publication.read_text(encoding="utf-8"))
+        data["fixed_evidence_commits"][0] = replacement
+        publication.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        self.replace_provenance(
+            "claims.yaml", validator.EXPECTED_EVALUATIONS["writer_component"]["private_evidence_commit"],
+            replacement,
+        )
+        self.assert_fails("fixed private_evidence_commit mismatch")
+
+    def test_c2b4_common_source_inventory_is_required(self):
+        self.filter_csv(
+            "sources.csv",
+            lambda row: not (
+                row["evaluation_id"] == "c2b4_writer" and row["scope"] == "common"
+            ),
+        )
+        self.assert_fails("fixed source inventory mismatch")
 
     def test_required_marker_deletion_fails(self):
         self.mutate_csv(
@@ -254,6 +306,13 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("waivers are not permitted")
 
+    def test_negative_lint_warning_count_fails(self):
+        self.mutate_csv(
+            "lint.csv", lambda row: row["point_id"] == "shared_pool_p6",
+            "warning_count", "-1",
+        )
+        self.assert_fails("lint counts must be nonnegative")
+
     def test_missing_report_hash_fails(self):
         self.mutate_csv(
             "artifacts.csv",
@@ -312,6 +371,33 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("claims are not bound")
 
+    def test_claim_source_ref_must_match_fixed_evidence_commit(self):
+        self.replace_provenance(
+            "claims.yaml",
+            "    source_ref: adbc36aa92c6fee11253fbae31ec77216dae91cc",
+            "    source_ref: " + "0" * 40,
+        )
+        self.assert_fails("source_ref does not match fixed evidence commit")
+
+    def test_claim_statement_numbers_are_fixed(self):
+        self.replace_provenance(
+            "claims.yaml", "reduced Writer total cell area by 7.966353 percent",
+            "reduced Writer total cell area by 6.991626 percent",
+        )
+        self.assert_fails("fixed statement mismatch")
+
+    def test_paired_claim_must_remain_verified(self):
+        self.replace_provenance(
+            "claims.yaml", "    status: verified", "    status: rejected",
+        )
+        self.assert_fails("must remain verified")
+
+    def test_paired_claim_must_remain_public(self):
+        self.replace_provenance(
+            "claims.yaml", "    public: true", "    public: false",
+        )
+        self.assert_fails("must remain public")
+
     def test_publication_evidence_claim_misbinding_fails(self):
         self.replace_provenance(
             "evidence.yaml",
@@ -344,6 +430,14 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         self.mutate_manifest(mutate)
         self.assert_fails("Windows absolute path")
 
+    def test_arbitrary_posix_absolute_path_injection_fails(self):
+        def mutate(data):
+            data["evaluations"][0]["nonclaims"].append(
+                "internal archive /root/private/customer/design.v"
+            )
+        self.mutate_manifest(mutate)
+        self.assert_fails("POSIX absolute path")
+
     def test_comparison_formula_mutation_fails(self):
         self.mutate_csv(
             "comparisons.csv",
@@ -366,6 +460,42 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         validator.validate(self.root, write_comparisons=True)
         validator.validate(self.root)
+
+    def test_write_mode_refreshes_complete_digest_chain(self):
+        self.mutate_csv(
+            "points.csv", lambda row: row["point_id"] == "writer_component_w1",
+            "leaf_cell_count", "3048",
+        )
+        validator.validate(self.root, write_comparisons=True)
+        validator.validate(self.root)
+        publication = json.loads(
+            (self.root / "provenance/asic_paired_dc_publication.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            publication["files"]["evidence/asic_paired_dc/points.csv"],
+            validator._sha256(self.csv_path("points.csv")),
+        )
+        self.assertEqual(
+            publication["files"]["evidence/asic_paired_dc/comparisons.csv"],
+            validator._sha256(self.csv_path("comparisons.csv")),
+        )
+        checksum_rows = {}
+        for line in (self.root / "provenance/checksums.sha256").read_text(
+            encoding="utf-8"
+        ).splitlines():
+            digest, relative = line.split("  ", 1)
+            checksum_rows[relative] = digest
+        for relative in (
+            "evidence/asic_paired_dc/points.csv",
+            "evidence/asic_paired_dc/comparisons.csv",
+            "provenance/asic_paired_dc_publication.yaml",
+            "provenance/evidence.yaml",
+        ):
+            self.assertEqual(
+                checksum_rows[relative], validator._sha256(self.root / relative)
+            )
 
 
 if __name__ == "__main__":

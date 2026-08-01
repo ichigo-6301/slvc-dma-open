@@ -19,6 +19,7 @@ EVIDENCE_REL = Path("evidence/asic_paired_dc")
 MANIFEST_REL = EVIDENCE_REL / "manifest.yaml"
 COMPARISONS_REL = EVIDENCE_REL / "comparisons.csv"
 PUBLICATION_REL = Path("provenance/asic_paired_dc_publication.yaml")
+CHECKSUM_REL = Path("provenance/checksums.sha256")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
@@ -72,6 +73,21 @@ COMPARISON_HEADER = (
 EXPECTED_EVALUATIONS = {
     "writer_component": {
         "claim_id": "slvc_dma_writer_reservation_component_paired_dc",
+        "private_evidence_commit": "adbc36aa92c6fee11253fbae31ec77216dae91cc",
+        "top": "dma_axi_write_engine_512",
+        "parameters": "MAX_BURST_BEATS=16;MAX_OUTSTANDING=4",
+        "constraint_id": "writer_ooc_p1p5_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+        "claim_record": {
+            "profile": "dma_axi_write_engine_512_component_eval",
+            "statement": "\"At the same 1.500 ns Nangate45 DC OOC constraint, the reservation candidate reduced Writer total cell area by 7.966353 percent and combinational area by 15.838902 percent; both points remained setup-closed.\"",
+            "metric": "component_paired_dc_total_cell_area",
+            "value": "-7.966353",
+            "unit": "percent candidate-minus-baseline",
+        },
+        "claim_values": {
+            "total_cell_area": {"delta_percent": "-7.966353"},
+            "combinational_area": {"delta_percent": "-15.838902"},
+        },
         "metrics": (
             "total_cell_area", "combinational_area", "leaf_cell_count",
             "register_count", "setup_wns_ns", "reservation_object_count",
@@ -87,6 +103,28 @@ EXPECTED_EVALUATIONS = {
     },
     "c2b4_writer": {
         "claim_id": "slvc_dma_c2b4_writer_subsystem_paired_dc",
+        "private_evidence_commit": "a630b1462efcc57d4e2748804ed652517da22a4b",
+        "flow_as_run_commit": "9a7e465d7a92f0502287eb162a80468a717fc9fb",
+        "top": "dma_rx512_memory_subsystem_top",
+        "parameters": "CHANNELS=2;FIXED_META_AW=1;FIXED_META_DEPTH=2;FIXED_PAYLOAD_AW=9;FIXED_PAYLOAD_WORDS=512;MAX_BURST_BEATS=16;MAX_OUTSTANDING=4;SHARED_BLOCK_AW=6;SHARED_BLOCK_NUM=64",
+        "constraint_id": "c2b4_writer_subsystem_p1p818182_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+        "claim_record": {
+            "profile": "dma_rx512_reg_c2_b4_m2_sp64",
+            "statement": "\"At the same 1.818182 ns C2B4 DC constraint, W0 and W1 both closed setup; W1 increased Writer hierarchy area by 54.393209 percent and reduced setup margin, so subsystem promotion was not supported.\"",
+            "metric": "subsystem_paired_dc_promotion",
+            "value": "not_promoted",
+            "unit": "result",
+        },
+        "claim_values": {
+            "writer_area": {"delta_percent": "54.393209"},
+            "setup_wns_ns": {
+                "baseline": "0.0014981", "candidate": "0.00095892",
+            },
+            "writer_setup_wns_ns": {
+                "baseline": "0.0392413", "candidate": "0.0172149",
+                "delta": "-0.0220264",
+            },
+        },
         "metrics": (
             "total_cell_area", "combinational_area", "writer_area",
             "setup_wns_ns", "writer_setup_wns_ns",
@@ -105,6 +143,22 @@ EXPECTED_EVALUATIONS = {
     },
     "shared_pool_scheduler": {
         "claim_id": "slvc_dma_shared_pool_scheduler_paired_dc",
+        "private_evidence_commit": "ac046053a5d959f265568e2ad6f1acf45b349be4",
+        "top": "dma_frame_shared_pool",
+        "parameters": "BLOCK_AW=6;BLOCK_NUM=64;CH_ID_W=4;CH_NUM=16;DATA_W=512;DEBUG_OWNERSHIP=0;KEEP_W=64;MAX_FRAME_BLOCKS=32;META_AW=2;META_DEPTH=4",
+        "constraint_id": "spdc_scheduler_n45_2p5ns_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+        "claim_record": {
+            "profile": "dma_frame_shared_pool_register_expanded_eval",
+            "statement": "\"At the same 2.500 ns Nangate45 DC OOC constraint, P7 improved setup WNS by 7.71332 ps while adding 52 registers and 0.019194 percent total cell area relative to P6.\"",
+            "metric": "component_paired_dc_setup_wns",
+            "value": "7.71332",
+            "unit": "ps candidate-minus-baseline",
+        },
+        "claim_values": {
+            "setup_wns_ns": {"delta": "0.00771332"},
+            "register_count": {"delta": "52"},
+            "total_cell_area": {"delta_percent": "0.019194"},
+        },
         "metrics": (
             "total_cell_area", "combinational_area", "sequential_area",
             "leaf_cell_count", "register_count", "setup_wns_ns",
@@ -119,6 +173,28 @@ EXPECTED_EVALUATIONS = {
         },
     },
 }
+
+EXPECTED_SOURCE_INVENTORY = frozenset({
+    ("writer_component", "point", "writer_component_w0", "5c6829acd74ce525c5b986d609a2f94f8b75a11e", "rtl/rx/dma_axi_write_engine_512.v", "7a34840ceb0468a461d99a2544a6b6e3208d70cf", "bd4e0081cbc667a1947fb6ed68057fec46a24660d991dd72a6576d92b0cae32e", "13256"),
+    ("writer_component", "point", "writer_component_w1", "529256758b33ba9628bc0bf93501297dd3e25487", "rtl/rx/dma_axi_write_engine_512.v", "9a21d55a0d22f1390bb356ae09adeb72557e44ac", "6ea3f0445916cd2304cb29fb6c513dbc70a0da60da134b5ff815f4a46310ad0b", "14002"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "filelists/dma_a3_target_b_register.f", "87c12dbdd49bad3c1c100a74bf569e87ca4454a3", "ff43e4f6fe198077ab766e01d6ad0dd6428ff2ce32cc29b7c7248f6724da7a79", "337"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "rtl/include/dma_defs.vh", "27aa63eaee05ef1737e767ee919281f20fb04ad2", "b4f1d77e577c9452c25ba4cd8013d48cd9b6c49be3f880be7a90f1f6c65cb0e2", "13786"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "rtl/common/dma_payload_beat_ram.v", "b8a131aaab18c966682683f6b426a8d8e1c0b510", "6029c43d87784c9f761949e1453449553127f364ffec13bd24a8584e6bcb4a38", "847"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "rtl/rx/dma_rx_fc_ingress_bank.v", "a9508ef31aae4ea7e8edf03eeb674cc5c66576c3", "132e72cf4fc48c0c809cc0380105d7b05b20b2426a387ea18633306b6b149f4a", "28261"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "rtl/rx/dma_frame_payload_ram.v", "875650a44e5f38e38b53fe5147dc2f0c4e88565a", "4f76689f7f8226084c7760d7888392e84c6efbdf37ff4d7871ff2db573f6b7c3", "1253"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "rtl/rx/dma_frame_shared_pool.v", "ec07e9627563c6abb2e316213f6108a6dc1822b2", "4cb4b2b174f740ea38c83e1a127ec2568b8503dc024bbc4e9459af75e6751720", "29562"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "rtl/rx/dma_rx_frame_shared_adapter.v", "e4c364d3ae260d794e0247bce96bb4ce100c4391", "46a2f72441ef2c38b620b64ad41e37b01250fd0e296078efc93b900d565133d8", "28101"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "rtl/rx/dma_rx_ingress_source_selector.v", "4eaa31a5e75c17ee57aa00fefaf5f6ec2fc569bd", "3cb25be9a0a58d0fd5c8ecb494898e3e927168e7acba9064a01ef79275269b18", "6853"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "flows/asic/a1/rtl/dma_rx512_writer_route_top.v", "9eab526285b538ca3886ace2d7146f09eec4e8a5", "f2c8f4780774e2296d0a1dc42a7bf968b2ac58a5508baa47e3d68b408d074ace", "2548"),
+    ("c2b4_writer", "common", "*", "348df4949d4d88954a4402cd47118c6444099a17", "flows/asic/a1/rtl/dma_rx512_memory_subsystem_top.v", "2ac1eea9c7fd8339ad03025920af11721d355a67", "12b8147dc37614e0622f8bfe9f3c00e981b6f8d76e48efbc80c64647833700ad", "18110"),
+    ("c2b4_writer", "point", "c2b4_writer_w2", "348df4949d4d88954a4402cd47118c6444099a17", "rtl/rx/dma_axi_write_engine_512.v", "0d53caa0b73df2302865b0222cd8aed5abf5193f", "d6585993fdab2446049d0f7efcf90412755106587d59c5441228b789c7f500b2", "14322"),
+    ("c2b4_writer", "point", "c2b4_writer_w0", "5c6829acd74ce525c5b986d609a2f94f8b75a11e", "rtl/rx/dma_axi_write_engine_512.v", "7a34840ceb0468a461d99a2544a6b6e3208d70cf", "bd4e0081cbc667a1947fb6ed68057fec46a24660d991dd72a6576d92b0cae32e", "13256"),
+    ("c2b4_writer", "point", "c2b4_writer_w1", "529256758b33ba9628bc0bf93501297dd3e25487", "rtl/rx/dma_axi_write_engine_512.v", "9a21d55a0d22f1390bb356ae09adeb72557e44ac", "6ea3f0445916cd2304cb29fb6c513dbc70a0da60da134b5ff815f4a46310ad0b", "14002"),
+    ("shared_pool_scheduler", "point", "shared_pool_p6", "bbc5da96acda883257b6da67577f8360a6f7f555", "rtl/dma_frame_shared_pool.v", "39d3cf8b52682eec5243b51246bf3d79baf6ca23", "22c82fab06b67afbf66e6de5c6860ddef78f538cc3b84c053af1a584fa2d2a38", "16006"),
+    ("shared_pool_scheduler", "point", "shared_pool_p6", "bbc5da96acda883257b6da67577f8360a6f7f555", "rtl/dma_frame_payload_ram.v", "4ffd61f4d2445aa540bb19a5bf75f8d608767753", "d71bf42e794b8eb8844ffcd863a57fd2f6a411c18c974f4b856940c8b0b7db78", "982"),
+    ("shared_pool_scheduler", "point", "shared_pool_p7", "02b4f9f0ff47fd103d252f5207a25f46f59699d0", "rtl/dma_frame_shared_pool.v", "35fa118d65f8259f43535ac541da1b087f0c9704", "1e3f107fbec34d812ca5caf4dd8e8c110a026be5fa339cdc348ae8886cf90ee8", "18942"),
+    ("shared_pool_scheduler", "point", "shared_pool_p7", "02b4f9f0ff47fd103d252f5207a25f46f59699d0", "rtl/dma_frame_payload_ram.v", "4ffd61f4d2445aa540bb19a5bf75f8d608767753", "d71bf42e794b8eb8844ffcd863a57fd2f6a411c18c974f4b856940c8b0b7db78", "982"),
+})
 
 EXPECTED_MARKERS = {
     "writer_2028": (
@@ -199,7 +275,9 @@ ALLOWED_SCOPE_PATHS = {
 SENSITIVE_PATTERNS = (
     ("Windows absolute path", re.compile(r"(?i)(?<![A-Za-z0-9])[A-Z]:[\\/]")),
     ("UNC path", re.compile(r"(?m)(?:^|[\s\"'])\\\\[^\\\s]+\\[^\\\s]+")),
-    ("private POSIX path", re.compile(r"(?i)/(?:home|users|mnt|workspace|tmp)/")),
+    ("POSIX absolute path", re.compile(
+        r"(?m)(?:^|(?<=[\s\"'=(:]))/(?![/\s])[^\s\"'<>]*"
+    )),
     ("private Git remote", re.compile(r"(?i)(?:git@|ssh://|file://)")),
     ("private branch", re.compile(r"(?i)\b(?:eval|archive|fix)/[A-Za-z0-9_.\-/]+")),
     ("host or account field", re.compile(r"(?i)\b(?:host_?name|user_?name|account_?name)\b\s*[:=]")),
@@ -326,6 +404,13 @@ def _validate_manifest(manifest):
         item = by_id[evaluation_id]
         if item.get("claim_id") != expected["claim_id"]:
             _fail("{} claim ID mismatch".format(evaluation_id))
+        for field in (
+            "private_evidence_commit", "top", "parameters", "constraint_id"
+        ):
+            if item.get(field) != expected[field]:
+                _fail("{} fixed {} mismatch".format(evaluation_id, field))
+        if item.get("flow_as_run_commit") != expected.get("flow_as_run_commit"):
+            _fail("{} fixed flow_as_run_commit mismatch".format(evaluation_id))
         for point_id, role in expected["roles"].items():
             manifest_key = {"baseline": "baseline", "candidate": "candidate", "canary": "canary"}[role]
             if item.get(manifest_key) != point_id:
@@ -363,12 +448,9 @@ def _validate_points(rows, evaluations):
             _fail("{} compile mode mismatch".format(point_id))
         if row["library"] != "Nangate45" or row["corner"] != "typical":
             _fail("{} library/corner mismatch".format(point_id))
-        if row["top"] != evaluations[evaluation_id]["top"]:
-            _fail("{} top mismatch with manifest".format(point_id))
-        if row["parameters"] != evaluations[evaluation_id]["parameters"]:
-            _fail("{} parameters mismatch with manifest".format(point_id))
-        if row["constraint_id"] != evaluations[evaluation_id]["constraint_id"]:
-            _fail("{} constraint mismatch with manifest".format(point_id))
+        for field in ("top", "parameters", "constraint_id"):
+            if row[field] != EXPECTED_EVALUATIONS[evaluation_id][field]:
+                _fail("{} fixed {} mismatch".format(point_id, field))
         for field in NUMERIC_FIELDS:
             if row[field] != "":
                 _decimal(row[field], "{}.{}".format(point_id, field))
@@ -400,6 +482,15 @@ def _validate_points(rows, evaluations):
 
 def _validate_sources(rows, points):
     _index_unique(rows, ("evaluation_id", "scope", "point_id", "path"), "source")
+    actual_inventory = {
+        tuple(row[field] for field in (
+            "evaluation_id", "scope", "point_id", "source_commit", "path",
+            "blob", "sha256", "size_bytes",
+        ))
+        for row in rows
+    }
+    if actual_inventory != EXPECTED_SOURCE_INVENTORY:
+        _fail("fixed source inventory mismatch")
     point_sources = {}
     for row in rows:
         _validate_digest(row["source_commit"], 160, "source commit")
@@ -409,6 +500,13 @@ def _validate_sources(rows, points):
             _fail("source size must be positive")
         if row["scope"] not in ("point", "common"):
             _fail("invalid source scope")
+        source_path = row["path"]
+        if (
+            not source_path or "\\" in source_path or source_path.startswith("/")
+            or re.match(r"(?i)^[a-z]:", source_path)
+            or any(part in ("", ".", "..") for part in source_path.split("/"))
+        ):
+            _fail("source path must be repository-relative and normalized")
         if row["scope"] == "point":
             key = (row["evaluation_id"], row["point_id"])
             if key not in points:
@@ -499,6 +597,8 @@ def _validate_lint(rows):
         counts = {name: int(row[name]) for name in (
             "fatal_count", "error_count", "warning_count", "waived_count"
         )}
+        if any(value < 0 for value in counts.values()):
+            _fail("lint counts must be nonnegative for {}".format(key))
         if key == ("c2b4_writer", "common_snapshot", "full_c2b4_common"):
             expected = {"fatal_count": 0, "error_count": 15, "warning_count": 202, "waived_count": 0}
             if row["status"] != "BLOCKED_COMMON_SCOPE" or counts != expected:
@@ -616,7 +716,10 @@ def _validate_publication(root, evaluations):
         _fail("publication claim IDs are invalid")
     if tuple(claim_ids) != expected_claims_ordered:
         _fail("publication claim IDs mismatch")
-    expected_commits = {item["private_evidence_commit"] for item in evaluations.values()}
+    expected_commits = {
+        item["private_evidence_commit"]
+        for item in EXPECTED_EVALUATIONS.values()
+    }
     commits = publication.get("fixed_evidence_commits")
     if not isinstance(commits, list) or set(commits) != expected_commits:
         _fail("publication evidence commits mismatch")
@@ -660,6 +763,26 @@ def _validate_publication(root, evaluations):
         references = _record_list(claim_records[claim_id], "evidence", claim_id)
         if references != [publication_id]:
             _fail("paired-DC claims are not bound to publication evidence")
+        evaluation_id = next(
+            name for name, item in EXPECTED_EVALUATIONS.items()
+            if item["claim_id"] == claim_id
+        )
+        definition = EXPECTED_EVALUATIONS[evaluation_id]
+        for field, value in definition["claim_record"].items():
+            actual = _record_scalar(
+                claim_records[claim_id], field, claim_id, r".+"
+            )
+            if actual != value:
+                _fail("{} fixed {} mismatch".format(claim_id, field))
+        source_ref = _record_scalar(
+            claim_records[claim_id], "source_ref", claim_id, r"[0-9a-f]{40}"
+        )
+        if source_ref != definition["private_evidence_commit"]:
+            _fail("{} source_ref does not match fixed evidence commit".format(claim_id))
+        if _record_scalar(claim_records[claim_id], "status", claim_id, r"\S+") != "verified":
+            _fail("{} must remain verified".format(claim_id))
+        if _record_scalar(claim_records[claim_id], "public", claim_id, r"\S+") != "true":
+            _fail("{} must remain public".format(claim_id))
     mapped_claims = tuple(_record_list(
         evidence_records[publication_id], "claims", publication_id
     ))
@@ -678,10 +801,8 @@ def _validate_publication(root, evaluations):
         _fail("provenance evidence hash must bind the publication manifest")
 
 
-def _comparison_bytes(evaluations, points):
-    output = io.StringIO(newline="")
-    writer = csv.DictWriter(output, fieldnames=COMPARISON_HEADER, lineterminator="\n")
-    writer.writeheader()
+def _comparison_records(evaluations, points):
+    records = []
     quantizer = Decimal("0.000001")
     for evaluation_id in ("writer_component", "c2b4_writer", "shared_pool_scheduler"):
         item = evaluations[evaluation_id]
@@ -698,7 +819,7 @@ def _comparison_bytes(evaluations, points):
                         quantizer, rounding=ROUND_HALF_EVEN
                     )
                 )
-            writer.writerow({
+            records.append({
                 "evaluation_id": evaluation_id,
                 "claim_id": item["claim_id"],
                 "baseline_point_id": item["baseline"],
@@ -709,6 +830,32 @@ def _comparison_bytes(evaluations, points):
                 "delta": _canonical_decimal(delta),
                 "delta_percent": percent,
             })
+    return records
+
+
+def _validate_claim_values(evaluations, points):
+    records = {
+        (row["evaluation_id"], row["metric"]): row
+        for row in _comparison_records(evaluations, points)
+    }
+    for evaluation_id, expected in EXPECTED_EVALUATIONS.items():
+        for metric, fields in expected["claim_values"].items():
+            row = records[(evaluation_id, metric)]
+            for field, value in fields.items():
+                if row[field] != value:
+                    _fail(
+                        "{} fixed claim value mismatch for {}.{}".format(
+                            evaluation_id, metric, field
+                        )
+                    )
+
+
+def _comparison_bytes(evaluations, points):
+    output = io.StringIO(newline="")
+    writer = csv.DictWriter(output, fieldnames=COMPARISON_HEADER, lineterminator="\n")
+    writer.writeheader()
+    for row in _comparison_records(evaluations, points):
+        writer.writerow(row)
     return output.getvalue().encode("utf-8")
 
 
@@ -721,6 +868,81 @@ def _validate_comparisons(root, expected, write):
         _fail("comparisons.csv is missing")
     if path.read_bytes() != expected:
         _fail("comparisons.csv does not match Decimal recomputation")
+
+
+def _replace_record_scalar(path, record_id, field, value):
+    text = path.read_text(encoding="utf-8")
+    start_marker = "  - id: {}\n".format(record_id)
+    if text.count(start_marker) != 1:
+        _fail("{} record is not unique in {}".format(record_id, path))
+    prefix, remainder = text.split(start_marker, 1)
+    next_record = remainder.find("\n  - id: ")
+    if next_record < 0:
+        body, suffix = remainder, ""
+    else:
+        body, suffix = remainder[:next_record], remainder[next_record:]
+    pattern = re.compile(r"(?m)^    {}: \S+$".format(field))
+    replacement = "    {}: {}".format(field, value)
+    body, count = pattern.subn(replacement, body)
+    if count != 1:
+        _fail("{} has invalid {} field".format(record_id, field))
+    with path.open("w", encoding="utf-8", newline="\n") as output:
+        output.write(prefix + start_marker + body + suffix)
+
+
+def _refresh_publication_chain(root):
+    publication_path = root / PUBLICATION_REL
+    publication = _read_json(publication_path)
+    evidence_files = publication.get("files")
+    if not isinstance(evidence_files, dict) or set(evidence_files) != EXPECTED_PUBLICATION_FILES:
+        _fail("publication file inventory mismatch before regeneration")
+    publication["files"] = {
+        relative: _sha256(root / relative)
+        for relative in sorted(EXPECTED_PUBLICATION_FILES)
+    }
+    with publication_path.open("w", encoding="utf-8", newline="\n") as output:
+        output.write(json.dumps(publication, indent=2) + "\n")
+    _replace_record_scalar(
+        root / "provenance/evidence.yaml",
+        "slvc_dma_asic_paired_dc_publication",
+        "sha256",
+        _sha256(publication_path),
+    )
+
+
+def _refresh_repository_checksums(root):
+    checksum_path = root / CHECKSUM_REL
+    try:
+        lines = checksum_path.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        _fail("cannot read repository checksum manifest: {}".format(error))
+
+    targets = set(EXPECTED_PUBLICATION_FILES)
+    targets.update({
+        str(PUBLICATION_REL).replace("\\", "/"),
+        "provenance/evidence.yaml",
+    })
+    seen = set()
+    rendered = []
+    for line in lines:
+        match = re.match(r"^([0-9a-f]{64})  (.+)$", line)
+        if not match:
+            _fail("repository checksum manifest has an invalid record")
+        digest, relative = match.groups()
+        if relative in seen:
+            _fail("repository checksum manifest has a duplicate path")
+        seen.add(relative)
+        if relative in targets:
+            candidate = root.joinpath(*Path(relative).parts)
+            if not candidate.is_file():
+                _fail("checksum refresh input is missing: {}".format(relative))
+            digest = _sha256(candidate)
+        rendered.append("{}  {}\n".format(digest, relative))
+    missing = targets - seen
+    if missing:
+        _fail("repository checksum manifest is missing publication inputs")
+    with checksum_path.open("w", encoding="utf-8", newline="\n") as output:
+        output.write("".join(rendered))
 
 
 def _validate_sanitization(root, extra_paths=None):
@@ -776,12 +998,16 @@ def validate(root, write_comparisons=False, base_ref=None):
     manifest, tables = _load_bundle(root)
     evaluations = _validate_manifest(manifest)
     points = _validate_points(tables["points.csv"], evaluations)
+    _validate_claim_values(evaluations, points)
     _validate_sources(tables["sources.csv"], points)
     _validate_verification(tables["verification.csv"], points, evaluations)
     _validate_lint(tables["lint.csv"])
     _validate_artifacts(tables["artifacts.csv"], evaluations, points)
     expected = _comparison_bytes(evaluations, points)
     _validate_comparisons(root, expected, write_comparisons)
+    if write_comparisons:
+        _refresh_publication_chain(root)
+        _refresh_repository_checksums(root)
     _validate_sanitization(root)
     _validate_publication(root, evaluations)
     if base_ref:

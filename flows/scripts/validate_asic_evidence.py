@@ -72,6 +72,14 @@ COMPARISON_HEADER = (
 EXPECTED_EVALUATIONS = {
     "writer_component": {
         "claim_id": "slvc_dma_writer_reservation_component_paired_dc",
+        "metrics": (
+            "total_cell_area", "combinational_area", "leaf_cell_count",
+            "register_count", "setup_wns_ns", "reservation_object_count",
+        ),
+        "artifacts": (
+            "area", "qor", "setup_top20", "hold_top20", "check_design",
+            "check_timing", "constraint_identity", "reservation_matches",
+        ),
         "roles": {
             "writer_component_w0": "baseline",
             "writer_component_w1": "candidate",
@@ -79,6 +87,16 @@ EXPECTED_EVALUATIONS = {
     },
     "c2b4_writer": {
         "claim_id": "slvc_dma_c2b4_writer_subsystem_paired_dc",
+        "metrics": (
+            "total_cell_area", "combinational_area", "writer_area",
+            "setup_wns_ns", "writer_setup_wns_ns",
+            "reservation_object_count",
+        ),
+        "artifacts": (
+            "area", "hierarchy_area", "qor", "setup_top20",
+            "writer_setup_top20", "reservation_matches", "mapped_netlist",
+            "ddc", "mapped_sdc",
+        ),
         "roles": {
             "c2b4_writer_w0": "baseline",
             "c2b4_writer_w1": "candidate",
@@ -87,11 +105,50 @@ EXPECTED_EVALUATIONS = {
     },
     "shared_pool_scheduler": {
         "claim_id": "slvc_dma_shared_pool_scheduler_paired_dc",
+        "metrics": (
+            "total_cell_area", "combinational_area", "sequential_area",
+            "leaf_cell_count", "register_count", "setup_wns_ns",
+        ),
+        "artifacts": (
+            "area", "qor", "setup_top20", "hold_top20", "check_design",
+            "check_timing", "constraints",
+        ),
         "roles": {
             "shared_pool_p6": "baseline",
             "shared_pool_p7": "candidate",
         },
     },
+}
+
+EXPECTED_MARKERS = {
+    "writer_2028": (
+        "PASS tb_rtl_rx_payload_writer_512 cases=2028",
+        "WIDE512_THROUGHPUT bytes_per_cycle_x1000=64000",
+    ),
+    "writer_integration": (
+        "PASS tb_rtl_rx_payload_writer_512_integration directed_lengths=18 mixed_frames=256",
+    ),
+    "a3_profile": (
+        "PASS tb_dma_a3_ingress_profile channels=2 payload_words=512 meta_depth=2",
+        "PASS tb_dma_rx512_memory_subsystem channels=2 payload_words=512 meta_depth=2",
+    ),
+    "shared_pool": (
+        "E19_CASE T0 reset_init",
+        "E19_CASE T1 single_frame",
+        "E19_CASE T2 back_to_back",
+        "E19_CASE T3 multi_channel",
+        "E19_CASE T4 pool_full_nodrop",
+        "E19_CASE T5 pool_full_drop",
+        "E19_CASE T6 oversized_drop",
+        "E19_CASE T7 drain_stall",
+        "E19_CASE T8 reset_recovery",
+        "OK: dma RTL v33e19 shared frame pool test passed.",
+    ),
+}
+
+EXPECTED_SIMULATORS = {
+    "windows": "ModelSim SE-64 2020.4",
+    "linux": "Questa Sim-64 10.7c",
 }
 
 PAIR_IDENTITY_FIELDS = (
@@ -263,13 +320,11 @@ def _validate_manifest(manifest):
             if item.get(manifest_key) != point_id:
                 _fail("{} {} point mismatch".format(evaluation_id, role))
         metrics = item.get("comparison_metrics")
-        if not isinstance(metrics, list) or not metrics or len(metrics) != len(set(metrics)):
-            _fail("{} comparison metrics are invalid".format(evaluation_id))
-        if any(metric not in NUMERIC_FIELDS for metric in metrics):
-            _fail("{} has an unknown comparison metric".format(evaluation_id))
+        if not isinstance(metrics, list) or tuple(metrics) != expected["metrics"]:
+            _fail("{} fixed comparison metrics mismatch".format(evaluation_id))
         artifacts = item.get("required_artifacts")
-        if not isinstance(artifacts, list) or not artifacts or len(artifacts) != len(set(artifacts)):
-            _fail("{} required artifact list is invalid".format(evaluation_id))
+        if not isinstance(artifacts, list) or tuple(artifacts) != expected["artifacts"]:
+            _fail("{} fixed artifact list mismatch".format(evaluation_id))
     return by_id
 
 
@@ -309,6 +364,17 @@ def _validate_points(rows, evaluations):
         for field in ZERO_GATE_FIELDS:
             if _decimal(row[field], "{}.{}".format(point_id, field)) != 0:
                 _fail("{} has nonzero {}".format(point_id, field))
+        if _decimal(row["setup_wns_ns"], point_id + ".setup_wns_ns") < 0:
+            _fail("{} has negative setup WNS in setup-closed evidence".format(point_id))
+        if _decimal(row["setup_tns_ns"], point_id + ".setup_tns_ns") != 0:
+            _fail("{} has nonzero setup TNS in setup-closed evidence".format(point_id))
+        if _decimal(row["hold_wns_ns"], point_id + ".hold_wns_ns") < 0:
+            _fail("{} has negative hold WNS in hold-closed evidence".format(point_id))
+        if _decimal(row["hold_tns_ns"], point_id + ".hold_tns_ns") != 0:
+            _fail("{} has nonzero hold TNS in hold-closed evidence".format(point_id))
+        for field in ("writer_setup_wns_ns", "writer_hold_wns_ns"):
+            if row[field] != "" and _decimal(row[field], point_id + "." + field) < 0:
+                _fail("{} has negative {}".format(point_id, field))
     for evaluation_id, item in evaluations.items():
         baseline = by_key[(evaluation_id, item["baseline"])]
         candidate = by_key[(evaluation_id, item["candidate"])]
@@ -375,10 +441,14 @@ def _validate_verification(rows, points, evaluations):
     for key, row in by_key.items():
         if row["status"] != "PASS":
             _fail("verification status is not PASS for {}".format(key))
-        markers = row["required_markers"].split("|") if row["required_markers"] else []
-        if len(markers) != len(set(markers)) or any(not marker for marker in markers):
-            _fail("invalid required marker list for {}".format(key))
-        if int(row["marker_count"]) != len(markers):
+        expected_tool = EXPECTED_SIMULATORS.get(row["platform"])
+        if row["tool_version"] != expected_tool:
+            _fail("simulator identity mismatch for {}".format(key))
+        markers = tuple(row["required_markers"].split("|")) if row["required_markers"] else ()
+        expected_markers = EXPECTED_MARKERS[row["suite_id"]]
+        if markers != expected_markers:
+            _fail("canonical required markers mismatch for {}".format(key))
+        if int(row["marker_count"]) != len(expected_markers):
             _fail("required marker count mismatch for {}".format(key))
         _validate_digest(row["semantic_trace_sha256"], 256, "semantic trace")
         _validate_digest(row["log_sha256"], 256, "verification log")
@@ -458,15 +528,48 @@ def _sha256(path):
     return digest.hexdigest()
 
 
-def _registered_ids(path):
+def _registered_records(path):
     try:
         text = path.read_text(encoding="utf-8")
     except OSError as error:
         _fail("cannot read {}: {}".format(path, error))
-    identifiers = re.findall(r"(?m)^  - id: ([a-z0-9_.-]+)\s*$", text)
-    if len(identifiers) != len(set(identifiers)):
-        _fail("{} contains duplicate IDs".format(path))
-    return set(identifiers), text
+    records = {}
+    current_id = None
+    current_lines = []
+    for line in text.splitlines():
+        match = re.fullmatch(r"  - id: ([a-z0-9_.-]+)", line)
+        if match:
+            if current_id is not None:
+                records[current_id] = "\n".join(current_lines)
+            current_id = match.group(1)
+            if current_id in records:
+                _fail("{} contains duplicate IDs".format(path))
+            current_lines = []
+        elif current_id is not None:
+            current_lines.append(line)
+    if current_id is not None:
+        if current_id in records:
+            _fail("{} contains duplicate IDs".format(path))
+        records[current_id] = "\n".join(current_lines)
+    return records
+
+
+def _record_list(body, field, context):
+    lines = body.splitlines()
+    marker = "    {}:".format(field)
+    try:
+        start = lines.index(marker) + 1
+    except ValueError:
+        _fail("{} has no {} list".format(context, field))
+    values = []
+    for line in lines[start:]:
+        match = re.fullmatch(r"      - ([a-z0-9_.-]+)", line)
+        if not match:
+            break
+        values.append(match.group(1))
+    if not values or len(values) != len(set(values)):
+        _fail("{} has invalid {} list".format(context, field))
+    return values
 
 
 def _validate_publication(root, evaluations):
@@ -497,7 +600,7 @@ def _validate_publication(root, evaluations):
 
     expected_files = {
         str(path.relative_to(root)).replace("\\", "/")
-        for path in (root / EVIDENCE_REL).iterdir() if path.is_file()
+        for path in (root / EVIDENCE_REL).rglob("*") if path.is_file()
     }
     files = publication.get("files")
     if not isinstance(files, dict) or set(files) != expected_files:
@@ -516,17 +619,33 @@ def _validate_publication(root, evaluations):
     if publication.get("commercial_artifact_policy") != "logical_name_and_sha256_only":
         _fail("publication commercial artifact policy mismatch")
 
-    claim_ids_registered, claims_text = _registered_ids(root / "provenance/claims.yaml")
-    evidence_ids, evidence_text = _registered_ids(root / "provenance/evidence.yaml")
-    if not expected_claims.issubset(claim_ids_registered):
+    claim_records = _registered_records(root / "provenance/claims.yaml")
+    evidence_records = _registered_records(root / "provenance/evidence.yaml")
+    if not expected_claims.issubset(claim_records):
         _fail("paired-DC claim is missing from provenance/claims.yaml")
-    if "slvc_dma_asic_paired_dc_publication" not in evidence_ids:
+    publication_id = "slvc_dma_asic_paired_dc_publication"
+    if publication_id not in evidence_records:
         _fail("paired-DC evidence is missing from provenance/evidence.yaml")
     for claim_id in expected_claims:
-        if claims_text.count("      - " + "slvc_dma_asic_paired_dc_publication") < len(expected_claims):
+        references = _record_list(claim_records[claim_id], "evidence", claim_id)
+        if references != [publication_id]:
             _fail("paired-DC claims are not bound to publication evidence")
-        if evidence_text.count("      - " + claim_id) != 1:
-            _fail("publication evidence claim mapping mismatch for {}".format(claim_id))
+    mapped_claims = set(_record_list(
+        evidence_records[publication_id], "claims", publication_id
+    ))
+    if mapped_claims != expected_claims:
+        _fail("publication evidence claim mapping mismatch")
+    publication_path = re.search(
+        r"(?m)^    path: (\S+)\s*$", evidence_records[publication_id]
+    )
+    publication_hash = re.search(
+        r"(?m)^    sha256: ([0-9a-f]{64})\s*$", evidence_records[publication_id]
+    )
+    expected_path = str(PUBLICATION_REL).replace("\\", "/")
+    if not publication_path or publication_path.group(1) != expected_path:
+        _fail("provenance evidence path must bind the publication manifest")
+    if not publication_hash or publication_hash.group(1) != _sha256(root / PUBLICATION_REL):
+        _fail("provenance evidence hash must bind the publication manifest")
 
 
 def _comparison_bytes(evaluations, points):

@@ -56,6 +56,12 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         callback(data)
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
+    def replace_provenance(self, name, old, new):
+        path = self.root / "provenance" / name
+        text = path.read_text(encoding="utf-8")
+        self.assertGreaterEqual(text.count(old), 1, (name, old))
+        path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
     def assert_fails(self, pattern):
         with self.assertRaisesRegex(validator.EvidenceError, pattern):
             validator.validate(self.root)
@@ -127,7 +133,25 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             and row["platform"] == "windows" and row["suite_id"] == "writer_2028",
             "required_markers", "PASS tb_rtl_rx_payload_writer_512 cases=2028",
         )
-        self.assert_fails("marker count mismatch")
+        self.assert_fails("canonical required markers mismatch")
+
+    def test_empty_required_markers_fail(self):
+        self.mutate_csv(
+            "verification.csv",
+            lambda row: row["point_id"] == "shared_pool_p6"
+            and row["platform"] == "linux",
+            "required_markers", "",
+        )
+        self.assert_fails("canonical required markers mismatch")
+
+    def test_wrong_simulator_identity_fails(self):
+        self.mutate_csv(
+            "verification.csv",
+            lambda row: row["point_id"] == "shared_pool_p7"
+            and row["platform"] == "windows",
+            "tool_version", "Questa Sim-64 10.7c",
+        )
+        self.assert_fails("simulator identity mismatch")
 
     def test_semantic_trace_mismatch_fails(self):
         self.mutate_csv(
@@ -143,6 +167,34 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             data["evaluations"][1]["claim_id"] = data["evaluations"][0]["claim_id"]
         self.mutate_manifest(mutate)
         self.assert_fails("claim ID reused")
+
+    def test_comparison_metric_removal_fails(self):
+        def mutate(data):
+            data["evaluations"][0]["comparison_metrics"].pop()
+        self.mutate_manifest(mutate)
+        self.assert_fails("fixed comparison metrics mismatch")
+
+    def test_required_artifact_removal_fails(self):
+        def mutate(data):
+            data["evaluations"][2]["required_artifacts"].pop()
+        self.mutate_manifest(mutate)
+        self.assert_fails("fixed artifact list mismatch")
+
+    def test_negative_setup_wns_fails(self):
+        self.mutate_csv(
+            "points.csv",
+            lambda row: row["point_id"] == "writer_component_w0",
+            "setup_wns_ns", "-0.000001",
+        )
+        self.assert_fails("negative setup WNS")
+
+    def test_negative_hold_wns_fails(self):
+        self.mutate_csv(
+            "points.csv",
+            lambda row: row["point_id"] == "shared_pool_p6",
+            "hold_wns_ns", "-0.000001",
+        )
+        self.assert_fails("negative hold WNS")
 
     def test_c2b4_lint_cannot_be_disguised_as_pass(self):
         self.mutate_csv(
@@ -175,6 +227,44 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         data["files"]["evidence/asic_paired_dc/points.csv"] = "0" * 64
         publication.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         self.assert_fails("publication hash mismatch")
+
+    def test_nested_uninventoried_payload_fails(self):
+        nested = self.csv_path("nested/raw/report.txt")
+        nested.parent.mkdir(parents=True)
+        nested.write_text("not inventoried\n", encoding="utf-8")
+        self.assert_fails("publication file inventory mismatch")
+
+    def test_claim_evidence_misbinding_fails(self):
+        self.replace_provenance(
+            "claims.yaml",
+            "      - slvc_dma_asic_paired_dc_publication\n    status: verified",
+            "      - slvc_dma_async64_vivado_2022_2_ooc_summary\n    status: verified",
+        )
+        self.assert_fails("claims are not bound")
+
+    def test_publication_evidence_claim_misbinding_fails(self):
+        self.replace_provenance(
+            "evidence.yaml",
+            "      - slvc_dma_shared_pool_scheduler_paired_dc",
+            "      - slvc_dma_async64_vivado_2022_2_ooc_200m",
+        )
+        self.assert_fails("publication evidence claim mapping mismatch")
+
+    def test_wrong_provenance_publication_path_fails(self):
+        self.replace_provenance(
+            "evidence.yaml",
+            "    path: provenance/asic_paired_dc_publication.yaml",
+            "    path: evidence/asic_paired_dc/manifest.yaml",
+        )
+        self.assert_fails("must bind the publication manifest")
+
+    def test_wrong_provenance_publication_hash_fails(self):
+        self.replace_provenance(
+            "evidence.yaml",
+            "    sha256: 21357df385e5752c375f9b9c2bf6a39438761a92b601c4d4e57af709f6ba6743",
+            "    sha256: " + "0" * 64,
+        )
+        self.assert_fails("must bind the publication manifest")
 
     def test_private_path_injection_fails(self):
         def mutate(data):

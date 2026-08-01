@@ -20,6 +20,29 @@ runner 始终核对 10 个 frozen-core PASS marker。默认 adapter-enabled defc
 
 完整命令、行为和 marker 见[验证矩阵](verification_matrix.md)。
 
+## ASIC Paired-DC 证据合同
+
+公开 paired-DC 数据包将每个点绑定到固定 source commit、源码 SHA-256、
+tool/library/constraint 身份、仿真 marker、语义 trace、lint 边界和商业报告哈希；
+不公开原始商业 EDA 日志或报告。
+
+Windows ModelSim SE-64 2020.4 与 Linux Questa Sim-64 10.7c 使用相同源码、
+参数、testbench 和 required marker。规范化语义 trace 只保留有序 case/phase、
+吞吐、最终计数和 PASS 记录，去除 simulator prompt、时间、路径及平台噪声；
+同一 equivalence group 的所有点必须具有相同 trace SHA-256。
+
+Writer suite 要求 2028-case、理想模型 64 B/cycle、directed integration 以及
+两项 A3 profile marker。P6/P7 在两个平台均要求 9 项 Shared Pool case marker
+和最终 PASS marker。
+
+SpyGlass 范围不会被合并描述：bounded Writer lint 为 0 fatal / 0 error，warning
+逐点披露；完整 C2B4 common scope 仍为 `BLOCKED_COMMON_SCOPE`，包含 0 fatal、
+15 errors、202 warnings、0 waiver。不得用 waiver 把完整范围表述为 lint-clean。
+
+`make asic-evidence-check` 严格校验 schema 与身份，使用 `Decimal` 从
+`points.csv` 重算全部 comparison，检查 marker/trace 等价性、lint 边界、敏感信息
+和原始 EDA payload；在 PR 模式下还可限制为批准的 evidence-only 路径集合。
+
 ## Channel Admission 隔离场景
 
 adapter-to-DMA smoke 的固定 marker 为：

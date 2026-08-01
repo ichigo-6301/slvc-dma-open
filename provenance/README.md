@@ -26,3 +26,13 @@ an internal fail-closed dispatcher for configuration, native log markers, and
 artifact audits. [`make_flow_interface.yaml`](make_flow_interface.yaml) records
 that interface-only migration separately from measured RTL, FPGA, and ASIC
 evidence.
+
+[`asic_paired_dc_publication.yaml`](asic_paired_dc_publication.yaml) binds the
+sanitized Writer component, C2B4 Writer-subsystem, and Shared Pool paired-DC
+tables to fixed evidence commits and public file SHA-256 values. The public
+package contains normalized CSV/JSON-syntax YAML and artifact hashes, not raw
+commercial reports, logs, netlists, DDC, SDC, host, account, or license
+configuration. Its three claim IDs are scope-distinct and cannot be promoted
+across component, subsystem, or complete-DMA boundaries. `points.csv` is the
+only numeric authority; `comparisons.csv` is regenerated with `Decimal`, six
+fractional digits, and `ROUND_HALF_EVEN`.

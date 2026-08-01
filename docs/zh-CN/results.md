@@ -99,6 +99,42 @@ Profile `dma_rx512_reg_c2_b4_m2_sp64` 使用 2 channels、每通道 4 KiB fixed 
 
 证据：[C2B4 same-run post-route summary](../../evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml)
 
+## ASIC Paired-DC 对比
+
+以下对比统一使用 Design Compiler O-2018.06-SP1、同一 Nangate45 typical
+library DB，并在每组 baseline/candidate 间保持完全相同的约束。
+`points.csv` 是数值真源，表中差值均由公开 validator 使用 Decimal 重算。
+
+<!-- claim:slvc_dma_writer_reservation_component_paired_dc maturity:verified -->
+
+| 对比与范围 | 周期 | Baseline -> candidate | 结果 |
+| --- | ---: | --- | --- |
+| Writer reservation，组件级 OOC | 1.500 ns | W0 -> W1 | 标准单元总面积 `7526.204 -> 6926.640`（`-7.966353%`）；组合面积 `-15.838902%`；两点均 setup 闭合 |
+
+该 Writer 结果只适用于 `dma_axi_write_engine_512`，不能外推为 C2B4
+子系统或完整 DMA 面积变化。
+
+<!-- claim:slvc_dma_c2b4_writer_subsystem_paired_dc maturity:verified -->
+
+| 对比与范围 | 周期 | Baseline -> candidate | 结果 |
+| --- | ---: | --- | --- |
+| C2B4 寄存器展开 RX512 子系统 | 1.818182 ns | W0 -> W1 | 两点均 setup 闭合；Writer 层级面积 `4637.976 -> 7160.720`（`+54.393209%`）；setup WNS `+0.001498 -> +0.000959 ns` |
+
+W0 已经闭合固定 550 MHz 测试点，而 W1 增加 Writer 层级面积并降低时序余量，
+因此不满足子系统 promotion 条件。W2 仅作为数值 anchor 匹配，不称为历史
+handoff 的方法学一致复现。
+
+<!-- claim:slvc_dma_shared_pool_scheduler_paired_dc maturity:verified -->
+
+| 对比与范围 | 周期 | Baseline -> candidate | 结果 |
+| --- | ---: | --- | --- |
+| 寄存器展开 Shared Pool 组件级 OOC | 2.500 ns | P6 -> P7 | setup WNS `+0.001163 -> +0.008876 ns`（改善 `7.71332 ps`）；寄存器 `+52`；总面积 `+0.019194%` |
+
+Shared Pool 对比量化了调度流水带来的时序余量改善，并同时披露寄存器和面积成本；
+该结果不是 SRAM macro PPA。
+
+证据：[脱敏 ASIC paired-DC 数据包](../../evidence/asic_paired_dc/README.md)
+
 ## SRAM A5 Research
 
 <!-- claim:slvc_dma_sram_a5_clock_delivery_canary maturity:verified -->

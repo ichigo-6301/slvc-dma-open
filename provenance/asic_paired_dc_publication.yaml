@@ -1,0 +1,35 @@
+{
+  "schema": "slvc_dma_asic_paired_dc_publication_v1",
+  "publication_class": "sanitized_hash_bound_summary",
+  "numeric_authority": "evidence/asic_paired_dc/points.csv",
+  "generated_derivative": "evidence/asic_paired_dc/comparisons.csv",
+  "raw_commercial_artifacts_published": false,
+  "claim_ids": [
+    "slvc_dma_writer_reservation_component_paired_dc",
+    "slvc_dma_c2b4_writer_subsystem_paired_dc",
+    "slvc_dma_shared_pool_scheduler_paired_dc"
+  ],
+  "fixed_evidence_commits": [
+    "adbc36aa92c6fee11253fbae31ec77216dae91cc",
+    "a630b1462efcc57d4e2748804ed652517da22a4b",
+    "ac046053a5d959f265568e2ad6f1acf45b349be4"
+  ],
+  "files": {
+    "evidence/asic_paired_dc/README.md": "d89bec8697844f0c41a648a07a3d994305dfb688121ef24f8debb0877de5733f",
+    "evidence/asic_paired_dc/artifacts.csv": "8223251b7e2c43350f580d9312741f662c99a40bc900cc3d0b73c59655c13114",
+    "evidence/asic_paired_dc/comparisons.csv": "0b921860201edf85fb1c77932eda8ee56299be10adb2dc7978a67b49021dfafe",
+    "evidence/asic_paired_dc/lint.csv": "de5ea09b58807945c4bc5f6eb2f64f33619a71d8f136faa2f1b95bdd9289ea20",
+    "evidence/asic_paired_dc/manifest.yaml": "e8e25054c598d133696684227ec9075f7ab3048af2eb7d11bd4f927d4c707817",
+    "evidence/asic_paired_dc/points.csv": "d3e72231dc38b6ab0e0362fe44f16232b9f6bbc7cbd6a9e9a9b2ba3c668cb861",
+    "evidence/asic_paired_dc/sources.csv": "d152357772eedbc14759fc43230b973302258d15107a799d7220e9244ab8cc15",
+    "evidence/asic_paired_dc/verification.csv": "061c9b70cd7a9862b599da1faa0cb8714d638e716e3441bacca277b7d9047d23"
+  },
+  "commercial_artifact_policy": "logical_name_and_sha256_only",
+  "c2b4_lint_boundary": {
+    "status": "BLOCKED_COMMON_SCOPE",
+    "fatal": 0,
+    "error": 15,
+    "warning": 202,
+    "waived": 0
+  }
+}

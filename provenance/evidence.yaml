@@ -1,6 +1,17 @@
 kind: evidence_manifest
 schema_version: 1.0.0
 evidence:
+  - id: slvc_dma_asic_paired_dc_publication
+    path: evidence/asic_paired_dc/manifest.yaml
+    type: sanitized_fixed_commit_paired_design_compiler_bundle
+    source_ref: 738d890dbba85a1e430caae9b6eb6b8b269b9566
+    tool: Design Compiler O-2018.06-SP1 / ModelSim SE-64 2020.4 / Questa Sim-64 10.7c / SpyGlass L-2016.06
+    claims:
+      - slvc_dma_writer_reservation_component_paired_dc
+      - slvc_dma_c2b4_writer_subsystem_paired_dc
+      - slvc_dma_shared_pool_scheduler_paired_dc
+    sha256: e8e25054c598d133696684227ec9075f7ab3048af2eb7d11bd4f927d4c707817
+    public: true
   - id: slvc_dma_async64_vivado_2022_2_ooc_summary
     path: evidence/slvc_dma_async64_vivado_2022_2_ooc_summary.yaml
     type: vivado_2022_2_routed_ooc_timing_utilization_cdc

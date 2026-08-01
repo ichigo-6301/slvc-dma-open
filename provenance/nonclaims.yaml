@@ -1,6 +1,30 @@
 kind: nonclaims
 schema_version: 1.0.0
 nonclaims:
+  - id: slvc_dma_writer_component_scope_promotion
+    profile: dma_axi_write_engine_512_component_eval
+    statement: "The Writer component area reduction is not a C2B4 subsystem or complete-DMA area claim."
+    reason: "The paired result synthesizes dma_axi_write_engine_512 alone; scope promotion is prohibited by the publication contract."
+    status: not_claimed
+    public: true
+  - id: slvc_dma_c2b4_writer_enabled_closure
+    profile: dma_rx512_reg_c2_b4_m2_sp64
+    statement: "The reservation change is not claimed to have enabled the first 550 MHz C2B4 closure or reduced Writer hierarchy area."
+    reason: "W0 already closes the fixed point, while W1 has higher Writer hierarchy area and lower setup margin."
+    status: not_claimed
+    public: true
+  - id: slvc_dma_paired_dc_implementation_signoff
+    profile: slvc_dma_asic_paired_dc_publication
+    statement: "The paired-DC data is not complete-DMA, Fmax, P&R, extracted STA, power, SRAM-macro, MMMC/OCV, foundry, silicon, or signoff evidence."
+    reason: "The publication contains bounded component/subsystem synthesis summaries and hashes only."
+    status: not_claimed
+    public: true
+  - id: slvc_dma_c2b4_full_lint_clean
+    profile: dma_rx512_reg_c2_b4_m2_sp64
+    statement: "A lint-clean complete C2B4 design is not claimed by the bounded Writer SpyGlass result."
+    reason: "The full common scope remains BLOCKED_COMMON_SCOPE with 0 fatal, 15 errors, 202 warnings, and 0 waivers."
+    status: not_claimed
+    public: true
   - id: slvc_dma_universal_channel_isolation
     profile: slvc_dma_v1_512_udp_ipv4_adapter_p0
     statement: "Universal non-blocking isolation across all channels and shared-resource exhaustion modes is not claimed."

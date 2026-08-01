@@ -1,0 +1,89 @@
+{
+  "schema": "slvc_dma_public_asic_paired_dc_v1",
+  "numeric_source": "points.csv",
+  "derived_source": "comparisons.csv",
+  "formula_policy": {
+    "delta": "candidate-baseline",
+    "delta_percent": "100*(candidate-baseline)/baseline",
+    "implementation": "decimal_v1",
+    "delta_percent_scale": 6,
+    "rounding": "ROUND_HALF_EVEN"
+  },
+  "evaluations": [
+    {
+      "id": "writer_component",
+      "claim_id": "slvc_dma_writer_reservation_component_paired_dc",
+      "private_evidence_commit": "adbc36aa92c6fee11253fbae31ec77216dae91cc",
+      "claim_scope": "Nangate45 component-level Design Compiler OOC",
+      "top": "dma_axi_write_engine_512",
+      "baseline": "writer_component_w0",
+      "candidate": "writer_component_w1",
+      "parameters": "MAX_BURST_BEATS=16;MAX_OUTSTANDING=4",
+      "constraint_id": "writer_ooc_p1p5_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+      "verification_reference": "c2b4_writer",
+      "comparison_metrics": [
+        "total_cell_area", "combinational_area", "leaf_cell_count",
+        "register_count", "setup_wns_ns", "reservation_object_count"
+      ],
+      "required_artifacts": [
+        "area", "qor", "setup_top20", "hold_top20", "check_design",
+        "check_timing", "constraint_identity", "reservation_matches"
+      ],
+      "nonclaims": [
+        "C2B4 or complete-DMA area reduction",
+        "place-and-route or extracted timing",
+        "maximum frequency, power, or signoff"
+      ]
+    },
+    {
+      "id": "c2b4_writer",
+      "claim_id": "slvc_dma_c2b4_writer_subsystem_paired_dc",
+      "private_evidence_commit": "a630b1462efcc57d4e2748804ed652517da22a4b",
+      "flow_as_run_commit": "9a7e465d7a92f0502287eb162a80468a717fc9fb",
+      "claim_scope": "Nangate45 C2B4 register-expanded RX512 subsystem Design Compiler",
+      "top": "dma_rx512_memory_subsystem_top",
+      "baseline": "c2b4_writer_w0",
+      "candidate": "c2b4_writer_w1",
+      "canary": "c2b4_writer_w2",
+      "canary_classification": "NUMERIC_ANCHOR_MATCH_ONLY",
+      "parameters": "CHANNELS=2;FIXED_META_AW=1;FIXED_META_DEPTH=2;FIXED_PAYLOAD_AW=9;FIXED_PAYLOAD_WORDS=512;MAX_BURST_BEATS=16;MAX_OUTSTANDING=4;SHARED_BLOCK_AW=6;SHARED_BLOCK_NUM=64",
+      "constraint_id": "c2b4_writer_subsystem_p1p818182_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+      "comparison_metrics": [
+        "total_cell_area", "combinational_area", "writer_area",
+        "setup_wns_ns", "writer_setup_wns_ns", "reservation_object_count"
+      ],
+      "required_artifacts": [
+        "area", "hierarchy_area", "qor", "setup_top20", "writer_setup_top20",
+        "reservation_matches", "mapped_netlist", "ddc", "mapped_sdc"
+      ],
+      "nonclaims": [
+        "writer optimization enabled the first 550 MHz subsystem closure",
+        "writer optimization reduced C2B4 writer hierarchy area",
+        "complete DMA, Fmax, P&R, extracted STA, power, SRAM, or signoff"
+      ]
+    },
+    {
+      "id": "shared_pool_scheduler",
+      "claim_id": "slvc_dma_shared_pool_scheduler_paired_dc",
+      "private_evidence_commit": "ac046053a5d959f265568e2ad6f1acf45b349be4",
+      "claim_scope": "Nangate45 register-expanded Shared Pool component Design Compiler OOC",
+      "top": "dma_frame_shared_pool",
+      "baseline": "shared_pool_p6",
+      "candidate": "shared_pool_p7",
+      "parameters": "BLOCK_AW=6;BLOCK_NUM=64;CH_ID_W=4;CH_NUM=16;DATA_W=512;DEBUG_OWNERSHIP=0;KEEP_W=64;MAX_FRAME_BLOCKS=32;META_AW=2;META_DEPTH=4",
+      "constraint_id": "spdc_scheduler_n45_2p5ns_su0p2_hu0p05_io0p5_tr0p1_load0p05_fo16_mt0p5_v1",
+      "comparison_metrics": [
+        "total_cell_area", "combinational_area", "sequential_area",
+        "leaf_cell_count", "register_count", "setup_wns_ns"
+      ],
+      "required_artifacts": [
+        "area", "qor", "setup_top20", "hold_top20", "check_design",
+        "check_timing", "constraints"
+      ],
+      "nonclaims": [
+        "complete DMA or SRAM-macro PPA",
+        "maximum frequency, P&R, extracted timing, power, or signoff"
+      ]
+    }
+  ]
+}

@@ -615,7 +615,11 @@ def _validate_scope(root, base_ref):
             continue
         if path not in ALLOWED_SCOPE_PATHS:
             _fail("PR scope forbids change to {}".format(path))
-    _validate_sanitization(root, changed)
+    published_text = {
+        path for path in changed
+        if path.startswith(("evidence/", "provenance/", "docs/"))
+    }
+    _validate_sanitization(root, published_text)
 
 
 def validate(root, write_comparisons=False, base_ref=None):

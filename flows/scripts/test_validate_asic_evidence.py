@@ -30,6 +30,10 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "evidence.yaml"
         ):
             shutil.copy2(ROOT / "provenance" / name, provenance / name)
+        for relative in ("docs/en/results.md", "docs/zh-CN/results.md"):
+            destination = self.root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / relative, destination)
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -183,6 +187,28 @@ class AsicEvidenceMutationTest(unittest.TestCase):
                     finally:
                         self.root = original_root
 
+    def test_manifest_claim_boundaries_are_fixed(self):
+        mutations = {
+            "claim_scope": "complete-DMA signoff",
+            "nonclaims": [],
+            "canary_classification": "METHODOLOGY_IDENTICAL_REPRODUCTION",
+        }
+        for field, value in mutations.items():
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as directory:
+                    nested = Path(directory) / "repo"
+                    shutil.copytree(self.root, nested)
+                    original_root = self.root
+                    self.root = nested
+                    try:
+                        def mutate(data):
+                            index = 1 if field == "canary_classification" else 0
+                            data["evaluations"][index][field] = value
+                        self.mutate_manifest(mutate)
+                        self.assert_fails("fixed {} mismatch".format(field))
+                    finally:
+                        self.root = original_root
+
     def test_private_evidence_commit_cannot_drift_with_publication(self):
         replacement = "0" * 40
         def mutate(data):
@@ -319,6 +345,27 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("negative writer_setup_wns_ns")
 
+    def test_negative_physical_area_fails(self):
+        self.mutate_csv(
+            "points.csv", lambda row: row["point_id"] == "c2b4_writer_w0",
+            "noncombinational_area", "-1",
+        )
+        self.assert_fails("negative physical metric")
+
+    def test_negative_physical_count_fails(self):
+        self.mutate_csv(
+            "points.csv", lambda row: row["point_id"] == "c2b4_writer_w0",
+            "writer_leaf_count", "-1",
+        )
+        self.assert_fails("negative physical metric")
+
+    def test_fractional_physical_count_fails(self):
+        self.mutate_csv(
+            "points.csv", lambda row: row["point_id"] == "c2b4_writer_w0",
+            "writer_leaf_count", "100.5",
+        )
+        self.assert_fails("non-integral count")
+
     def test_c2b4_lint_cannot_be_disguised_as_pass(self):
         self.mutate_csv(
             "lint.csv",
@@ -350,6 +397,15 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "sha256", "",
         )
         self.assert_fails("artifact hash")
+
+    def test_commercial_report_digest_inventory_is_fixed(self):
+        self.mutate_csv(
+            "artifacts.csv",
+            lambda row: row["point_id"] == "writer_component_w0"
+            and row["logical_name"] == "area",
+            "sha256", "0" * 64,
+        )
+        self.assert_fails("fixed commercial-report digest inventory")
 
     def test_publication_file_hash_mismatch_fails(self):
         publication = self.root / "provenance/asic_paired_dc_publication.yaml"
@@ -458,6 +514,29 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("publication evidence claim mapping mismatch")
 
+    def test_publication_evidence_identity_is_fixed(self):
+        mutations = {
+            "type": "signoff_bundle",
+            "source_ref": "0" * 40,
+            "tool": "Vivado 2022.2",
+            "public": "false",
+        }
+        for field, value in mutations.items():
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as directory:
+                    nested = Path(directory) / "repo"
+                    shutil.copytree(self.root, nested)
+                    original_root = self.root
+                    self.root = nested
+                    try:
+                        expected = validator.EXPECTED_EVIDENCE_RECORD[field]
+                        self.replace_provenance("evidence.yaml", expected, value)
+                        self.assert_fails(
+                            "publication evidence fixed {} mismatch".format(field)
+                        )
+                    finally:
+                        self.root = original_root
+
     def test_wrong_provenance_publication_path_fails(self):
         self.replace_provenance(
             "evidence.yaml",
@@ -475,23 +554,24 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         self.assert_fails("must bind the publication manifest")
 
     def test_private_path_injection_fails(self):
-        def mutate(data):
-            data["evaluations"][0]["nonclaims"].append(
-                "internal archive D:\\private\\run"
-            )
-        self.mutate_manifest(mutate)
+        path = self.csv_path("README.md")
+        path.write_text(
+            path.read_text(encoding="utf-8") + "\nD:\\private\\run\n",
+            encoding="utf-8",
+        )
         self.assert_fails("Windows absolute path")
 
     def test_arbitrary_posix_absolute_path_injection_fails(self):
-        def mutate(data):
-            data["evaluations"][0]["nonclaims"].append(
-                "internal archive /root/private/customer/design.v"
-            )
-        self.mutate_manifest(mutate)
+        path = self.csv_path("README.md")
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + "\n/root/private/customer/design.v\n",
+            encoding="utf-8",
+        )
         self.assert_fails("POSIX absolute path")
 
     def test_delimited_posix_absolute_path_injection_fails(self):
-        for delimiter in (",", ":", ";", "(", "~", "-"):
+        for delimiter in (",", ":", ";", "(", "~", "-", "_"):
             with self.subTest(delimiter=delimiter):
                 with tempfile.TemporaryDirectory() as directory:
                     nested = Path(directory) / "repo"
@@ -499,16 +579,26 @@ class AsicEvidenceMutationTest(unittest.TestCase):
                     original_root = self.root
                     self.root = nested
                     try:
-                        def mutate(data):
-                            data["evaluations"][0]["nonclaims"].append(
-                                "internal archive{}/root/private/design.v".format(
-                                    delimiter
-                                )
-                            )
-                        self.mutate_manifest(mutate)
+                        path = self.csv_path("README.md")
+                        path.write_text(
+                            path.read_text(encoding="utf-8")
+                            + "\ninternal archive{}/root/private/design.v\n".format(
+                                delimiter
+                            ),
+                            encoding="utf-8",
+                        )
                         self.assert_fails("POSIX absolute path")
                     finally:
                         self.root = original_root
+
+    def test_delimited_unc_path_injection_fails(self):
+        path = self.csv_path("README.md")
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + "\ninternal archive,\\\\server\\share\\design.v\n",
+            encoding="utf-8",
+        )
+        self.assert_fails("UNC path")
 
     def test_comparison_formula_mutation_fails(self):
         self.mutate_csv(
@@ -522,6 +612,31 @@ class AsicEvidenceMutationTest(unittest.TestCase):
     def test_raw_commercial_artifact_fails(self):
         self.csv_path("private.rpt").write_text("raw report\n", encoding="utf-8")
         self.assert_fails("raw EDA artifact")
+
+    def test_raw_report_disguised_as_readme_fails(self):
+        self.csv_path("README.md").write_text(
+            "Design Compiler report_area raw payload\n", encoding="utf-8"
+        )
+        self.assert_fails("fixed evidence README content")
+
+    def test_published_result_table_value_is_fixed(self):
+        path = self.root / "docs/en/results.md"
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace("`-7.966353%`", "`-70.000000%`", 1),
+            encoding="utf-8",
+        )
+        self.assert_fails("fixed result table row mismatch")
+
+    def test_ordinary_pr_does_not_activate_evidence_scope(self):
+        self.assertFalse(validator._evidence_scope_active({
+            "rtl/rx/dma_axi_write_engine_512.v",
+            "provenance/checksums.sha256",
+        }))
+        self.assertTrue(validator._evidence_scope_active({
+            "docs/en/results.md",
+            "provenance/checksums.sha256",
+        }))
 
     def test_write_mode_restores_canonical_comparisons(self):
         self.mutate_csv(

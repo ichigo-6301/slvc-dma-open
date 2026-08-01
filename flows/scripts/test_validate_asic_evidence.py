@@ -30,7 +30,7 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "evidence.yaml"
         ):
             shutil.copy2(ROOT / "provenance" / name, provenance / name)
-        for relative in ("docs/en/results.md", "docs/zh-CN/results.md"):
+        for relative in validator.EXPECTED_DOC_SHA256:
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, destination)
@@ -454,7 +454,7 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "      - slvc_dma_asic_paired_dc_publication\n    status: verified",
             "      - slvc_dma_async64_vivado_2022_2_ooc_summary\n    status: verified",
         )
-        self.assert_fails("claims are not bound")
+        self.assert_fails("claim binding")
 
     def test_claim_source_ref_must_match_fixed_evidence_commit(self):
         self.replace_provenance(
@@ -513,6 +513,58 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "      - slvc_dma_async64_vivado_2022_2_ooc_200m",
         )
         self.assert_fails("publication evidence claim mapping mismatch")
+
+    def test_unexpected_claim_cannot_bind_publication_evidence(self):
+        path = self.root / "provenance/claims.yaml"
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + """
+  - id: slvc_dma_complete_dma_false_claim
+    benchmark: fabricated
+    configuration: fabricated
+    tool: fabricated
+    status: verified
+    public: true
+    evidence:
+      - slvc_dma_asic_paired_dc_publication
+""",
+            encoding="utf-8",
+        )
+        self.assert_fails("unexpected claim binding")
+
+    def test_inline_claim_binding_cannot_bypass_inventory(self):
+        path = self.root / "provenance/claims.yaml"
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + """
+  - id: slvc_dma_complete_dma_inline_false_claim
+    benchmark: fabricated
+    configuration: fabricated
+    tool: fabricated
+    status: verified
+    public: true
+    evidence: [slvc_dma_asic_paired_dc_publication]
+""",
+            encoding="utf-8",
+        )
+        self.assert_fails("evidence list")
+
+    def test_escaped_claim_binding_cannot_bypass_inventory(self):
+        path = self.root / "provenance/claims.yaml"
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + """
+  - id: slvc_dma_complete_dma_escaped_false_claim
+    benchmark: fabricated
+    configuration: fabricated
+    tool: fabricated
+    status: verified
+    public: true
+    evidence: ["slvc_dma_asic_paired_dc_publicatio\\u006e"]
+""",
+            encoding="utf-8",
+        )
+        self.assert_fails("evidence list")
 
     def test_publication_evidence_identity_is_fixed(self):
         mutations = {
@@ -627,6 +679,53 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             encoding="utf-8",
         )
         self.assert_fails("fixed result table row mismatch")
+
+    def test_paired_dc_document_section_is_fixed(self):
+        path = self.root / "docs/en/results.md"
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace(
+                "## SRAM A5 Research",
+                "Complete-DMA area reduction: 50%.\n\n## SRAM A5 Research",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        self.assert_fails("fixed evidence document content mismatch")
+
+    def test_paired_dc_limitations_are_fixed(self):
+        path = self.root / "docs/en/limitations.md"
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace(
+                "not a C2B4 or complete-DMA area result",
+                "a complete-DMA result",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        self.assert_fails("fixed evidence document content mismatch")
+
+    def test_contradictory_text_outside_paired_dc_section_fails(self):
+        path = self.root / "docs/en/results.md"
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + "\nComplete-DMA area reduction: 50%.\n",
+            encoding="utf-8",
+        )
+        self.assert_fails("fixed evidence document content mismatch")
+
+    def test_html_closing_tag_is_not_a_posix_path(self):
+        path = self.csv_path("README.md")
+        text = path.read_text(encoding="utf-8")
+        path.write_text(text + "\n<details></details>\n", encoding="utf-8")
+        self.assert_fails("fixed evidence README content")
+
+    def test_posix_path_ending_in_angle_bracket_fails(self):
+        path = self.csv_path("README.md")
+        text = path.read_text(encoding="utf-8")
+        path.write_text(text + "\n/tmp>\n", encoding="utf-8")
+        self.assert_fails("POSIX absolute path")
 
     def test_ordinary_pr_does_not_activate_evidence_scope(self):
         self.assertFalse(validator._evidence_scope_active({

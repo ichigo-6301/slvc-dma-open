@@ -294,6 +294,27 @@ EXPECTED_RESULT_ROWS = {
     ),
 }
 
+EXPECTED_DOC_SHA256 = {
+    "docs/en/results.md": (
+        "e3bb0780925d02900cce02dee7cf196b8f28a997e9d5f0b7980c75b3d115688d"
+    ),
+    "docs/zh-CN/results.md": (
+        "285d9f936c17e4a6cc39c5255c2e79330f6264eb0d93869578452dbc7f73b7fc"
+    ),
+    "docs/en/verification.md": (
+        "5d5d4cfd3f4c1fa2285f182e1c6db9d12a4a44930e4799c002fbda6000feb068"
+    ),
+    "docs/zh-CN/verification.md": (
+        "a689c556dd38901463ec001898998805893734938034a96bcdcae2979d5660bb"
+    ),
+    "docs/en/limitations.md": (
+        "e4fa2563fefbc93a29cc2c8a2b938db96bda77860f5d5aafa9ef621a74dd6ccb"
+    ),
+    "docs/zh-CN/limitations.md": (
+        "fa6e463b501b874f8d7e5cff2a44117514764bb9836283e141d273260d034934"
+    ),
+}
+
 EXPECTED_EVIDENCE_RECORD = {
     "type": "sanitized_fixed_commit_paired_design_compiler_bundle",
     "source_ref": "738d890dbba85a1e430caae9b6eb6b8b269b9566",
@@ -890,6 +911,16 @@ def _validate_publication(root, evaluations):
     publication_id = "slvc_dma_asic_paired_dc_publication"
     if publication_id not in evidence_records:
         _fail("paired-DC evidence is missing from provenance/evidence.yaml")
+    claim_evidence = {
+        claim_id: _record_list(body, "evidence", claim_id)
+        for claim_id, body in claim_records.items()
+    }
+    bound_claims = {
+        claim_id for claim_id, references in claim_evidence.items()
+        if publication_id in references
+    }
+    if bound_claims != expected_claims:
+        _fail("publication evidence has unexpected claim binding")
     for field, value in EXPECTED_EVIDENCE_RECORD.items():
         actual = _record_scalar(
             evidence_records[publication_id], field, publication_id, r".+"
@@ -897,7 +928,7 @@ def _validate_publication(root, evaluations):
         if actual != value:
             _fail("publication evidence fixed {} mismatch".format(field))
     for claim_id in expected_claims:
-        references = _record_list(claim_records[claim_id], "evidence", claim_id)
+        references = claim_evidence[claim_id]
         if references != [publication_id]:
             _fail("paired-DC claims are not bound to publication evidence")
         evaluation_id = next(
@@ -1099,6 +1130,7 @@ def _validate_sanitization(root, extra_paths=None):
     for path in paths:
         text = path.read_text(encoding="utf-8", errors="replace")
         scan_text = text.replace("100*(candidate-baseline)/baseline", "")
+        scan_text = re.sub(r"</[A-Za-z][A-Za-z0-9-]*>", "", scan_text)
         for label, pattern in SENSITIVE_PATTERNS:
             if pattern.search(scan_text):
                 _fail("{} contains {}".format(path.relative_to(root), label))
@@ -1113,6 +1145,15 @@ def _validate_result_tables(root):
         for expected in expected_rows:
             if text.count(expected) != 1:
                 _fail("fixed result table row mismatch in {}".format(relative))
+
+    for relative, expected_hash in EXPECTED_DOC_SHA256.items():
+        try:
+            text = (root / relative).read_text(encoding="utf-8")
+        except OSError as error:
+            _fail("cannot read evidence document {}: {}".format(relative, error))
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if digest != expected_hash:
+            _fail("fixed evidence document content mismatch in {}".format(relative))
 
 
 def _git_paths(root, arguments):

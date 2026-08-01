@@ -61,6 +61,10 @@ FUTURE_PUBLICATION_PATHS = frozenset(
     }
 )
 
+EVIDENCE_TRIGGER_PATHS = FUTURE_PUBLICATION_PATHS - {
+    "provenance/checksums.sha256",
+}
+
 
 class PolicyError(RuntimeError):
     pass
@@ -109,7 +113,7 @@ def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY):
             _fail("bootstrap evidence PR exact path set mismatch")
         return "BOOTSTRAP_EVIDENCE_SCOPE_PASS"
 
-    publication_touched = bool(changed & FUTURE_PUBLICATION_PATHS) or any(
+    publication_touched = bool(changed & EVIDENCE_TRIGGER_PATHS) or any(
         path.startswith("evidence/asic_paired_dc/") for path in changed
     )
     if publication_touched and changed & POLICY_PATHS:

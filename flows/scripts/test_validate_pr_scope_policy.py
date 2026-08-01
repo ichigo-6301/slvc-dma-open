@@ -78,6 +78,25 @@ class TrustedScopePolicyTest(unittest.TestCase):
             "NOT_APPLICABLE",
         )
 
+    def test_global_checksum_does_not_activate_evidence_scope(self):
+        self.assertEqual(
+            policy.validate_event(
+                event(9, "3" * 40),
+                {"README.md", "provenance/checksums.sha256"},
+                BOOTSTRAP_HEAD,
+            ),
+            "NOT_APPLICABLE",
+        )
+
+    def test_renamed_policy_source_path_is_rejected(self):
+        changed = {
+            ".github/workflows/trusted-evidence-scope.yml",
+            "evidence/asic_paired_dc/README.md",
+            "provenance/checksums.sha256",
+        }
+        with self.assertRaisesRegex(policy.PolicyError, "must not modify trusted policy"):
+            policy.validate_event(event(9, "3" * 40), changed, BOOTSTRAP_HEAD)
+
     def test_repository_and_base_are_fixed(self):
         wrong_repo = event(9, "3" * 40)
         wrong_repo["repository"]["full_name"] = "other/repo"

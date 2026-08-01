@@ -25,12 +25,15 @@ jobs:
         run: |
           git init policy
           git -C policy remote add origin "https://github.com/${REPOSITORY}.git"
-          git -C policy fetch --depth=1 origin "${BASE_SHA}"
+          git -C policy fetch --no-tags origin "${BASE_SHA}"
           git -C policy checkout --detach FETCH_HEAD
           test "$(git -C policy rev-parse HEAD)" = "${BASE_SHA}"
-          git -C policy fetch --depth=1 origin "${HEAD_SHA}"
+          git -C policy fetch --no-tags origin "${HEAD_SHA}"
           test "$(git -C policy rev-parse FETCH_HEAD)" = "${HEAD_SHA}"
-          git -C policy diff --name-only -z "${BASE_SHA}" "${HEAD_SHA}" > changed-paths.z
+          MERGE_BASE="$(git -C policy merge-base "${BASE_SHA}" "${HEAD_SHA}")"
+          test -n "${MERGE_BASE}"
+          git -C policy diff --no-renames --name-only -z \
+            "${MERGE_BASE}" "${HEAD_SHA}" > changed-paths.z
       -
         name: Validate PR identity and changed paths with base-owned code
         run: >-

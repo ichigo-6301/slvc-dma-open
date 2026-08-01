@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
   group: trusted-evidence-scope-${{ github.event.pull_request.number }}
@@ -21,6 +20,7 @@ jobs:
         name: Fetch immutable base policy only
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REPOSITORY: ${{ github.repository }}
         run: |
           git init policy
@@ -28,11 +28,14 @@ jobs:
           git -C policy fetch --depth=1 origin "${BASE_SHA}"
           git -C policy checkout --detach FETCH_HEAD
           test "$(git -C policy rev-parse HEAD)" = "${BASE_SHA}"
+          git -C policy fetch --depth=1 origin "${HEAD_SHA}"
+          test "$(git -C policy rev-parse FETCH_HEAD)" = "${HEAD_SHA}"
+          git -C policy diff --name-only -z "${BASE_SHA}" "${HEAD_SHA}" > changed-paths.z
       -
         name: Validate PR identity and changed paths with base-owned code
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: >-
           python3 policy/flows/scripts/validate_pr_scope_policy.py
           --event "${GITHUB_EVENT_PATH}"
           --repository "${GITHUB_REPOSITORY}"
+          --changed-files-z "changed-paths.z"
+          --bootstrap-head "${{ vars.ASIC_EVIDENCE_BOOTSTRAP_HEAD }}"

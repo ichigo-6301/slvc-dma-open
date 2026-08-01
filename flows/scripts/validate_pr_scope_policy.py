@@ -5,11 +5,8 @@ from __future__ import print_function
 
 import argparse
 import json
-import os
 import re
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 
@@ -17,7 +14,6 @@ REPOSITORY = "ichigo-6301/slvc-dma-open"
 SHA_RE = re.compile(r"[0-9a-f]{40}")
 
 BOOTSTRAP_PR = 2
-BOOTSTRAP_HEAD = "9e9159e7952314343fd2a6efa41364a26a0c0de2"
 BOOTSTRAP_PATHS = frozenset({
     ".github/workflows/public-integrity.yml",
     "Makefile",
@@ -46,8 +42,12 @@ BOOTSTRAP_PATHS = frozenset({
 })
 
 POLICY_PATHS = frozenset({
+    ".github/workflows/public-integrity.yml",
     ".github/workflows/trusted-evidence-scope.yml",
+    "Makefile",
+    "flows/scripts/test_validate_asic_evidence.py",
     "flows/scripts/test_validate_pr_scope_policy.py",
+    "flows/scripts/validate_asic_evidence.py",
     "flows/scripts/validate_pr_scope_policy.py",
 })
 
@@ -83,7 +83,7 @@ def _normalize_paths(paths):
     return frozenset(normalized)
 
 
-def validate_event(event, changed_paths, repository=REPOSITORY):
+def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY):
     if event.get("repository", {}).get("full_name") != repository:
         _fail("repository identity mismatch")
     pull = event.get("pull_request")
@@ -101,77 +101,41 @@ def validate_event(event, changed_paths, repository=REPOSITORY):
     changed = _normalize_paths(changed_paths)
 
     if number == BOOTSTRAP_PR:
-        if head_sha != BOOTSTRAP_HEAD:
+        if not SHA_RE.fullmatch(bootstrap_head):
+            _fail("trusted bootstrap head is not configured")
+        if head_sha != bootstrap_head:
             _fail("bootstrap evidence PR head SHA mismatch")
         if changed != BOOTSTRAP_PATHS:
             _fail("bootstrap evidence PR exact path set mismatch")
         return "BOOTSTRAP_EVIDENCE_SCOPE_PASS"
 
-    publication_touched = any(
+    publication_touched = bool(changed & FUTURE_PUBLICATION_PATHS) or any(
         path.startswith("evidence/asic_paired_dc/") for path in changed
     )
+    if publication_touched and changed & POLICY_PATHS:
+        _fail("evidence PR must not modify trusted policy")
     if not publication_touched:
         return "NOT_APPLICABLE"
-    if changed & POLICY_PATHS:
-        _fail("evidence PR must not modify trusted policy")
     unexpected = changed - FUTURE_PUBLICATION_PATHS
     if unexpected:
         _fail("evidence PR contains forbidden path: {}".format(sorted(unexpected)[0]))
     return "EVIDENCE_SCOPE_PASS"
 
 
-def fetch_changed_paths(repository, number, token):
-    paths = []
-    page = 1
-    while True:
-        url = (
-            "https://api.github.com/repos/{}/pulls/{}/files?per_page=100&page={}"
-            .format(repository, number, page)
-        )
-        request = urllib.request.Request(url)
-        request.add_header("Accept", "application/vnd.github+json")
-        request.add_header("Authorization", "Bearer {}".format(token))
-        request.add_header("X-GitHub-Api-Version", "2022-11-28")
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except (OSError, ValueError, urllib.error.HTTPError) as error:
-            _fail("cannot read pull request files: {}".format(error))
-        if not isinstance(payload, list):
-            _fail("GitHub files response is not a list")
-        for item in payload:
-            if not isinstance(item, dict) or not isinstance(item.get("filename"), str):
-                _fail("GitHub files response has an invalid record")
-            paths.append(item["filename"])
-            previous = item.get("previous_filename")
-            if previous is not None:
-                if not isinstance(previous, str):
-                    _fail("GitHub files response has an invalid previous path")
-                paths.append(previous)
-        if len(payload) < 100:
-            break
-        page += 1
-        if page > 30:
-            _fail("pull request file list exceeds policy limit")
-    return paths
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event", required=True)
     parser.add_argument("--repository", default=REPOSITORY)
-    parser.add_argument("--changed-files")
+    parser.add_argument("--changed-files-z", required=True)
+    parser.add_argument("--bootstrap-head", required=True)
     args = parser.parse_args(argv)
     try:
         event = json.loads(Path(args.event).read_text(encoding="utf-8"))
-        if args.changed_files:
-            changed = json.loads(Path(args.changed_files).read_text(encoding="utf-8"))
-        else:
-            token = os.environ.get("GITHUB_TOKEN", "")
-            if not token:
-                _fail("GITHUB_TOKEN is required")
-            changed = fetch_changed_paths(args.repository, event.get("number"), token)
-        result = validate_event(event, changed, args.repository)
+        raw_paths = Path(args.changed_files_z).read_bytes().split(b"\0")
+        changed = [path.decode("utf-8") for path in raw_paths if path]
+        result = validate_event(
+            event, changed, args.bootstrap_head, args.repository
+        )
     except (OSError, ValueError, PolicyError) as error:
         print("trusted-scope: error: {}".format(error), file=sys.stderr)
         return 2

@@ -77,7 +77,7 @@ help:
 >   'Local tools, PDKs, and libraries belong in flows/local/ (ignored).'
 
 showcase-check: public-hygiene asic-evidence-check
-> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence
+> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy
 > @printf '%s\n' 'SHOWCASE_CHECK_PASS'
 
 public-hygiene:

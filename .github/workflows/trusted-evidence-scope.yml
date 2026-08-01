@@ -1,0 +1,44 @@
+name: Trusted Evidence Scope
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-evidence-scope-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  base-owned-scope:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Fetch immutable base policy only
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git init policy
+          git -C policy remote add origin "https://github.com/${REPOSITORY}.git"
+          git -C policy fetch --no-tags origin "${BASE_SHA}"
+          git -C policy checkout --detach FETCH_HEAD
+          test "$(git -C policy rev-parse HEAD)" = "${BASE_SHA}"
+          git -C policy fetch --no-tags origin "${HEAD_SHA}"
+          test "$(git -C policy rev-parse FETCH_HEAD)" = "${HEAD_SHA}"
+          MERGE_BASE="$(git -C policy merge-base "${BASE_SHA}" "${HEAD_SHA}")"
+          test -n "${MERGE_BASE}"
+          git -C policy diff --no-renames --name-only -z \
+            "${MERGE_BASE}" "${HEAD_SHA}" > changed-paths.z
+      -
+        name: Validate PR identity and changed paths with base-owned code
+        run: >-
+          python3 policy/flows/scripts/validate_pr_scope_policy.py
+          --event "${GITHUB_EVENT_PATH}"
+          --repository "${GITHUB_REPOSITORY}"
+          --changed-files-z "changed-paths.z"
+          --bootstrap-head "${{ vars.ASIC_EVIDENCE_BOOTSTRAP_HEAD }}"

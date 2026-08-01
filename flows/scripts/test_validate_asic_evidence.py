@@ -8,6 +8,7 @@ import json
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from flows.scripts import validate_asic_evidence as validator
@@ -27,9 +28,10 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         provenance.mkdir()
         for name in (
             "asic_paired_dc_publication.yaml", "checksums.sha256", "claims.yaml",
-            "evidence.yaml"
+            "evidence.yaml", "nonclaims.yaml"
         ):
             shutil.copy2(ROOT / "provenance" / name, provenance / name)
+        shutil.copy2(ROOT / "provenance/README.md", provenance / "README.md")
         for relative in validator.EXPECTED_DOC_SHA256:
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -95,6 +97,14 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "total_cell_area", "6926.641",
         )
         self.assert_fails("fixed claim value mismatch")
+
+    def test_nonclaim_point_metric_cannot_drift(self):
+        self.mutate_csv(
+            "points.csv",
+            lambda row: row["point_id"] == "writer_component_w1",
+            "hold_wns_ns", "99",
+        )
+        self.assert_fails("fixed points numeric authority")
 
     def test_commit_mapping_mismatch_fails(self):
         self.mutate_csv(
@@ -209,6 +219,18 @@ class AsicEvidenceMutationTest(unittest.TestCase):
                     finally:
                         self.root = original_root
 
+    def test_manifest_unknown_field_fails(self):
+        self.mutate_manifest(
+            lambda data: data.__setitem__("complete_dma_signoff", "verified")
+        )
+        self.assert_fails("manifest field set mismatch")
+
+    def test_evaluation_unknown_field_fails(self):
+        def mutate(data):
+            data["evaluations"][0]["complete_dma_signoff"] = "verified"
+        self.mutate_manifest(mutate)
+        self.assert_fails("writer_component manifest field set mismatch")
+
     def test_private_evidence_commit_cannot_drift_with_publication(self):
         replacement = "0" * 40
         def mutate(data):
@@ -294,6 +316,16 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "semantic_trace_sha256", "0" * 64,
         )
         self.assert_fails("semantic trace mismatch")
+
+    def test_verification_digest_inventory_is_fixed(self):
+        self.mutate_csv(
+            "verification.csv",
+            lambda row: row["point_id"] == "c2b4_writer_w0"
+            and row["platform"] == "windows"
+            and row["suite_id"] == "writer_2028",
+            "log_sha256", "0" * 64,
+        )
+        self.assert_fails("fixed verification digest inventory")
 
     def test_claim_id_reuse_fails(self):
         def mutate(data):
@@ -382,6 +414,14 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("waivers are not permitted")
 
+    def test_bounded_lint_inventory_is_fixed(self):
+        self.mutate_csv(
+            "lint.csv",
+            lambda row: row["point_id"] == "c2b4_writer_w0",
+            "warning_count", "0",
+        )
+        self.assert_fails("fixed bounded-lint evidence inventory")
+
     def test_negative_lint_warning_count_fails(self):
         self.mutate_csv(
             "lint.csv", lambda row: row["point_id"] == "shared_pool_p6",
@@ -437,7 +477,7 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "    claims:\n      - slvc_dma_writer_reservation_component_paired_dc\n"
             "    claims:\n      - slvc_dma_writer_reservation_component_paired_dc",
         )
-        self.assert_fails("has no claims list")
+        self.assert_fails("field set mismatch")
 
     def test_duplicate_provenance_path_field_fails(self):
         self.replace_provenance(
@@ -446,7 +486,7 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "    path: provenance/asic_paired_dc_publication.yaml\n"
             "    path: provenance/asic_paired_dc_publication.yaml",
         )
-        self.assert_fails("invalid path field")
+        self.assert_fails("field set mismatch")
 
     def test_claim_evidence_misbinding_fails(self):
         self.replace_provenance(
@@ -598,12 +638,129 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         self.assert_fails("must bind the publication manifest")
 
     def test_wrong_provenance_publication_hash_fails(self):
+        records = validator._registered_records(
+            self.root / "provenance/evidence.yaml"
+        )
+        current_hash = validator._record_scalar(
+            records["slvc_dma_asic_paired_dc_publication"],
+            "sha256",
+            "slvc_dma_asic_paired_dc_publication",
+            r"[0-9a-f]{64}",
+        )
         self.replace_provenance(
             "evidence.yaml",
-            "    sha256: 21357df385e5752c375f9b9c2bf6a39438761a92b601c4d4e57af709f6ba6743",
+            "    sha256: " + current_hash,
             "    sha256: " + "0" * 64,
         )
         self.assert_fails("must bind the publication manifest")
+
+    def test_paired_nonclaim_registry_is_fixed(self):
+        self.replace_provenance(
+            "nonclaims.yaml",
+            "    status: not_claimed",
+            "    status: claimed",
+        )
+        self.assert_fails("fixed status mismatch")
+
+    def test_paired_nonclaim_registry_record_is_required(self):
+        self.replace_provenance(
+            "nonclaims.yaml",
+            "  - id: slvc_dma_writer_component_scope_promotion",
+            "  - id: slvc_dma_writer_component_scope_promotion_removed",
+        )
+        self.assert_fails("nonclaim registry record is missing")
+
+    def test_extra_paired_nonclaim_record_fails(self):
+        path = self.root / "provenance/nonclaims.yaml"
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + """
+  - id: slvc_dma_paired_dc_false_override
+    profile: slvc_dma_asic_paired_dc_publication
+    statement: Complete-DMA signoff is claimed.
+    reason: fabricated
+    status: claimed
+    public: true
+""",
+            encoding="utf-8",
+        )
+        self.assert_fails("fixed paired-DC nonclaim registry inventory")
+
+    def test_paired_nonclaim_unknown_field_fails(self):
+        self.replace_provenance(
+            "nonclaims.yaml",
+            "    status: not_claimed",
+            "    override: complete-DMA signoff is claimed\n"
+            "    status: not_claimed",
+        )
+        self.assert_fails("field set mismatch")
+
+    def test_duplicate_json_key_fails(self):
+        path = self.csv_path("manifest.yaml")
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace(
+                '  "schema": "slvc_dma_public_asic_paired_dc_v1",',
+                '  "schema": "wrong",\n'
+                '  "schema": "slvc_dma_public_asic_paired_dc_v1",',
+                1,
+            ),
+            encoding="utf-8",
+        )
+        self.assert_fails("duplicate key")
+
+    def test_duplicate_publication_key_fails(self):
+        path = self.root / "provenance/asic_paired_dc_publication.yaml"
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace(
+                '  "raw_commercial_artifacts_published": false,',
+                '  "raw_commercial_artifacts_published": true,\n'
+                '  "raw_commercial_artifacts_published": false,',
+                1,
+            ),
+            encoding="utf-8",
+        )
+        self.assert_fails("duplicate key")
+
+    def test_publication_unknown_field_fails(self):
+        path = self.root / "provenance/asic_paired_dc_publication.yaml"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["complete_dma_signoff"] = "verified"
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        self.assert_fails("publication field set mismatch")
+
+    def test_claim_unknown_field_fails(self):
+        self.replace_provenance(
+            "claims.yaml",
+            "    status: verified",
+            "    complete_dma_signoff: verified\n    status: verified",
+        )
+        self.assert_fails("field set mismatch")
+
+    def test_nonpaired_claim_cannot_drift(self):
+        self.replace_provenance(
+            "claims.yaml",
+            "    value: 0.000341",
+            "    value: 9999",
+        )
+        self.assert_fails("fixed claim registry inventory")
+
+    def test_nonpaired_evidence_cannot_drift(self):
+        self.replace_provenance(
+            "evidence.yaml",
+            "    path: evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml",
+            "    path: evidence/does-not-exist.yaml",
+        )
+        self.assert_fails("fixed evidence registry inventory")
+
+    def test_provenance_readme_is_fixed(self):
+        path = self.root / "provenance/README.md"
+        path.write_text(
+            "Complete DMA foundry signoff verified at 9999 MHz.\n",
+            encoding="utf-8",
+        )
+        self.assert_fails("fixed provenance README content")
 
     def test_private_path_injection_fails(self):
         path = self.csv_path("README.md")
@@ -752,8 +909,12 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "points.csv", lambda row: row["point_id"] == "writer_component_w1",
             "leaf_cell_count", "3048",
         )
-        validator.validate(self.root, write_comparisons=True)
-        validator.validate(self.root)
+        updated_points_hash = validator._sha256(self.csv_path("points.csv"))
+        with mock.patch.object(
+            validator, "EXPECTED_POINTS_SHA256", updated_points_hash
+        ):
+            validator.validate(self.root, write_comparisons=True)
+            validator.validate(self.root)
         publication = json.loads(
             (self.root / "provenance/asic_paired_dc_publication.yaml").read_text(
                 encoding="utf-8"

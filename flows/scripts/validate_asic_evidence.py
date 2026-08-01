@@ -32,6 +32,27 @@ EXPECTED_ARTIFACTS_SHA256 = (
 EXPECTED_EVIDENCE_README_SHA256 = (
     "d89bec8697844f0c41a648a07a3d994305dfb688121ef24f8debb0877de5733f"
 )
+EXPECTED_VERIFICATION_SHA256 = (
+    "061c9b70cd7a9862b599da1faa0cb8714d638e716e3441bacca277b7d9047d23"
+)
+EXPECTED_LINT_SHA256 = (
+    "de5ea09b58807945c4bc5f6eb2f64f33619a71d8f136faa2f1b95bdd9289ea20"
+)
+EXPECTED_POINTS_SHA256 = (
+    "d3e72231dc38b6ab0e0362fe44f16232b9f6bbc7cbd6a9e9a9b2ba3c668cb861"
+)
+EXPECTED_NONCLAIMS_SHA256 = (
+    "98b910f4bd9b1e2020e44400c61c21445d3f5d413841fa95e21fa0042223dc1c"
+)
+EXPECTED_CLAIMS_SHA256 = (
+    "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+)
+EXPECTED_EVIDENCE_REGISTRY_NORMALIZED_SHA256 = (
+    "a0f9ac81b1223f00dc29ab97357f7c2c8d2bed9c3a8214a73a0862ffaa4b6b70"
+)
+EXPECTED_PROVENANCE_README_SHA256 = (
+    "12fe0583121fda0e2f5c53b0352c2ea8c40b1473924b1668d0158ce375db63cd"
+)
 
 CSV_HEADERS = {
     "points.csv": (
@@ -322,6 +343,37 @@ EXPECTED_EVIDENCE_RECORD = {
     "public": "true",
 }
 
+EXPECTED_NONCLAIMS = {
+    "slvc_dma_writer_component_scope_promotion": {
+        "profile": "dma_axi_write_engine_512_component_eval",
+        "statement": "\"The Writer component area reduction is not a C2B4 subsystem or complete-DMA area claim.\"",
+        "reason": "\"The paired result synthesizes dma_axi_write_engine_512 alone; scope promotion is prohibited by the publication contract.\"",
+        "status": "not_claimed",
+        "public": "true",
+    },
+    "slvc_dma_c2b4_writer_enabled_closure": {
+        "profile": "dma_rx512_reg_c2_b4_m2_sp64",
+        "statement": "\"The reservation change is not claimed to have enabled the first 550 MHz C2B4 closure or reduced Writer hierarchy area.\"",
+        "reason": "\"W0 already closes the fixed point, while W1 has higher Writer hierarchy area and lower setup margin.\"",
+        "status": "not_claimed",
+        "public": "true",
+    },
+    "slvc_dma_paired_dc_implementation_signoff": {
+        "profile": "slvc_dma_asic_paired_dc_publication",
+        "statement": "\"The paired-DC data is not complete-DMA, Fmax, P&R, extracted STA, power, SRAM-macro, MMMC/OCV, foundry, silicon, or signoff evidence.\"",
+        "reason": "\"The publication contains bounded component/subsystem synthesis summaries and hashes only.\"",
+        "status": "not_claimed",
+        "public": "true",
+    },
+    "slvc_dma_c2b4_full_lint_clean": {
+        "profile": "dma_rx512_reg_c2_b4_m2_sp64",
+        "statement": "\"A lint-clean complete C2B4 design is not claimed by the bounded Writer SpyGlass result.\"",
+        "reason": "\"The full common scope remains BLOCKED_COMMON_SCOPE with 0 fatal, 15 errors, 202 warnings, and 0 waivers.\"",
+        "status": "not_claimed",
+        "public": "true",
+    },
+}
+
 EXPECTED_PUBLICATION_FILES = frozenset({
     "evidence/asic_paired_dc/README.md",
     "evidence/asic_paired_dc/artifacts.csv",
@@ -415,9 +467,21 @@ def _fail(message):
     raise EvidenceError(message)
 
 
+def _strict_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate key {!r}".format(key))
+        result[key] = value
+    return result
+
+
 def _read_json(path):
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_strict_json_object,
+        )
     except (OSError, TypeError, ValueError) as error:
         _fail("invalid JSON-syntax YAML {}: {}".format(path, error))
 
@@ -484,6 +548,12 @@ def _load_bundle(root):
 
 
 def _validate_manifest(manifest):
+    expected_manifest_fields = {
+        "schema", "numeric_source", "derived_source", "formula_policy",
+        "evaluations",
+    }
+    if set(manifest) != expected_manifest_fields:
+        _fail("manifest field set mismatch")
     if manifest.get("schema") != "slvc_dma_public_asic_paired_dc_v1":
         _fail("manifest schema mismatch")
     if manifest.get("numeric_source") != "points.csv":
@@ -522,6 +592,19 @@ def _validate_manifest(manifest):
         _fail("evaluation matrix mismatch")
     for evaluation_id, expected in EXPECTED_EVALUATIONS.items():
         item = by_id[evaluation_id]
+        expected_fields = {
+            "id", "claim_id", "private_evidence_commit", "claim_scope",
+            "top", "baseline", "candidate", "parameters", "constraint_id",
+            "comparison_metrics", "required_artifacts", "nonclaims",
+        }
+        if "flow_as_run_commit" in expected:
+            expected_fields.update({
+                "flow_as_run_commit", "canary", "canary_classification",
+            })
+        if evaluation_id == "writer_component":
+            expected_fields.add("verification_reference")
+        if set(item) != expected_fields:
+            _fail("{} manifest field set mismatch".format(evaluation_id))
         if item.get("claim_id") != expected["claim_id"]:
             _fail("{} claim ID mismatch".format(evaluation_id))
         for field in (
@@ -679,7 +762,7 @@ def _validate_sources(rows, points):
             _fail("writer component/C2B4 source hash mismatch for {}".format(component_point))
 
 
-def _validate_verification(rows, points, evaluations):
+def _validate_verification(root, rows, points, evaluations):
     by_key = _index_unique(
         rows, ("evaluation_id", "point_id", "platform", "suite_id"),
         "verification",
@@ -723,9 +806,13 @@ def _validate_verification(rows, points, evaluations):
         subsystem = points[("c2b4_writer", "c2b4_writer_" + suffix)]
         if component["source_commit"] != subsystem["source_commit"]:
             _fail("writer verification source commit mismatch")
+    if _sha256(root / EVIDENCE_REL / "verification.csv") != (
+        EXPECTED_VERIFICATION_SHA256
+    ):
+        _fail("fixed verification digest inventory mismatch")
 
 
-def _validate_lint(rows):
+def _validate_lint(root, rows):
     by_key = _index_unique(rows, ("evaluation_id", "point_id", "scope"), "lint")
     expected_keys = {
         ("c2b4_writer", point_id, "writer_bounded")
@@ -758,6 +845,8 @@ def _validate_lint(rows):
                 _fail("bounded lint has fatal/error for {}".format(key))
             if counts["waived_count"] != 0:
                 _fail("lint waivers are not permitted for {}".format(key))
+    if _sha256(root / EVIDENCE_REL / "lint.csv") != EXPECTED_LINT_SHA256:
+        _fail("fixed bounded-lint evidence inventory mismatch")
 
 
 def _validate_artifacts(root, rows, evaluations, points):
@@ -787,6 +876,24 @@ def _sha256(path):
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _text_sha256(path):
+    return hashlib.sha256(path.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+
+
+def _normalized_evidence_registry_sha256(path):
+    text = path.read_text(encoding="utf-8")
+    pattern = (
+        r"(?ms)(^  - id: slvc_dma_asic_paired_dc_publication\n"
+        r".*?^    sha256: )[0-9a-f]{64}(?=\n)"
+    )
+    normalized, replacements = re.subn(
+        pattern, r"\1<PUBLICATION_SHA256>", text
+    )
+    if replacements != 1:
+        _fail("paired-DC evidence registry hash field mismatch")
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def _registered_records(path):
@@ -841,8 +948,49 @@ def _record_scalar(body, field, context, value_pattern):
     return matches[0]
 
 
+def _validate_record_fields(body, expected, context):
+    fields = []
+    for line in body.splitlines():
+        if not line.startswith("    ") or line.startswith("      "):
+            continue
+        match = re.fullmatch(r"    ([a-z][a-z0-9_]*):(?: .*)?", line)
+        if not match:
+            _fail("{} contains noncanonical field syntax".format(context))
+        fields.append(match.group(1))
+    if len(fields) != len(set(fields)) or set(fields) != set(expected):
+        _fail("{} field set mismatch".format(context))
+
+
+def _validate_nonclaims(root):
+    records = _registered_records(root / "provenance/nonclaims.yaml")
+    if not set(EXPECTED_NONCLAIMS).issubset(records):
+        _fail("paired-DC nonclaim registry record is missing")
+    for nonclaim_id, expected in EXPECTED_NONCLAIMS.items():
+        _validate_record_fields(
+            records[nonclaim_id], expected, nonclaim_id
+        )
+        for field, value in expected.items():
+            actual = _record_scalar(
+                records[nonclaim_id], field, nonclaim_id, r".+"
+            )
+            if actual != value:
+                _fail("{} fixed {} mismatch".format(nonclaim_id, field))
+    if _text_sha256(
+        root / "provenance/nonclaims.yaml"
+    ) != EXPECTED_NONCLAIMS_SHA256:
+        _fail("fixed paired-DC nonclaim registry inventory mismatch")
+
+
 def _validate_publication(root, evaluations):
     publication = _read_json(root / PUBLICATION_REL)
+    expected_publication_fields = {
+        "schema", "publication_class", "numeric_authority",
+        "generated_derivative", "raw_commercial_artifacts_published",
+        "claim_ids", "fixed_evidence_commits", "files",
+        "c2b4_lint_boundary", "commercial_artifact_policy",
+    }
+    if set(publication) != expected_publication_fields:
+        _fail("publication field set mismatch")
     if publication.get("schema") != "slvc_dma_asic_paired_dc_publication_v1":
         _fail("publication schema mismatch")
     if publication.get("publication_class") != "sanitized_hash_bound_summary":
@@ -911,6 +1059,11 @@ def _validate_publication(root, evaluations):
     publication_id = "slvc_dma_asic_paired_dc_publication"
     if publication_id not in evidence_records:
         _fail("paired-DC evidence is missing from provenance/evidence.yaml")
+    _validate_record_fields(
+        evidence_records[publication_id],
+        {"path", "type", "source_ref", "tool", "claims", "sha256", "public"},
+        publication_id,
+    )
     claim_evidence = {
         claim_id: _record_list(body, "evidence", claim_id)
         for claim_id, body in claim_records.items()
@@ -928,14 +1081,20 @@ def _validate_publication(root, evaluations):
         if actual != value:
             _fail("publication evidence fixed {} mismatch".format(field))
     for claim_id in expected_claims:
-        references = claim_evidence[claim_id]
-        if references != [publication_id]:
-            _fail("paired-DC claims are not bound to publication evidence")
         evaluation_id = next(
             name for name, item in EXPECTED_EVALUATIONS.items()
             if item["claim_id"] == claim_id
         )
         definition = EXPECTED_EVALUATIONS[evaluation_id]
+        _validate_record_fields(
+            claim_records[claim_id],
+            set(definition["claim_record"])
+            | {"source_ref", "evidence", "status", "public"},
+            claim_id,
+        )
+        references = claim_evidence[claim_id]
+        if references != [publication_id]:
+            _fail("paired-DC claims are not bound to publication evidence")
         for field, value in definition["claim_record"].items():
             actual = _record_scalar(
                 claim_records[claim_id], field, claim_id, r".+"
@@ -967,6 +1126,16 @@ def _validate_publication(root, evaluations):
         _fail("provenance evidence path must bind the publication manifest")
     if publication_hash != _sha256(root / PUBLICATION_REL):
         _fail("provenance evidence hash must bind the publication manifest")
+    if _text_sha256(root / "provenance/claims.yaml") != EXPECTED_CLAIMS_SHA256:
+        _fail("fixed claim registry inventory mismatch")
+    if _normalized_evidence_registry_sha256(
+        root / "provenance/evidence.yaml"
+    ) != EXPECTED_EVIDENCE_REGISTRY_NORMALIZED_SHA256:
+        _fail("fixed evidence registry inventory mismatch")
+    if _text_sha256(
+        root / "provenance/README.md"
+    ) != EXPECTED_PROVENANCE_README_SHA256:
+        _fail("fixed provenance README content mismatch")
 
 
 def _comparison_records(evaluations, points):
@@ -1198,17 +1367,25 @@ def validate(root, write_comparisons=False, base_ref=None):
     evaluations = _validate_manifest(manifest)
     points = _validate_points(tables["points.csv"], evaluations)
     _validate_claim_values(evaluations, points)
+    if _sha256(root / EVIDENCE_REL / "points.csv") != EXPECTED_POINTS_SHA256:
+        _fail("fixed points numeric authority mismatch")
     _validate_sources(tables["sources.csv"], points)
-    _validate_verification(tables["verification.csv"], points, evaluations)
-    _validate_lint(tables["lint.csv"])
+    _validate_verification(root, tables["verification.csv"], points, evaluations)
+    _validate_lint(root, tables["lint.csv"])
     _validate_artifacts(root, tables["artifacts.csv"], evaluations, points)
     expected = _comparison_bytes(evaluations, points)
     _validate_comparisons(root, expected, write_comparisons)
     if write_comparisons:
         _refresh_publication_chain(root)
         _refresh_repository_checksums(root)
-    _validate_sanitization(root)
+    published_text = {
+        path for path in ALLOWED_SCOPE_PATHS
+        if path.startswith(("docs/", "provenance/"))
+        and path != "provenance/checksums.sha256"
+    }
+    _validate_sanitization(root, published_text)
     _validate_result_tables(root)
+    _validate_nonclaims(root)
     _validate_publication(root, evaluations)
     if base_ref:
         _validate_scope(root, base_ref)

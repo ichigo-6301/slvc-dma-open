@@ -36,3 +36,9 @@ configuration. Its three claim IDs are scope-distinct and cannot be promoted
 across component, subsystem, or complete-DMA boundaries. `points.csv` is the
 only numeric authority; `comparisons.csv` is regenerated with `Decimal`, six
 fractional digits, and `ROUND_HALF_EVEN`.
+
+Replacing fixed points, hidden-report digests, or registry records uses two
+reviewed changes: first update the base-owned validator constants in a policy
+PR, then publish the matching payload in an evidence-only PR. The comparison
+writer regenerates derivatives and digest chains only after the trusted point
+identity has been accepted; it is not an authorization to replace evidence.

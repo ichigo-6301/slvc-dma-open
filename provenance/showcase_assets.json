@@ -17,6 +17,30 @@
       "claim_ids": [
         "slvc_dma_channel_admission_isolation_directed"
       ]
+    },
+    {
+      "path": "docs/assets/slvc_dma_results_at_a_glance.svg",
+      "sha256": "2eabba7ef72425af29409007906e2cf85ac740f3e9eebefea9e73e76c20358fd",
+      "format": "svg",
+      "source": "deterministically generated from tracked public claims and sanitized paired-DC comparisons",
+      "generator": "flows/scripts/generate_results_at_a_glance.py",
+      "generator_sha256": "562b1b5b57b17f3febc447568606202181a15298c0f3a50bf8145304b1ac41a3",
+      "command": "python flows/scripts/generate_results_at_a_glance.py --root . --write",
+      "inputs": [
+        {
+          "path": "evidence/asic_paired_dc/comparisons.csv",
+          "sha256": "0b921860201edf85fb1c77932eda8ee56299be10adb2dc7978a67b49021dfafe"
+        },
+        {
+          "path": "provenance/claims.yaml",
+          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+        }
+      ],
+      "claim_ids": [
+        "slvc_dma_writer_reservation_component_paired_dc",
+        "slvc_dma_rx_payload_cdc_ideal_throughput",
+        "slvc_dma_c2b4_n45_register_postroute_450"
+      ]
     }
   ]
 }

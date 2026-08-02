@@ -24,6 +24,7 @@ DEFCONFIG_PATH = $(call root_path,$(DEFCONFIG))
 KCONFIG_PATH := $(ROOT)/Kconfig
 FLOWCTL = $(PYTHON) "$(ROOT)/flows/scripts/flowctl.py" --root "$(ROOT)" --config "$(CONFIG_PATH)"
 CHECKSUM_GENERATOR = $(PYTHON) "$(ROOT)/provenance/generate_checksums.py" --root "$(ROOT)"
+RESULTS_ASSET_GENERATOR = $(PYTHON) "$(ROOT)/flows/scripts/generate_results_at_a_glance.py" --root "$(ROOT)"
 
 export DMA_FLOW_ROOT := $(ROOT)
 export DMA_FLOW_CONFIG := $(CONFIG_PATH)
@@ -49,7 +50,7 @@ DEFCONFIG_TARGETS := slvc_dma_512_core_only_defconfig \
 
 .RECIPEPREFIX := >
 .DEFAULT_GOAL := help
-.PHONY: help showcase-check public-hygiene asic-evidence-check refresh-checksums verify-current-checksums \
+.PHONY: help showcase-check public-hygiene asic-evidence-check results-asset-check refresh-results-asset refresh-checksums verify-current-checksums \
         defconfig $(DEFCONFIG_TARGETS) menuconfig showconfig validate-profile \
         list-stages selected selected-dry-run $(FLOW_STAGES) $(DRY_RUN_TARGETS)
 
@@ -68,6 +69,7 @@ help:
 >   '  make selected[-dry-run]           Run enabled stages in dependency order' \
 >   '  make showcase-check               Run public integrity and interface contracts' \
 >   '  make asic-evidence-check          Validate sanitized ASIC paired-DC evidence' \
+>   '  make results-asset-check          Verify the evidence-bound results SVG' \
 >   '  make verify-current-checksums      Verify the tracked checksum manifest' \
 >   '' \
 >   'Stages: sim fpga-ooc adapter-dc-ooc rx-payload-writer-dc-ooc' \
@@ -76,8 +78,8 @@ help:
 >   'Utilities: n45-a5-{model,clock-delivery}-audit' \
 >   'Local tools, PDKs, and libraries belong in flows/local/ (ignored).'
 
-showcase-check: public-hygiene asic-evidence-check
-> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy
+showcase-check: results-asset-check public-hygiene asic-evidence-check
+> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy flows.scripts.test_generate_results_at_a_glance
 > @printf '%s\n' 'SHOWCASE_CHECK_PASS'
 
 public-hygiene:
@@ -85,6 +87,12 @@ public-hygiene:
 
 asic-evidence-check:
 > @$(PYTHON) "$(ROOT)/flows/scripts/validate_asic_evidence.py" --root "$(ROOT)"
+
+results-asset-check:
+> @$(RESULTS_ASSET_GENERATOR) --check
+
+refresh-results-asset:
+> @$(RESULTS_ASSET_GENERATOR) --write
 
 refresh-checksums:
 > @$(CHECKSUM_GENERATOR) --include-untracked

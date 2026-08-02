@@ -22,6 +22,76 @@
 | 流控边界 | Payload `valid/ready` 与 PAUSE/RESUME control-message 通道分离；后者不是网络端到端流控 |
 | 实现证据 | Windows ModelSim + Linux Questa；Vivado routed OOC；Nangate45 DC/OpenROAD/OpenRCX/PrimeTime |
 
+<a id="key-results-and-evidence"></a>
+## 关键结果与证据入口
+
+<!-- claim:slvc_dma_writer_reservation_component_paired_dc maturity:verified -->
+<!-- claim:slvc_dma_c2b4_writer_subsystem_paired_dc maturity:verified -->
+<!-- claim:slvc_dma_rx_payload_cdc_ideal_throughput maturity:verified -->
+<!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->
+
+![SLVC DMA verified results at a glance](docs/assets/slvc_dma_results_at_a_glance.svg)
+
+| 关注点 | 当前已核验结论 | 直接证据入口 |
+| --- | --- | --- |
+| 16-channel admission / hybrid buffering | `flow_id` 命中后联合检查并预留 ingress、DDR Ring 和 CQ credit；Fixed ingress 与 free-list Shared Frame Pool 在整帧 commit 后出队 | [Architecture](docs/zh-CN/architecture.md#虚拟通道生命周期) · [Verification](docs/zh-CN/verification.md#channel-admission-隔离场景) · [Results](docs/zh-CN/results.md#rtl-功能与接口吞吐) · [Evidence](evidence/slvc_dma_udp_adapter_regression_summary.yaml) |
+| 512-bit AXI4 Writer 关键路径 | reservation 计数按 `4 x 16` beat 上界由 32 bit 收窄至 7 bit，并切断 `bytes-left -> ready` 长组合路径；同库同 1.5 ns Writer-only paired DC 总/组合面积降低 `7.97%/15.84%` | [Architecture](docs/zh-CN/rx_payload_512_backend.md) · [Verification](docs/zh-CN/verification.md#asic-paired-dc-证据合同) · [Results](docs/zh-CN/results.md#asic-paired-dc-对比) · [CSV](evidence/asic_paired_dc/comparisons.csv) / [Manifest](evidence/asic_paired_dc/manifest.yaml) |
+| RTL memory-interface throughput | ready ideal-memory 1 MiB workload 下，同频 512 与 Async512 均持续 `64 B/cycle`、W utilization `100%`、peak outstanding `4` | [Architecture](docs/zh-CN/architecture.md#rx-memory-开发-profile) · [Verification](docs/zh-CN/verification.md#rx-writer-与-cdc) · [Results](docs/zh-CN/results.md#rtl-功能与接口吞吐) · [Evidence](evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml) |
+| C2B4 ASIC implementation | 两通道 register-expanded RX512 子系统完成 550 MHz DC handoff 与 450 MHz route/PT；setup/hold WNS `+0.041322/+0.000341 ns`，standard-cell area `1.04207 mm²`，route DRC/antenna/electrical 为 `0` | [Architecture](docs/zh-CN/architecture.md#asic-memory-binding) · [Verification](docs/zh-CN/verification.md#asic-paired-dc-证据合同) · [Results](docs/zh-CN/results.md#asic-c2b4-register-expanded) · [Evidence](evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml) |
+
+<a id="result-scope-levels"></a>
+## 结果作用层级
+
+| 层级 | 结果覆盖范围 | 不可外推的结论 |
+| --- | --- | --- |
+| Writer-only OOC | 单独综合 `dma_axi_write_engine_512`，1.5 ns paired-DC 面积结果 | 不能外推为 C2B4 或完整 DMA 面积下降 |
+| C2B4 RX512 memory subsystem | 两通道、每通道 4 KiB、Shared Pool 64 blocks、register-expanded 的固定 DC/P&R/PT 实现点 | 不是完整 DMA、C4B4、SRAM 实现或 Fmax |
+| 完整 SLVC DMA | 16-channel 架构、公开 RTL 与有界 directed regression | 尚无完整 DMA ASIC PPA、布局布线或 signoff claim |
+| FPGA Async64 OOC | XC7Z100 上的 200 MHz routed OOC profile | 不是 bitstream、板级 DDR/10G 或 ASIC 结果 |
+
+C2B4 Writer paired A/B **未满足 subsystem promotion 条件**：W0 本身已经闭合固定 550 MHz 测试点；完整反例和原因保留在[详细结果](docs/zh-CN/results.md#asic-paired-dc-对比)，不把负结果隐藏或改写成优化收益。
+
+<a id="quick-public-checks"></a>
+## 快速公开检查
+
+以下命令不调用 ModelSim/Questa、Vivado、DC、OpenROAD 或 PrimeTime：
+
+```bash
+make showcase-check
+make slvc_dma_512_defconfig
+make sim-dry-run
+make asic-evidence-check
+```
+
+`asic-evidence-check` 只校验脱敏 CSV/YAML、固定 source/tool/library/constraint 身份、marker、trace、报告哈希和 claim 边界；它不会重新运行任何商业 EDA 或物理实现工具。
+
+安装 ModelSim/Questa 后，可通过公开 profile 运行相应 RTL 回归：
+
+| 关注范围 | 入口 |
+| --- | --- |
+| Core、parser、admission、Fixed/Shared buffer | `make slvc_dma_512_defconfig sim` |
+| Same-clock 512 Writer | `make slvc_dma_512_rx_wide_defconfig sim` |
+| CDC bridge 与 Async64 backend | `make slvc_dma_512_rx_async64_defconfig sim` |
+| CDC bridge 与 Async512 Writer | `make slvc_dma_512_rx_async512_defconfig sim` |
+
+SpyGlass 边界保持不变：**Writer bounded scope 为 0 fatal / 0 error；完整 C2B4 common scope 未声明 clean**，详见[验证说明](docs/zh-CN/verification.md#asic-paired-dc-证据合同)。
+
+<a id="ten-minute-rtl-reading-path"></a>
+## 10 分钟 RTL 阅读路径
+
+| 顺序 | 文件与阅读重点 |
+| ---: | --- |
+| 1 | [`slvc_dma_wrapper.v`](rtl/integration/slvc_dma_wrapper.v)：先看 512-bit stream、AXI-Lite、memory master、control-message 与 clock/reset 的系统边界。 |
+| 2 | [`dma_rx_parser_pipe.v`](rtl/rx/dma_rx_parser_pipe.v)：看 SHDR64 解析与 metadata 发布；[`dma_rx_channel_match.v`](rtl/rx/dma_rx_channel_match.v)：看 `flow_id` 命中；[`dma_rx_channel_table.v`](rtl/rx/dma_rx_channel_table.v)：看最多 16 路静态 context 与硬件状态。 |
+| 3 | [`frame_dma_rx_top.v`](rtl/integration/frame_dma_rx_top.v)：沿 staged lookup、ring/free-space、buffer/CQ credit、reservation 和 commit 阅读帧前准入。 |
+| 4 | [`dma_rx_ingress_queue.v`](rtl/rx/dma_rx_ingress_queue.v)：看 per-channel Fixed ingress；[`dma_rx_frame_shared_adapter.v`](rtl/rx/dma_rx_frame_shared_adapter.v)：看 frame context；[`dma_frame_shared_pool.v`](rtl/rx/dma_frame_shared_pool.v)：看 block free list、链表和整帧 commit/release。 |
+| 5 | [`dma_rx_ingress_source_selector.v`](rtl/rx/dma_rx_ingress_source_selector.v)：看 Fixed/Shared source 选择及持续到 frame end 的锁定。 |
+| 6 | [`dma_axi_write_engine_512.v`](rtl/rx/dma_axi_write_engine_512.v)：看 4 KiB split、burst planner、AW/W/B 独立推进、outstanding 与 reservation credit。 |
+| 7 | [`dma_rx_payload_cdc_bridge.v`](rtl/rx/dma_rx_payload_cdc_bridge.v)：看 command/payload/completion crossing；[`dma_async_fifo.v`](rtl/common/dma_async_fifo.v) 与 [`dma_async_fifo_tech.v`](rtl/common/dma_async_fifo_tech.v)：看 Gray pointer、技术映射与 reset 边界。 |
+| 8 | [`tb_rtl_v33e20a107_udp_to_dma_smoke.v`](pattern/tb_rtl_v33e20a107_udp_to_dma_smoke.v)：看 channel 0 full 时 channel 1 前进及 CQE；[`tb_rtl_rx_payload_writer_512.v`](pattern/tb_rtl_rx_payload_writer_512.v)：看 2028 个 Writer directed case。 |
+
+[进入完整 RTL 阅读指南](docs/zh-CN/rtl_reading_guide.md#ten-minute-review-path)
+
 ## 1. 背景：共享链路上的多源搬运
 
 典型采集系统会把多个业务源汇聚到 Aurora 类串行链路、片内共享 stream，或由 MAC 输出的 packet stream。链路复用减少外部引脚和协议实例，但不会自动解决通道识别、缓冲隔离、DDR ownership、完成通知和反压传播问题。
@@ -78,9 +148,7 @@ directed and deterministic-random RTL regression
 ## 4. 当前已核验结果
 
 <!-- claim:slvc_dma_rx_payload_cdc_regression maturity:verified -->
-<!-- claim:slvc_dma_rx_payload_cdc_ideal_throughput maturity:verified -->
 <!-- claim:slvc_dma_async64_vivado_2022_2_ooc_200m maturity:verified -->
-<!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->
 
 | 层级 | Profile 与 workload | 已核验结果 | 成熟度边界 |
 | --- | --- | --- | --- |
@@ -113,24 +181,6 @@ SRAM A5 是独立的 `partial/blocked` 研究路线，不与上方完成闭合�
 | 同频或双时钟 RX memory backend | [`frame_dma_rx_top`](rtl/integration/frame_dma_rx_top.v) | `slvc_dma_512_rx_{wide,async64,async512}_defconfig` |
 
 [查看端口、时钟/reset、bring-up 和 ownership 合同](docs/zh-CN/integration.md)
-
-## 快速检查
-
-不需要商业 EDA 工具的展示完整性检查：
-
-```bash
-make showcase-check
-```
-
-生成默认配置并查看可执行命令：
-
-```bash
-make slvc_dma_512_defconfig
-make showconfig
-make selected-dry-run
-```
-
-GNU Make 是公开 flow 的统一入口；Python 仅作为内部配置、日志 marker 与审计 backend。安装 ModelSim/Questa 后运行 `make sim`。Vivado、DC/PT、ORFS、PDK 和 library 路径只允许出现在 ignored `flows/local/`；公开仓库不分发商业工具产物或工艺数据。
 
 ## 文档与发行边界
 

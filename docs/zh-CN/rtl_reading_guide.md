@@ -5,22 +5,25 @@
 payload 为 4096 byte。外部宽度 frontend 可以把 64/128/256/512-bit AXI-Stream
 聚合到 512-bit Core，但这不等同于 native Core 已经支持或验证所有宽度。
 
-## 1. 推荐阅读顺序
+冻结默认 profile 使用 legacy 64-bit memory writer；same-clock 512、Async512 和 C2B4
+profile 使用 `dma_axi_write_engine_512`。二者共享准入、帧缓存和 completion 语义，但不能把
+一个 profile 的实现结果直接外推到另一个 profile。
 
-建议按以下顺序阅读，而不是从最大文件逐行向下看：
+<a id="ten-minute-review-path"></a>
+## 1. 10 分钟推荐阅读顺序
 
-1. `rtl/include/dma_defs.vh`：协议常量、寄存器偏移、状态码和功能开关。
-2. `rtl/integration/slvc_dma_wrapper.v`：推荐系统接口和时钟域边界。
-3. `rtl/integration/frame_dma_wrapper.v`：完整 FPGA OOC 顶层。
-4. `rtl/integration/frame_dma_rx_top.v`：RX、TX、CQ、AXI-Lite 和 AXI master 的集成关系。
-5. `rtl/rx/dma_rx_parser_pipe.v`：SHDR64 header 的分拍解析与发布。
-6. `rtl/rx/dma_rx_channel_match.v`：header metadata 如何选择 RX channel。
-7. `rtl/rx/dma_rx_frame_shared_adapter.v` 与 `rtl/rx/dma_frame_shared_pool.v`：共享帧存储。
-8. `rtl/rx/dma_axi_write_engine.v`：RX payload 如何写入 AXI4 memory。
-9. `rtl/tx/dma_tx_engine.v` 与 `rtl/tx/dma_axi_read_prefetch.v`：descriptor 驱动的 TX replay。
-10. `rtl/cq/dma_cq_single_writer.v` 与 `rtl/cq/dma_cq_writer.v`：CQE 的 owner-last 发布。
+| 顺序 | 文件与阅读重点 |
+| ---: | --- |
+| 1 | [`slvc_dma_wrapper.v`](../../rtl/integration/slvc_dma_wrapper.v)：系统入口、native 512-bit 保护、AXI-Lite、memory master、control-message 和 clock/reset。 |
+| 2 | [`dma_rx_parser_pipe.v`](../../rtl/rx/dma_rx_parser_pipe.v)：SHDR64 解析和 metadata 发布；[`dma_rx_channel_match.v`](../../rtl/rx/dma_rx_channel_match.v)：`flow_id` 命中；[`dma_rx_channel_table.v`](../../rtl/rx/dma_rx_channel_table.v)：最多 16 路 channel context 与硬件状态。 |
+| 3 | [`frame_dma_rx_top.v`](../../rtl/integration/frame_dma_rx_top.v)：沿 staged lookup、ring/free-space、buffer/CQ credit、reservation 和 commit 阅读帧前准入。 |
+| 4 | [`dma_rx_ingress_queue.v`](../../rtl/rx/dma_rx_ingress_queue.v)：per-channel Fixed ingress；[`dma_rx_frame_shared_adapter.v`](../../rtl/rx/dma_rx_frame_shared_adapter.v)：frame context；[`dma_frame_shared_pool.v`](../../rtl/rx/dma_frame_shared_pool.v)：block free list、链表和整帧 commit/release。 |
+| 5 | [`dma_rx_ingress_source_selector.v`](../../rtl/rx/dma_rx_ingress_source_selector.v)：Fixed/Shared source 选择及持续到 frame end 的锁定。 |
+| 6 | [`dma_axi_write_engine_512.v`](../../rtl/rx/dma_axi_write_engine_512.v)：4 KiB split、burst planner、AW/W/B 独立推进、outstanding 和 reservation credit。 |
+| 7 | [`dma_rx_payload_cdc_bridge.v`](../../rtl/rx/dma_rx_payload_cdc_bridge.v)：command/payload/completion crossing；[`dma_async_fifo.v`](../../rtl/common/dma_async_fifo.v) 与 [`dma_async_fifo_tech.v`](../../rtl/common/dma_async_fifo_tech.v)：Gray pointer、技术映射和 reset 边界。 |
+| 8 | [`tb_rtl_v33e20a107_udp_to_dma_smoke.v`](../../pattern/tb_rtl_v33e20a107_udp_to_dma_smoke.v)：channel 0 full 时 channel 1 前进与 CQE；[`tb_rtl_rx_payload_writer_512.v`](../../pattern/tb_rtl_rx_payload_writer_512.v)：2028 个 Writer directed case。 |
 
-读完这十个文件后，再根据关注方向进入 channel table、AXI-Lite、CDC 或 Adapter。
+随后可按关注方向继续阅读 TX descriptor、CQ owner-last、AXI-Lite、Adapter 和完整 CDC 文档。
 
 ## 2. 纯文本模块层次
 
@@ -30,7 +33,7 @@ slvc_dma_wrapper
     └── frame_dma_rx_top
         ├── RX parser / channel match / admission
         ├── ingress queue 或 shared frame pool
-        ├── dma_axi_write_engine
+        ├── selected legacy64 / same-clock 512 / async memory writer
         ├── TX channel / descriptor table
         ├── dma_tx_engine
         │   ├── dma_tx_header_builder
@@ -59,7 +62,7 @@ RX 的基本顺序如下：
   -> channel match 和静态 context
   -> admission/resource reservation
   -> ingress queue 或 shared frame pool
-  -> 64-bit AXI write engine
+  -> selected legacy64 / same-clock 512 / async memory backend
   -> payload 完成
   -> CQE body 写入
   -> CQE owner/valid 发布
@@ -93,9 +96,15 @@ free space，并检查 ingress/CQ 等资源。只有这些条件全部满足后�
 
 ### AXI 写入
 
-`dma_axi_write_engine` 的输入索引单位是 64-bit word。它把连续 word 规划成 AXI burst，
-同时限制最大 burst、4KB 边界和 outstanding 数量。AW、W 和 B 进度独立跟踪；只有响应
-完成后，上层才能把 payload 写入视为结束。
+冻结默认 profile 的 `dma_axi_write_engine` 以 64-bit word 为输入；same-clock 512 和
+Async512 profile 使用 `dma_axi_write_engine_512`，Async64 则在 memory clock 域串行化后
+进入 `dma_axi_write_engine_64_stream`。三条路径都限制最大 burst、4 KiB 边界和 outstanding
+数量，并独立跟踪 AW、W、B 进度；只有响应完成后，上层才能把 payload 写入视为结束。
+
+`dma_axi_write_engine_512` 按 `MAX_BURST_BEATS * MAX_OUTSTANDING` 计算 source reservation
+位宽，并用 source level 与 reservation credit 决定是否发布 AW plan。阅读关键路径时应区分
+32-bit payload bytes-left 状态与有界 reservation 计数，不能把 Writer-only DC 结果外推为
+C2B4 或完整 DMA 面积结果。
 
 ## 4. TX 数据路径
 
@@ -242,6 +251,9 @@ Error Matrix 曾出现额外 drop 的原因是 testbench 在真实 valid/ready �
 - `modelsim/run_rtl_v33e20a_hybrid_rx_ingress_minimal.do`：普通 ingress 与 frame ingress 集成。
 - `modelsim/run_rtl_v33e20a23_full_arch_throughput.do`：完整架构稳态吞吐。
 - `modelsim/run_rtl_v33e20a23_w_prefetch_fifo.do`：RX writer prefetch/burst 边界。
+- `modelsim/run_rtl_rx_payload_writer_512.do`：512-bit Writer 的 2028 个长度、4 KiB、tail、outstanding 和 backpressure case。
+- `modelsim/run_rtl_rx_payload_cdc_bridge.do`：command/payload/completion CDC 与 clock/reset stress。
+- `modelsim/run_rtl_v33e20a107_udp_to_dma_smoke.do`：channel 0 full 后 channel 1 继续前进并发布 CQE。
 - `modelsim/run_rtl_v28_tx_descriptor_queue.do`：descriptor ownership 和 TX queue。
 - `modelsim/run_rtl_v31_tx_desc_status_pipeline.do`：descriptor 状态事件 pipeline。
 - `modelsim/run_rtl_v33e20a10_tx_cq_space_check_pipeline.do`：TX CQ 空间检查。
@@ -251,6 +263,7 @@ Error Matrix 曾出现额外 drop 的原因是 testbench 在真实 valid/ready �
 ## 10. Legacy 与兼容模块
 
 - `dma_rx_payload_buffer` 是旧式 payload buffer，shared pool profile 下不是首选主路径。
+- `dma_axi_write_engine` 是冻结默认 profile 的 legacy 64-bit memory path；`dma_axi_write_engine_512` 属于 same-clock 512、Async512 和 C2B4 路线。
 - `dma_cq_writer` 保留单来源 writer；完整 profile 可由 `dma_cq_single_writer` 串行化 RX/TX。
 - 文件名和信号中的 `UFC` 是现有控制消息兼容命名，不意味着 Core 被 Aurora 绑定。
 - 外部 width packer 是边界适配，不是 native Core 宽度参数化完成的证明。
@@ -268,7 +281,8 @@ Error Matrix 曾出现额外 drop 的原因是 testbench 在真实 valid/ready �
 | `dma_rx_channel_table.v` | protected CSR、RD pointer、counter event lane |
 | `dma_rx_frame_shared_adapter.v` | context reservation、RDQ、pool input boundary |
 | `dma_frame_shared_pool.v` | free FIFO、metadata commit、read/release FSM |
-| `dma_axi_write_engine.v` | 4KB split、burst queue、AW/W/B outstanding |
+| `dma_axi_write_engine_512.v` | 4 KiB split、AW plan queue、source reservation、AW/W/B outstanding |
+| `dma_axi_write_engine.v` | 冻结默认 profile 的 legacy 64-bit word path |
 | `dma_tx_engine.v` | descriptor context、CQ check、header/payload handshake |
 | `dma_axi_read_prefetch.v` | reserved beats、pack lane、RRESP/flush |
 | `dma_cq_single_writer.v` | RX/TX request selection、shadow pointer、commit event |

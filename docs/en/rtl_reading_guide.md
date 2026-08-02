@@ -170,8 +170,11 @@ through two-stage synchronizers; full and empty are local-domain decisions.
 `dma_rx_payload_cdc_bridge` crosses a committed frame as one command, ordered
 512-bit payload entries, and one tagged completion rather than crossing a full
 AXI channel. Source and memory active state explain the one-frame-in-flight
-contract. `dma_async_fifo_tech` selects XPM for the 32-entry payload FIFO and
-the Gray-pointer implementation for shallower command/completion FIFOs.
+contract. In FPGA builds with `DMA_ASYNC_FIFO_XPM`, `dma_async_fifo_tech`
+selects XPM for FIFOs with at least 16 entries, including the 32-entry payload
+FIFO, while shallower command/completion FIFOs remain on the generic
+Gray-pointer implementation. Without that define, including simulation and
+ASIC builds, every depth uses the generic implementation.
 
 Async64 uses `dma_rx_payload_serializer_512_to_64` and
 `dma_axi_write_engine_64_stream`; Async512 reuses
@@ -257,12 +260,12 @@ the shared pool allocates 512-bit blocks.
 
 ## 12. Comment-Only Equivalence
 
-The documented comment branch uses `scripts/check_rtl_comment_only.py` to
+The documented comment branch uses `flows/scripts/check_rtl_comment_only.py` to
 compare functional RTL with annotated RTL after lexical removal of ordinary
 comments and whitespace. Any functional token change fails the check.
 
 ```bash
-python3 scripts/check_rtl_comment_only.py --base <base-commit> --paths rtl
+python3 flows/scripts/check_rtl_comment_only.py --base <base-commit> --paths rtl
 ```
 
 Chinese text is limited to ordinary comments and Markdown. Existing synthesis

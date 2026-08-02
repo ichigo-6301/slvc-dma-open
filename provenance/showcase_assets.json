@@ -24,7 +24,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked public claims and sanitized paired-DC comparisons",
       "generator": "flows/scripts/generate_results_at_a_glance.py",
-      "generator_sha256": "c049cfc326ab82bd542ff21326b57feead1cb3f7f4143d4080ff789f215ca7ca",
+      "generator_sha256": "562b1b5b57b17f3febc447568606202181a15298c0f3a50bf8145304b1ac41a3",
       "command": "python flows/scripts/generate_results_at_a_glance.py --root . --write",
       "inputs": [
         {

@@ -177,8 +177,10 @@ FSM、valid、pointer、occupancy 和 pending 控制状态，不清空大容量 
 `dma_rx_payload_cdc_bridge` 不跨完整 AXI channel，而是把 committed frame 拆成一个
 command、有序 512-bit payload entry 和一个 tagged completion。先看 source-side
 `source_active_q/source_payload_done_q`，再看 memory-side `mem_active_q`，即可理解为何
-一次只允许一个 frame in flight。`dma_async_fifo_tech` 对 32-entry payload FIFO 选择
-XPM，对较浅 command/completion FIFO 使用 Gray-pointer 实现。
+一次只允许一个 frame in flight。仅在 FPGA build 定义 `DMA_ASYNC_FIFO_XPM` 时，
+`dma_async_fifo_tech` 才对至少 16-entry 的 FIFO（包括 32-entry payload FIFO）选择
+XPM，较浅 command/completion FIFO 仍使用通用 Gray-pointer 实现；未定义该宏的仿真和
+ASIC build 对所有深度均使用通用实现。
 
 Async64 在 `mem_clk` 中经过 `dma_rx_payload_serializer_512_to_64` 和
 `dma_axi_write_engine_64_stream`；Async512 直接复用 `dma_axi_write_engine_512`。
@@ -292,14 +294,14 @@ Error Matrix 曾出现额外 drop 的原因是 testbench 在真实 valid/ready �
 
 ## 12. 注释等价性
 
-本注释分支使用 `scripts/check_rtl_comment_only.py` 对功能基线与带注释 RTL 进行词法比较。
+本注释分支使用 `flows/scripts/check_rtl_comment_only.py` 对功能基线与带注释 RTL 进行词法比较。
 脚本识别行注释、块注释、字符串、转义标识符、compiler directive 和 Verilog 数字 literal，
 删除普通注释与空白后比较 token 序列。任何功能 token 变化都会使检查失败。
 
 示例：
 
 ```bash
-python3 scripts/check_rtl_comment_only.py --base <base-commit> --paths rtl
+python3 flows/scripts/check_rtl_comment_only.py --base <base-commit> --paths rtl
 ```
 
 中文只出现在普通注释和 Markdown 中；现有综合属性和工具语义注释保持不变。

@@ -86,8 +86,66 @@ class ResultsAtAGlanceTest(unittest.TestCase):
             generator.THROUGHPUT_CAVEAT,
             "",
         )
-        with self.assertRaisesRegex(generator.ResultsAssetError, "caveat mismatch"):
+        with self.assertRaisesRegex(generator.ResultsAssetError, "scope identity"):
             generator.check(self.root)
+
+    def test_claim_scope_identity_drift_fails_write(self):
+        mutations = (
+            (
+                generator.WRITER_SCOPE["profile"],
+                "dma_rx512_reg_c2_b4_m2_sp64",
+            ),
+            (
+                generator.WRITER_SCOPE["benchmark"],
+                "complete DMA W0 versus W1",
+            ),
+            (
+                generator.WRITER_SCOPE["configuration"],
+                "different parameters and constraints",
+            ),
+            (
+                generator.WRITER_SCOPE["tool"],
+                "another synthesis tool",
+            ),
+            (
+                generator.WRITER_SCOPE["source_ref"],
+                "0" * 40,
+            ),
+            (
+                generator.WRITER_SCOPE["evidence"][0],
+                "different_evidence_record",
+            ),
+            (
+                generator.THROUGHPUT_SCOPE["statement"],
+                "A board test sustained one AXI W beat per clock.",
+            ),
+            (
+                generator.THROUGHPUT_SCOPE["benchmark"],
+                "board DDR measurement",
+            ),
+            (
+                generator.C2B4_SCOPE["source_ref"],
+                "f" * 40,
+            ),
+            (
+                generator.C2B4_SCOPE["tool"],
+                "unrelated physical implementation flow",
+            ),
+            (
+                generator.C2B4_SCOPE["evidence"][0],
+                "different_c2b4_evidence_record",
+            ),
+        )
+        for old, new in mutations:
+            with self.subTest(new=new):
+                shutil.copyfile(
+                    REPOSITORY_ROOT / generator.CLAIMS_PATH,
+                    self.root / generator.CLAIMS_PATH,
+                )
+                self.replace_text(generator.CLAIMS_PATH, old, new)
+                with self.assertRaisesRegex(
+                        generator.ResultsAssetError, "scope identity"):
+                    generator.write(self.root)
 
     def test_c2b4_scope_or_frequency_drift_fails(self):
         mutations = (
@@ -102,7 +160,7 @@ class ResultsAtAGlanceTest(unittest.TestCase):
                 )
                 self.replace_text(generator.CLAIMS_PATH, old, new)
                 with self.assertRaises(generator.ResultsAssetError):
-                    generator.check(self.root)
+                    generator.write(self.root)
 
     def test_svg_tamper_fails(self):
         path = self.root / generator.ASSET_PATH

@@ -30,6 +30,7 @@ COMPARISON_HEADER = (
 
 CLAIM_START = re.compile(r"^  - id: ([A-Za-z0-9_.-]+)$")
 CLAIM_FIELD = re.compile(r"^    ([A-Za-z0-9_]+):\s*(.*)$")
+CLAIM_LIST_ITEM = re.compile(r"^      -\s+(.+)$")
 WRITER_STATEMENT = re.compile(
     r"^At the same ([0-9.]+) ns Nangate45 DC OOC constraint, the reservation "
     r"candidate reduced Writer total cell area by ([0-9.]+) percent and "
@@ -59,6 +60,80 @@ C2B4_CAVEAT = (
     "result, not C4B4, Fmax, complete-DMA, power, IO, OCV/MMMC, foundry, "
     "or silicon signoff."
 )
+
+WRITER_SCOPE = {
+    "profile": "dma_axi_write_engine_512_component_eval",
+    "statement": (
+        "At the same 1.500 ns Nangate45 DC OOC constraint, the reservation "
+        "candidate reduced Writer total cell area by 7.966353 percent and "
+        "combinational area by 15.838902 percent; both points remained "
+        "setup-closed."
+    ),
+    "metric": "component_paired_dc_total_cell_area",
+    "value": "-7.966353",
+    "unit": "percent candidate-minus-baseline",
+    "benchmark": "dma_axi_write_engine_512 W0 versus W1",
+    "configuration": (
+        "MAX_OUTSTANDING=4; MAX_BURST_BEATS=16; register-expanded "
+        "component; identical tool, library, and constraints"
+    ),
+    "source_ref": "adbc36aa92c6fee11253fbae31ec77216dae91cc",
+    "tool": "Design Compiler O-2018.06-SP1",
+    "evidence": ["slvc_dma_asic_paired_dc_publication"],
+    "status": "verified",
+    "caveat": WRITER_CAVEAT,
+    "public": True,
+}
+
+THROUGHPUT_SCOPE = {
+    "profile": "slvc_dma_v1_512_rx_payload_cdc_development",
+    "statement": (
+        "Ideal-memory tests sustained one AXI W beat per clock for "
+        "same-clock 512, async64, and async512."
+    ),
+    "metric": "ideal_model_interface_throughput",
+    "value": "100",
+    "unit": "percent W-channel utilization",
+    "benchmark": "1 MiB transfer with ready memory model",
+    "configuration": (
+        "same-clock 512 and async512 64 byte/cycle; async64 8 byte/cycle; "
+        "four peak outstanding"
+    ),
+    "source_ref": "18db34bf010ba48428fea5955ac42454e92f60a1",
+    "tool": "ModelSim SE-64 2020.4 / Questa Sim-64 10.7c",
+    "evidence": ["slvc_dma_rx_payload_cdc_regression_summary"],
+    "status": "verified",
+    "caveat": THROUGHPUT_CAVEAT,
+    "public": True,
+}
+
+C2B4_SCOPE = {
+    "profile": "dma_rx512_reg_c2_b4_m2_sp64",
+    "statement": (
+        "The C2B4 register-expanded RX512 memory subsystem completed a "
+        "550 MHz Design Compiler handoff and a 450 MHz same-run OpenROAD, "
+        "OpenRCX, and PrimeTime closure point."
+    ),
+    "metric": "internal_postroute_setup_hold",
+    "value": "0.000341",
+    "unit": "ns minimum setup or hold WNS",
+    "benchmark": (
+        "C2B4 RX512 memory subsystem with 102400 payload and keep registers"
+    ),
+    "configuration": (
+        "Nangate45 nominal corner; DC 550 MHz; P&R and PT 450 MHz; setup "
+        "uncertainty 0.200 ns; nominal hold uncertainty 0 ns"
+    ),
+    "source_ref": "bb8591a8903e55027722f404e99fe9df9832dbf7",
+    "tool": (
+        "Design Compiler O-2018.06-SP1 / OpenROAD / OpenRCX / "
+        "PrimeTime O-2018.06-SP1"
+    ),
+    "evidence": ["slvc_dma_c2b4_n45_register_postroute_summary"],
+    "status": "verified",
+    "caveat": C2B4_CAVEAT,
+    "public": True,
+}
 
 
 class ResultsAssetError(RuntimeError):
@@ -97,6 +172,7 @@ def _load_claims(path):
     claims = {}
     current_id = None
     current = None
+    current_list = None
     for line_number, raw in enumerate(
             path.read_text(encoding="utf-8").splitlines(), 1):
         start = CLAIM_START.match(raw)
@@ -106,8 +182,15 @@ def _load_claims(path):
                 _fail("duplicate claim id: {}".format(current_id))
             current = {"id": current_id}
             claims[current_id] = current
+            current_list = None
             continue
         if current is None:
+            continue
+        list_item = CLAIM_LIST_ITEM.match(raw)
+        if list_item:
+            if current_list is None:
+                _fail("unexpected claim list item at line {}".format(line_number))
+            current[current_list].append(_decode_scalar(list_item.group(1)))
             continue
         field = CLAIM_FIELD.match(raw)
         if not field:
@@ -115,20 +198,33 @@ def _load_claims(path):
         key, value = field.groups()
         if key in current:
             _fail("duplicate field {} in claim {}".format(key, current_id))
-        current[key] = _decode_scalar(value)
+        current_list = None
+        if not value:
+            if key != "evidence":
+                _fail("unsupported empty claim field: {}".format(key))
+            current[key] = []
+            current_list = key
+        else:
+            current[key] = _decode_scalar(value)
     return claims
 
 
-def _require_claim(claims, claim_id, caveat):
+def _require_claim(claims, claim_id, expected_scope):
     claim = claims.get(claim_id)
     if claim is None:
         _fail("missing required claim: {}".format(claim_id))
-    if claim.get("status") != "verified" or claim.get("public") is not True:
-        _fail("claim is not verified and public: {}".format(claim_id))
-    if claim.get("caveat") != caveat:
-        _fail("claim caveat mismatch: {}".format(claim_id))
-    if not re.fullmatch(r"[0-9a-f]{40}", str(claim.get("source_ref", ""))):
-        _fail("claim source_ref mismatch: {}".format(claim_id))
+    expected = {"id": claim_id}
+    expected.update(expected_scope)
+    if claim != expected:
+        fields = sorted(
+            key for key in set(claim).union(expected)
+            if claim.get(key) != expected.get(key)
+        )
+        _fail(
+            "claim scope identity mismatch: {} fields={}".format(
+                claim_id, ",".join(fields)
+            )
+        )
     return claim
 
 
@@ -190,9 +286,9 @@ def _load_writer_metrics(path, writer_claim):
 
 def _extract_metrics(root):
     claims = _load_claims(root / CLAIMS_PATH)
-    writer = _require_claim(claims, WRITER_CLAIM, WRITER_CAVEAT)
-    throughput = _require_claim(claims, THROUGHPUT_CLAIM, THROUGHPUT_CAVEAT)
-    c2b4 = _require_claim(claims, C2B4_CLAIM, C2B4_CAVEAT)
+    writer = _require_claim(claims, WRITER_CLAIM, WRITER_SCOPE)
+    throughput = _require_claim(claims, THROUGHPUT_CLAIM, THROUGHPUT_SCOPE)
+    c2b4 = _require_claim(claims, C2B4_CLAIM, C2B4_SCOPE)
 
     period, writer_total, writer_comb = _load_writer_metrics(
         root / COMPARISONS_PATH, writer

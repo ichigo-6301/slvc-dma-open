@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="240" viewBox="0 0 1280 240" role="img" aria-labelledby="title desc">
+  <title id="title">SLVC DMA results at a glance</title>
+  <desc id="desc">Three evidence-bound results: ideal-memory RTL interface throughput, Writer-only Design Compiler area changes, and fixed C2B4 subsystem implementation points. Scope labels prohibit subsystem and complete-DMA extrapolation.</desc>
+  <style>
+    .title { font: 700 22px Arial, sans-serif; fill: #0f172a; }
+    .metric { font: 700 31px Arial, sans-serif; }
+    .label { font: 700 15px Arial, sans-serif; fill: #0f172a; }
+    .note { font: 400 13px Arial, sans-serif; fill: #475569; }
+    .divider { stroke: #cbd5e1; stroke-width: 2; }
+  </style>
+  <rect width="1280" height="240" fill="#f8fafc"/>
+  <text x="40" y="38" class="title">Verified results at a glance</text>
+  <line x1="426" y1="62" x2="426" y2="214" class="divider"/>
+  <line x1="853" y1="62" x2="853" y2="214" class="divider"/>
+
+  <text x="40" y="103" class="metric" fill="#166534">64 B/cycle</text>
+  <text x="40" y="134" class="label">512-bit memory interface</text>
+  <text x="40" y="160" class="note">ready ideal-memory RTL model</text>
+  <text x="40" y="184" class="note">peak outstanding 4; not board DDR/10G</text>
+
+  <text x="466" y="103" class="metric" fill="#1d4ed8">-7.97% / -15.84%</text>
+  <text x="466" y="134" class="label">Writer-only total / combinational area</text>
+  <text x="466" y="160" class="note">Nangate45 paired DC OOC at 1.5 ns</text>
+  <text x="466" y="184" class="note">not C2B4 or complete-DMA area</text>
+
+  <text x="893" y="103" class="metric" fill="#a16207">550 MHz -&gt; 450 MHz</text>
+  <text x="893" y="134" class="label">DC handoff -&gt; route / PrimeTime</text>
+  <text x="893" y="160" class="note">C2B4 two-channel RX512 subsystem</text>
+  <text x="893" y="184" class="note">fixed closure points; not complete DMA or Fmax</text>
+</svg>

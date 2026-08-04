@@ -1,0 +1,26 @@
+{
+  "schema": "slvc_dma_experimental_power_branch_v1",
+  "branch": "research/dma-a3-clock-gating-power-negative-2026-08",
+  "evidence_path": "evidence/asic_power_clock_gating_negative/manifest.json",
+  "status": "negative",
+  "promotion_eligible": false,
+  "merge_recommended": false,
+  "production_rtl_changed": false,
+  "postroute_pair_completed": false,
+  "lec_status": "not_available",
+  "registered_verified_claim": false,
+  "release_or_tag_changed": false,
+  "fixed_provenance_revisions": {
+    "finalization": "14538a48b1483a50ba7fceef6f4abde8f6e5ea86",
+    "machine_evidence": "6cb023413cdd814d35faf582a44ec96b51768515",
+    "compatibility_validation": "1aaaae7902707a30f9375453b5f3136369e7fe58"
+  },
+  "publication_boundary": {
+    "branch_only": true,
+    "main_modified": false,
+    "pull_request_created": false,
+    "release_tag_changed": false,
+    "raw_commercial_artifacts_published": false
+  },
+  "decision": "Negative mapped-DC automatic clock-gating evaluation with physically blocked comparison; no production RTL change and no merge recommendation."
+}

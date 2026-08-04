@@ -2,7 +2,13 @@
 
 [![Public Integrity](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml/badge.svg?branch=main)](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml) ![RTL](https://img.shields.io/badge/RTL-Verilog-2f6f9f) [![License](https://img.shields.io/github/license/ichigo-6301/slvc-dma-open)](LICENSE)
 
-[中文](README.md) · [Architecture](docs/en/architecture.md) · [Integration](docs/en/integration.md) · [Verification](docs/en/verification.md) · [Results](docs/en/results.md) · [Limitations](docs/en/limitations.md)
+[中文](README.md) · [Architecture](docs/en/architecture.md) · [Integration](docs/en/integration.md) · [Verification](docs/en/verification.md) · [Results](docs/en/results.md) · [Limitations](docs/en/limitations.md) · [Power research](docs/en/asic_power_clock_gating_experiment.md)
+
+> [!WARNING]
+> This is a branch-only ASIC power research record. It is not part of `main`,
+> `v0.1.0-rc1`, or any production profile. The experiment established deterministic
+> activity, mapped-DC automatic clock gating, and bounded physical gates, but did
+> not meet the predefined promotion gate. No production RTL change is recommended.
 
 **A 512-bit virtual-channel DMA for multi-source shared high-speed links, providing channel-aware admission, hybrid buffering, a separate control-message path, and auditable completion ownership between protocol adapters and DDR.**
 
@@ -21,6 +27,51 @@ Sensors, baseband pipelines, or local endpoints can first be multiplexed into on
 | Buffering | Per-channel fixed ingress storage or a free-list-managed shared frame pool |
 | Flow-control boundary | Payload `valid/ready` is separate from PAUSE/RESUME control messages; the latter is not network end-to-end flow control |
 | Implementation evidence | Windows ModelSim + Linux Questa, Vivado routed OOC, and Nangate45 DC/OpenROAD/OpenRCX/PrimeTime |
+
+## ASIC Power Research Branch
+
+> [!WARNING]
+> This section records a branch-only negative research result. It will not enter
+> `main`, `v0.1.0-rc1`, or any production profile, and it is not recommended for
+> merge.
+
+This bounded ASIC power experiment uses the two-channel C2B4 register-expanded
+RX512 subsystem and deterministic activity to compare ordinary Design Compiler
+mapping with automatic clock gating. G1 inserted `9 x CLKGATETST_X1` gating
+`576` bits. It is not a conclusion about a complete DMA or an SRAM profile.
+
+| Item | Result |
+| --- | --- |
+| Scope | Two-channel C2B4 register-expanded RX512 subsystem |
+| Tool point | DC O-2018.06-SP1, Nangate45 typical, 500 MHz mapped-DC |
+| Clock gates | `9 x CLKGATETST_X1` |
+| Gated bits | `576` |
+| Bursty dynamic | `-0.759288%` |
+| Saturated dynamic | `+0.490785%` |
+| Area | `-0.070802%` |
+| Physical comparison | Blocked before G1; no paired physical comparison |
+| Decision | `NEGATIVE / NOT_PROMOTED / PHYSICALLY_BLOCKED`; no production RTL change |
+
+The result misses both the `3% dynamic` and `8% clock + sequential` promotion
+gates. The G0 physical attempt at 500 MHz was blocked by setup and max-fanout
+issues. At 475 MHz, G0 closed setup/hold but retained 14 max-fanout violations.
+G1 physical implementation therefore did not start; there is no common
+post-route point and no post-route paired power. A bursty `-25%` incremental
+energy figure formed by coarse total-power residuals is not used as a benefit,
+because it is dominated by report quantization.
+
+Method and boundaries: [English research note](docs/en/asic_power_clock_gating_experiment.md) ·
+[Chinese research note](docs/zh-CN/asic_power_clock_gating_experiment.md) ·
+[Evidence README](evidence/asic_power_clock_gating_negative/README.md) ·
+[points.csv](evidence/asic_power_clock_gating_negative/points.csv) ·
+[comparisons.csv](evidence/asic_power_clock_gating_negative/comparisons.csv) ·
+[physical_attempts.csv](evidence/asic_power_clock_gating_negative/physical_attempts.csv) ·
+[branch-only validator](flows/scripts/validate_asic_power_clock_gating_experiment.py)
+
+Mapped-DC clock power is not CTS clock-tree power. This scope is not a complete
+DMA, and register-expanded C2B4 is not an SRAM profile. There is no
+LEC/Formality PASS. This branch is an auditable record of automatic clock-gating
+evaluation, physical blocking, and a negative result only.
 
 <a id="key-results-and-evidence"></a>
 ## Key Results And Evidence

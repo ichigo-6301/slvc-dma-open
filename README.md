@@ -2,7 +2,12 @@
 
 [![Public Integrity](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml/badge.svg?branch=main)](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml) ![RTL](https://img.shields.io/badge/RTL-Verilog-2f6f9f) [![License](https://img.shields.io/github/license/ichigo-6301/slvc-dma-open)](LICENSE)
 
-[English](README.en.md) · [架构](docs/zh-CN/architecture.md) · [集成](docs/zh-CN/integration.md) · [验证](docs/zh-CN/verification.md) · [结果](docs/zh-CN/results.md) · [限制](docs/zh-CN/limitations.md)
+[English](README.en.md) · [架构](docs/zh-CN/architecture.md) · [集成](docs/zh-CN/integration.md) · [验证](docs/zh-CN/verification.md) · [结果](docs/zh-CN/results.md) · [限制](docs/zh-CN/limitations.md) · [功耗研究](docs/zh-CN/asic_power_clock_gating_experiment.md)
+
+> [!WARNING]
+> 本分支是独立的 ASIC 功耗研究记录，不属于 `main`、`v0.1.0-rc1` 或任何生产
+> Profile。它建立了确定性 activity、Mapped-DC 自动 Clock Gating 和有界物理门禁，
+> 但未达到预设 Promotion Gate；因此没有修改生产 RTL，也不建议合入主线。
 
 **面向多源共享高速链路的 512-bit 虚拟通道 DMA：在协议适配层与 DDR 之间提供 channel-aware admission、混合缓冲、独立控制消息和可审计的 completion ownership。**
 
@@ -21,6 +26,46 @@
 | 缓冲策略 | 每通道 fixed ingress buffer，或由 free list 管理的 shared frame pool |
 | 流控边界 | Payload `valid/ready` 与 PAUSE/RESUME control-message 通道分离；后者不是网络端到端流控 |
 | 实现证据 | Windows ModelSim + Linux Questa；Vivado routed OOC；Nangate45 DC/OpenROAD/OpenRCX/PrimeTime |
+
+## ASIC 功耗研究分支
+
+> [!WARNING]
+> 本节只记录 branch-only 的负结果研究。它不会进入 `main`、`v0.1.0-rc1` 或任何
+> 生产 Profile，也不建议合入主线。
+
+本实验以两通道 C2B4 register-expanded RX512 子系统为范围，用确定性 activity
+比较普通 Design Compiler 映射与自动 Clock Gating。G1 插入 `9 x CLKGATETST_X1`，
+共门控 `576` bit；它是有界 ASIC 功耗实验，不是完整 DMA 或 SRAM Profile 的结论。
+
+| 项目 | 结果 |
+| --- | --- |
+| Scope | 两通道 C2B4 register-expanded RX512 子系统 |
+| 工具点 | DC O-2018.06-SP1，Nangate45 typical，500 MHz Mapped-DC |
+| Clock gates | `9 x CLKGATETST_X1` |
+| Gated bits | `576` |
+| Bursty dynamic | `-0.759288%` |
+| Saturated dynamic | `+0.490785%` |
+| Area | `-0.070802%` |
+| 物理比较 | G1 之前被阻断，未形成 paired 物理比较 |
+| 决策 | `NEGATIVE / NOT_PROMOTED / PHYSICALLY_BLOCKED`；不改生产 RTL |
+
+该结果未达到 `3% dynamic` 或 `8% clock + sequential` Promotion Gate。500 MHz 的 G0
+物理尝试被 setup 与 max-fanout 问题阻断；475 MHz 的 G0 虽满足 setup/hold，但仍有
+14 项 max-fanout 违例。因此 G1 物理实现没有启动，未形成共同 post-route 点，也没有
+post-route paired power。由粗粒度 total-power 残差得到的 bursty incremental energy
+`-25%` 不作为收益，因为它受报告量化影响。
+
+详细方法与边界：[中文研究说明](docs/zh-CN/asic_power_clock_gating_experiment.md) ·
+[English research note](docs/en/asic_power_clock_gating_experiment.md) ·
+[Evidence README](evidence/asic_power_clock_gating_negative/README.md) ·
+[points.csv](evidence/asic_power_clock_gating_negative/points.csv) ·
+[comparisons.csv](evidence/asic_power_clock_gating_negative/comparisons.csv) ·
+[physical_attempts.csv](evidence/asic_power_clock_gating_negative/physical_attempts.csv) ·
+[branch-only validator](flows/scripts/validate_asic_power_clock_gating_experiment.py)
+
+Mapped-DC 的 clock power 不是 CTS 后的 Clock Tree Power。本 Scope 不是完整 DMA，
+register-expanded C2B4 不是 SRAM Profile；没有 LEC/Formality PASS。本分支只作为
+自动 Clock Gating 评估、物理阻断和负结果的可审计研究记录。
 
 <a id="key-results-and-evidence"></a>
 ## 关键结果与证据入口

@@ -1,0 +1,154 @@
+{
+  "schema": "slvc_dma_asic_power_clock_gating_negative_v1",
+  "publication_class": "sanitized_branch_only_research",
+  "branch": "research/dma-a3-clock-gating-power-negative-2026-08",
+  "classification": "NEGATIVE / NOT_PROMOTED / PHYSICALLY_BLOCKED",
+  "branch_only": true,
+  "promotion_eligible": false,
+  "merge_recommended": false,
+  "production_rtl_changed": false,
+  "postroute_pair_completed": false,
+  "lec_status": "not_available",
+  "release_or_tag_changed": false,
+  "registered_verified_claim": false,
+  "numeric_authority": "points.csv",
+  "generated_derivative": "comparisons.csv",
+  "raw_commercial_artifacts_published": false,
+  "fixed_provenance_revisions": {
+    "finalization": "14538a48b1483a50ba7fceef6f4abde8f6e5ea86",
+    "machine_evidence": "6cb023413cdd814d35faf582a44ec96b51768515",
+    "compatibility_validation": "1aaaae7902707a30f9375453b5f3136369e7fe58",
+    "rtl_closure": "45cd49764d26861027639cd1e3de638dfdc35454",
+    "shared_source_set": "348df4949d4d88954a4402cd47118c6444099a17"
+  },
+  "scope": {
+    "top": "dma_rx512_memory_subsystem_top",
+    "profile": "dma_rx512_reg_c2_b4_m2_sp64",
+    "channels": 2,
+    "fixed_payload_bytes_per_channel": 4096,
+    "shared_block_count": 64,
+    "shared_block_width_bits": 512,
+    "max_burst_beats": 16,
+    "max_outstanding": 4,
+    "storage_model": "register_expanded",
+    "parameters_sha256": "4d0e48084982ba4451888b63c3f09016e05f09f186c4a100940979fccb89145f",
+    "writer_source_sha256": "d6585993fdab2446049d0f7efcf90412755106587d59c5441228b789c7f500b2",
+    "shared_source_set_sha256": "2316525a44e38bde84ea4d4cbf5139ff49f26e4abbcc91d1bfc1905919087bbb",
+    "variant_source_set_sha256": "bf332ec11aab8327ccf91a47cce39b9b24abd857c44bd25e7916e2af2fa95282"
+  },
+  "mapped_dc_identity": {
+    "tool": "Design Compiler",
+    "tool_version": "O-2018.06-SP1",
+    "library": "Nangate45",
+    "corner": "typical",
+    "library_db_sha256": "111c429e7ae9341d51f5f04b0e4c7574e5c1359de32d51b151470463abe187de",
+    "library_power_audit": {
+      "internal_power_groups": 2459,
+      "leakage_power_groups": 2071,
+      "legal_icg_cells": 8
+    },
+    "constraint_id": "c2b4_clock_gating_dc_2ns",
+    "constraints_sha256": "0ded9f241bb7a14d13c284b5895fec3c16dfbb35866a78c481a47f97d3bcc6a7",
+    "clock_period_ns": "2.000000",
+    "frequency_mhz": 500,
+    "compile_script_sha256": "18a4b0467082067e037a70d99119851655e9f707343a7a766047e60c383e9a79"
+  },
+  "pair_methodology": {
+    "baseline": "G0: compile_ultra",
+    "candidate": "G1: compile_ultra -gate_clock",
+    "shared_identity": [
+      "A1 RTL closure",
+      "top",
+      "parameter contract",
+      "source-set digests",
+      "library and constraint",
+      "compile script",
+      "workload contract",
+      "normalized functional trace"
+    ],
+    "per_point_activity": "Each mapped implementation has its own activity digest; the package does not claim one identical activity file."
+  },
+  "activity_contract": {
+    "seed": 71,
+    "warmup_cycles": 4096,
+    "workloads": {
+      "idle": {
+        "window_cycles": 4096,
+        "functional_bytes": 0,
+        "definition": "No transaction in the sampled window."
+      },
+      "bursty": {
+        "window_cycles": 4096,
+        "functional_bytes": 65536,
+        "definition": "Sixteen 4 KiB frames; 64 active and 192 idle cycles per 256-cycle interval."
+      },
+      "saturated": {
+        "window_cycles": 4096,
+        "functional_bytes": 1048576,
+        "definition": "1 MiB, 16-beat bursts, four outstanding, ready-memory model; steady-state power window."
+      }
+    },
+    "coverage_gate": {
+      "input_percent": 100,
+      "sequential_percent": 100,
+      "overall_percent": {
+        "G0": "97.14",
+        "G1": "97.12"
+      }
+    },
+    "verification_platforms": [
+      "Windows ModelSim",
+      "Linux Questa"
+    ]
+  },
+  "clock_gating_policy": {
+    "icg_cell": "CLKGATETST_X1",
+    "icg_count": 9,
+    "gated_bits": 576,
+    "minimum_bit_width": 32,
+    "maximum_gate_fanout": 64,
+    "allowlist_scope": "Writer wide data-register banks",
+    "excluded_scope": [
+      "CDC synchronizers and pointers",
+      "reset handshakes",
+      "AXI handshake control",
+      "completion",
+      "IRQ/error/status",
+      "whole-domain gating"
+    ]
+  },
+  "promotion_gate": {
+    "primary_workload": "bursty",
+    "total_dynamic_percent": -3,
+    "clock_plus_sequential_percent": -8,
+    "saturated_dynamic_regression_limit_percent": 1,
+    "decision": "NOT_PROMOTED"
+  },
+  "physical_boundary": {
+    "backend": "OpenROAD bounded physical gate",
+    "G0_500MHz": "BLOCKED_SETUP",
+    "G0_475MHz": "BLOCKED_ELECTRICAL",
+    "G1": "NOT_STARTED_GATE_BLOCKED",
+    "common_postroute_frequency": "none",
+    "primetime_postroute_paired_power": "not_completed"
+  },
+  "artifact_policy": {
+    "published": "logical artifact ID, size, and SHA-256 only",
+    "not_distributed": [
+      "commercial logs and reports",
+      "DDC and mapped netlist",
+      "SDC, ODB, SPEF, VCD, and SAIF",
+      "library payload",
+      "host, account, license, and local-path data"
+    ]
+  },
+  "nonclaims": [
+    "No complete-DMA power result.",
+    "No SRAM-profile result.",
+    "No maximum-frequency statement.",
+    "Mapped-DC clock power is not CTS clock-tree power.",
+    "No post-route paired-power result.",
+    "No LEC/Formality pass.",
+    "No foundry or silicon conclusion."
+  ]
+}

@@ -33,7 +33,7 @@ Sensors, baseband pipelines, or local endpoints can first be multiplexed into on
 
 RX parses `flow_id` and length from the 64-byte SHDR64 header and admits a frame only when ingress, target DDR Ring, and CQ credits can all be reserved. Payload enters either per-channel Fixed ingress or the block-free-list-managed Shared Frame Pool. Only a whole-frame commit makes it visible to the source selector, which remains locked through frame end. After AXI responses complete, hardware writes the CQE body, publishes owner/valid and IRQ, and finally releases frame ownership.
 
-![SLVC DMA virtual-channel buffering](docs/assets/slvc_dma_virtual_channel_buffering.svg)
+![SLVC DMA frame lifecycle](docs/assets/slvc_dma_frame_lifecycle.svg)
 
 [Read the complete data path, resource boundaries, and blocking conditions](docs/en/architecture.md)
 
@@ -47,6 +47,8 @@ Legacy64 and Same-clock512 issue AXI writes in `aclk`. Async64/Async512 cross on
 
 Same-clock512 and Async512 sustain `64 B/cycle` under the ready-memory model, while Async64 sustains `8 B/cycle`. These are RTL/interface rates, not board DDR throughput.
 
+![SLVC DMA RX memory profiles and CDC boundaries](docs/assets/slvc_dma_memory_profiles.svg)
+
 [Read the 512-bit Writer](docs/en/rx_payload_512_backend.md) · [Read the CDC Backends](docs/en/rx_payload_cdc_backends.md)
 
 <a id="throughput-ppa-and-asic"></a>
@@ -54,6 +56,8 @@ Same-clock512 and Async512 sustain `64 B/cycle` under the ready-memory model, wh
 ## Throughput, Writer PPA, And ASIC Implementation
 
 Formal numbers are managed in three non-transferable scopes: Writer-only paired DC measures a local accounting structure; the ideal-memory workload measures interface delivery; C2B4 records fixed DC handoff and route/PT points for a two-channel RX512 subsystem. They do not combine into a claim that the complete DMA achieved every result.
+
+![SLVC DMA verified throughput, Writer PPA, and ASIC implementation](docs/assets/slvc_dma_ppa_implementation.svg)
 
 [Read the complete result tables and calculation boundaries](docs/en/results.md)
 

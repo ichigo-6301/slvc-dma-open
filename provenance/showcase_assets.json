@@ -19,17 +19,82 @@
       ]
     },
     {
-      "path": "docs/assets/slvc_dma_results_at_a_glance.svg",
-      "sha256": "2eabba7ef72425af29409007906e2cf85ac740f3e9eebefea9e73e76c20358fd",
+      "path": "docs/assets/slvc_dma_frame_lifecycle.svg",
+      "sha256": "e9410bc8c0f8b53d4a750f2a64b73d82c968c22b8e13f8179e9b1081b86eec4b",
       "format": "svg",
-      "source": "deterministically generated from tracked public claims and sanitized paired-DC comparisons",
-      "generator": "flows/scripts/generate_results_at_a_glance.py",
-      "generator_sha256": "562b1b5b57b17f3febc447568606202181a15298c0f3a50bf8145304b1ac41a3",
-      "command": "python flows/scripts/generate_results_at_a_glance.py --root . --write",
+      "source": "deterministically generated from tracked RTL architecture and the bounded admission claim",
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "03f40a48ecf6cf3c5fb7a6600499c24c189ffaa646523150784cc54fe7b8ddb0",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
+      "inputs": [
+        {
+          "path": "rtl/integration/slvc_dma_wrapper.v",
+          "sha256": "312d87a2eb87fc958f0fe6a7043c12ec416974d86131077b8048d6beda99e976"
+        },
+        {
+          "path": "rtl/integration/frame_dma_rx_top.v",
+          "sha256": "f7de4e5c02b6e9608f606e0915514c11fc4f7f580981be0b5c4aee0314036062"
+        },
+        {
+          "path": "provenance/claims.yaml",
+          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+        }
+      ],
+      "claim_ids": [
+        "slvc_dma_channel_admission_isolation_directed"
+      ]
+    },
+    {
+      "path": "docs/assets/slvc_dma_memory_profiles.svg",
+      "sha256": "b37494aeff76d508f64b41297439fc3f91ff51867e801bc95b63b1a784718e74",
+      "format": "svg",
+      "source": "deterministically generated from tracked RTL, regression evidence, and CDC claims",
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "03f40a48ecf6cf3c5fb7a6600499c24c189ffaa646523150784cc54fe7b8ddb0",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
+      "inputs": [
+        {
+          "path": "rtl/integration/slvc_dma_wrapper.v",
+          "sha256": "312d87a2eb87fc958f0fe6a7043c12ec416974d86131077b8048d6beda99e976"
+        },
+        {
+          "path": "rtl/integration/frame_dma_rx_top.v",
+          "sha256": "f7de4e5c02b6e9608f606e0915514c11fc4f7f580981be0b5c4aee0314036062"
+        },
+        {
+          "path": "evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml",
+          "sha256": "282266eea3f9d7193f640288d83a01373323b25681f159d942d1daee5d8784f5"
+        },
+        {
+          "path": "provenance/claims.yaml",
+          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+        }
+      ],
+      "claim_ids": [
+        "slvc_dma_rx_payload_cdc_regression",
+        "slvc_dma_rx_payload_cdc_ideal_throughput"
+      ]
+    },
+    {
+      "path": "docs/assets/slvc_dma_ppa_implementation.svg",
+      "sha256": "360c3b5e703ddec967613c764b33242a2692dc645f015c0a45a2d856276d657d",
+      "format": "svg",
+      "source": "deterministically generated from tracked public claims and sanitized implementation evidence",
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "03f40a48ecf6cf3c5fb7a6600499c24c189ffaa646523150784cc54fe7b8ddb0",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
           "path": "evidence/asic_paired_dc/comparisons.csv",
           "sha256": "0b921860201edf85fb1c77932eda8ee56299be10adb2dc7978a67b49021dfafe"
+        },
+        {
+          "path": "evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml",
+          "sha256": "282266eea3f9d7193f640288d83a01373323b25681f159d942d1daee5d8784f5"
+        },
+        {
+          "path": "evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml",
+          "sha256": "8438cba00f5a7327124c321fe0724846cfc292d75f9ca2c4cf6caad22d893765"
         },
         {
           "path": "provenance/claims.yaml",

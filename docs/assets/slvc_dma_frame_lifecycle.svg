@@ -1,51 +1,112 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="700" viewBox="0 0 1480 700" role="img" aria-labelledby="title desc">
-  <title id="title">SHDR64 frame lifecycle through SLVC DMA</title>
-  <desc id="desc">The diagram separates payload movement, admission control, and software-visible completion. It marks whole-frame commit and the final frame-ownership release point.</desc>
-  <defs><marker id="life-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
-  <style>.title{font:700 28px Arial,sans-serif;fill:#0f172a}.sub{font:400 16px Arial,sans-serif;fill:#475569}.lane{font:700 15px Arial,sans-serif}.head{font:700 16px Arial,sans-serif;fill:#0f172a}.body{font:400 14px Arial,sans-serif;fill:#334155}.tiny{font:400 13px Arial,sans-serif;fill:#475569}.box{stroke-width:2;rx:6}.flow{stroke:#334155;stroke-width:3;fill:none;marker-end:url(#life-arrow)}.dash{stroke:#d97706;stroke-width:2.5;stroke-dasharray:7 5;fill:none;marker-end:url(#life-arrow)}.soft{stroke:#16a34a;stroke-width:2.5;fill:none;marker-end:url(#life-arrow)}</style>
-  <rect width="1480" height="700" fill="#ffffff"/>
-  <text x="40" y="46" class="title">SHDR64 frame lifecycle</text>
-  <text x="40" y="74" class="sub">Admission is resolved before visibility; completion is published before ownership is released.</text>
-
-  <rect x="34" y="112" width="1412" height="128" fill="#fff7ed" stroke="#fed7aa" class="box"/>
-  <text x="58" y="142" class="lane" fill="#c2410c">Admission / control</text>
-  <rect x="190" y="142" width="170" height="66" fill="#ffffff" stroke="#d97706" class="box"/>
-  <text x="275" y="169" text-anchor="middle" class="head">SHDR64 parse / CRC</text><text x="275" y="191" text-anchor="middle" class="tiny">flow_id + length</text>
-  <rect x="410" y="142" width="160" height="66" fill="#ffffff" stroke="#d97706" class="box"/>
-  <text x="490" y="169" text-anchor="middle" class="head">Channel match</text><text x="490" y="191" text-anchor="middle" class="tiny">context lookup</text>
-  <rect x="620" y="132" width="230" height="86" fill="#ffffff" stroke="#d97706" class="box"/>
-  <text x="735" y="161" text-anchor="middle" class="head">Ingress + DDR Ring + CQ</text><text x="735" y="184" text-anchor="middle" class="tiny">joint availability check</text><text x="735" y="204" text-anchor="middle" class="tiny">fail closed before payload commit</text>
-  <rect x="900" y="142" width="150" height="66" fill="#ffffff" stroke="#d97706" class="box"/>
-  <text x="975" y="169" text-anchor="middle" class="head">Reserve</text><text x="975" y="191" text-anchor="middle" class="tiny">ring + buffer + CQ</text>
-  <path d="M360 175 H410 M570 175 H620 M850 175 H900" class="dash"/>
-
-  <rect x="34" y="270" width="1412" height="188" fill="#eff6ff" stroke="#bfdbfe" class="box"/>
-  <text x="58" y="302" class="lane" fill="#1d4ed8">Data path</text>
-  <rect x="90" y="328" width="150" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="165" y="359" text-anchor="middle" class="head">Shared-link RX</text><text x="165" y="383" text-anchor="middle" class="tiny">elastic 512-bit input</text>
-  <rect x="285" y="318" width="220" height="98" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="395" y="347" text-anchor="middle" class="head">Fixed ingress</text><text x="395" y="370" text-anchor="middle" class="body">or Shared Frame Pool</text><text x="395" y="394" text-anchor="middle" class="tiny">free-list + linked blocks</text>
-  <path d="M975 208 V254 H395 V318" class="dash"/>
-  <line x1="555" y1="292" x2="555" y2="438" stroke="#16a34a" stroke-width="4"/>
-  <text x="570" y="315" class="lane" fill="#166534">WHOLE-FRAME COMMIT</text>
-  <rect x="650" y="328" width="170" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="735" y="359" text-anchor="middle" class="head">Frame-locked source</text><text x="735" y="383" text-anchor="middle" class="tiny">no source interleave</text>
-  <rect x="865" y="328" width="170" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="950" y="359" text-anchor="middle" class="head">Memory backend</text><text x="950" y="383" text-anchor="middle" class="tiny">4 KiB burst split</text>
-  <rect x="1080" y="328" width="145" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="1152" y="359" text-anchor="middle" class="head">DDR Ring</text><text x="1152" y="383" text-anchor="middle" class="tiny">per channel</text>
-  <rect x="1270" y="328" width="130" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="1335" y="359" text-anchor="middle" class="head">AXI response</text><text x="1335" y="383" text-anchor="middle" class="tiny">B completion</text>
-  <path d="M240 367 H285 M505 367 H535 M590 367 H650 M820 367 H865 M1035 367 H1080 M1225 367 H1270" class="flow"/>
-
-  <rect x="34" y="488" width="1412" height="152" fill="#f0fdf4" stroke="#bbf7d0" class="box"/>
-  <text x="58" y="520" class="lane" fill="#166534">Software-visible completion</text>
-  <rect x="455" y="535" width="170" height="70" fill="#ffffff" stroke="#16a34a" class="box"/>
-  <text x="540" y="565" text-anchor="middle" class="head">CQE body</text><text x="540" y="587" text-anchor="middle" class="tiny">written first</text>
-  <rect x="690" y="535" width="190" height="70" fill="#ffffff" stroke="#16a34a" class="box"/>
-  <text x="785" y="565" text-anchor="middle" class="head">owner / valid + IRQ</text><text x="785" y="587" text-anchor="middle" class="tiny">published last</text>
-  <rect x="945" y="535" width="220" height="70" fill="#ffffff" stroke="#16a34a" class="box"/>
-  <text x="1055" y="565" text-anchor="middle" class="head">Release frame ownership</text><text x="1055" y="587" text-anchor="middle" class="tiny">blocks return to free list</text>
-  <path d="M1335 406 V470 H540 V535 M625 570 H690 M880 570 H945" class="soft"/>
-  <text x="40" y="674" class="tiny">Commit boundary: incomplete Shared frames are invisible. Release boundary: source storage is retained until AXI completion and CQ publication.</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc" data-theme-contract="mrtc-engineering-report">
+  <title id="title">SHDR64 frame lifecycle and ownership boundaries</title>
+  <desc id="desc">Header control and payload data converge at a fail-closed admission gate before whole-frame commit; completion publishes the CQ body before owner and releases storage last.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1456a0"/></marker>
+  </defs>
+  <style>.title{font:700 38px Arial,Helvetica,sans-serif;fill:#111827}
+    .subtitle{font:400 22px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .panel-title{font:700 25px Arial,Helvetica,sans-serif;fill:#102f5e}
+    .section{font:700 22px Arial,Helvetica,sans-serif;fill:#111827}
+    .body{font:400 19px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .body-bold{font:700 19px Arial,Helvetica,sans-serif;fill:#111827}
+    .metric{font:700 23px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .small{font:400 16px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .foot{font:400 17px Arial,Helvetica,sans-serif;fill:#374151}
+    .table-head{font:700 17px Arial,Helvetica,sans-serif;fill:#ffffff}
+    .table-header{font:700 16px Arial,Helvetica,sans-serif;fill:#111827}
+    .table{font:400 17px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .table-strong{font:700 17px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .rule{stroke:#102f5e;stroke-width:1.5}
+    .thin{stroke:#9ca3af;stroke-width:1}
+    .box{fill:#ffffff;stroke:#6b7280;stroke-width:1.2}
+    .box-blue{fill:#ffffff;stroke:#1456a0;stroke-width:1.4}
+    .panel-header{fill:#102f5e;stroke:#102f5e;stroke-width:1}
+    .flow{fill:none;stroke:#6b7280;stroke-width:1.5;marker-end:url(#arrow)}
+    .flow-blue{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .flow-return{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .boundary{fill:none;stroke:#8b9199;stroke-width:1.5;stroke-dasharray:8 6}
+    .orange{fill:#b45309}
+    .green{fill:#047857}</style>
+  <rect width="1600" height="1000" fill="#ffffff"/>
+  <g data-layout-region="page-header">
+    <rect data-layout-box="true" x="30" y="18" width="1540" height="112" fill="none" stroke="none"/>
+    <text x="40" y="60" class="title">SHDR64 frame lifecycle and ownership boundaries</text>
+    <text x="40" y="98" class="subtitle">Header control and payload data meet at one admission gate before collection, commit, memory completion, and release.</text>
+    <line x1="40" y1="124" x2="1560" y2="124" class="rule"/>
+  </g>
+  <g id="header-control-path" data-path="header-control" data-layout-region="lifecycle-control">
+    <rect data-layout-box="true" x="50" y="160" width="680" height="400" class="box"/>
+    <rect x="50" y="160" width="680" height="58" class="panel-header"/>
+    <text x="390" y="198" text-anchor="middle" class="table-head">Header / Admission Control</text>
+    <rect id="header-beat" x="90" y="245" width="260" height="65" class="box-blue"/>
+    <text x="220" y="286" text-anchor="middle" class="body-bold">Header beat</text>
+    <rect id="parse-crc" x="410" y="245" width="270" height="65" class="box"/>
+    <text x="545" y="286" text-anchor="middle" class="body-bold">Parse / CRC</text>
+    <rect id="match-context" x="90" y="350" width="260" height="65" class="box"/>
+    <text x="220" y="391" text-anchor="middle" class="body-bold">Match Context</text>
+    <rect id="check-resources" x="410" y="340" width="270" height="85" class="box"/>
+    <text x="545" y="376" text-anchor="middle" class="body-bold">Check Ingress + Ring + CQ</text>
+    <text x="545" y="405" text-anchor="middle" class="small">joint availability</text>
+    <rect id="reserve-reject" x="230" y="465" width="320" height="65" class="box-blue"/>
+    <text x="390" y="506" text-anchor="middle" class="body-bold">Reserve / Reject</text>
+    <path d="M350 278 H410 M545 310 V340 M410 382 H350 M220 415 V445 H390 V465" class="flow"/>
+    <path id="reject-drop" d="M550 498 H610" class="flow"/>
+    <text x="620" y="505" class="small orange">Reject / Drop</text>
+  </g>
+  <g id="payload-data-path" data-path="payload" data-layout-region="lifecycle-payload">
+    <rect data-layout-box="true" x="870" y="160" width="680" height="400" class="box"/>
+    <rect x="870" y="160" width="680" height="58" class="panel-header"/>
+    <text x="1210" y="198" text-anchor="middle" class="table-head">512-bit Shared-link RX Payload</text>
+    <rect id="payload-beats" x="1010" y="265" width="400" height="95" class="box-blue"/>
+    <text x="1210" y="306" text-anchor="middle" class="body-bold">Payload beats</text>
+    <text x="1210" y="337" text-anchor="middle" class="small">ordered behind the accepted Header beat</text>
+    <text x="1210" y="425" text-anchor="middle" class="body">Elastic input retains frame ordering</text>
+    <text x="1210" y="468" text-anchor="middle" class="body">No unconditional path into storage</text>
+    <text x="1210" y="515" text-anchor="middle" class="small">Payload proceeds only when admission resolves</text>
+  </g>
+  <g id="admission-gate" data-requires="header-control,payload" data-layout-region="lifecycle-gate">
+    <rect data-layout-box="true" x="50" y="610" width="250" height="86" class="box-blue"/>
+    <text x="175" y="649" text-anchor="middle" class="panel-title">admission gate</text>
+    <text x="175" y="679" text-anchor="middle" class="small">reserved frame only</text>
+  </g>
+  <path id="control-to-admission" data-connects="header-control-to-admission" d="M390 530 V580 H175 V610" class="flow-blue"/>
+  <path id="payload-to-admission" data-connects="payload-to-admission" d="M1210 360 V580 H175 V610" class="flow-blue"/>
+  <g data-layout-region="lifecycle-data-chain">
+    <rect data-layout-box="true" x="330" y="580" width="1220" height="140" fill="none" stroke="none"/>
+    <rect id="frame-collect" x="340" y="610" width="245" height="86" class="box-blue"/>
+    <text x="462" y="649" text-anchor="middle" class="body-bold">Fixed / Shared collect</text>
+    <text x="462" y="679" text-anchor="middle" class="small">whole frame remains private</text>
+    <line id="commit-boundary" data-boundary-order="1" x1="625" y1="585" x2="625" y2="720" class="boundary"/>
+    <text x="642" y="606" class="table-strong green">WHOLE-FRAME COMMIT</text>
+    <rect id="frame-locked-source" x="670" y="610" width="245" height="86" class="box-blue"/>
+    <text x="792" y="649" text-anchor="middle" class="body-bold">Frame-locked Source</text>
+    <text x="792" y="679" text-anchor="middle" class="small">no source interleave</text>
+    <rect id="memory-backend" x="960" y="610" width="245" height="86" class="box"/>
+    <text x="1082" y="649" text-anchor="middle" class="body-bold">Memory Backend</text>
+    <text x="1082" y="679" text-anchor="middle" class="small">burst planning + AXI</text>
+    <rect id="ddr-b-response" x="1250" y="610" width="300" height="86" class="box"/>
+    <text x="1400" y="649" text-anchor="middle" class="body-bold">DDR / B response</text>
+    <text x="1400" y="679" text-anchor="middle" class="small">memory completion</text>
+    <path d="M300 653 H340 M585 653 H605 M645 653 H670 M915 653 H960 M1205 653 H1250" class="flow-blue"/>
+  </g>
+  <g data-layout-region="lifecycle-completion">
+    <rect data-layout-box="true" x="350" y="790" width="1200" height="120" fill="none" stroke="none"/>
+    <rect id="cqe-body" data-completion-order="1" x="390" y="805" width="250" height="82" class="box"/>
+    <text x="515" y="842" text-anchor="middle" class="body-bold">CQE body</text>
+    <text x="515" y="872" text-anchor="middle" class="small">written first</text>
+    <rect id="owner-valid" data-completion-order="2" x="700" y="805" width="270" height="82" class="box-blue"/>
+    <text x="835" y="842" text-anchor="middle" class="body-bold">owner / valid + IRQ</text>
+    <text x="835" y="872" text-anchor="middle" class="small">published after body</text>
+    <line id="release-boundary" data-boundary-order="2" x1="1015" y1="780" x2="1015" y2="915" class="boundary"/>
+    <rect id="release-frame-ownership" data-completion-order="3" x="1060" y="805" width="360" height="82" class="box"/>
+    <text x="1240" y="842" text-anchor="middle" class="body-bold">release frame ownership</text>
+    <text x="1240" y="872" text-anchor="middle" class="small">return source capacity</text>
+    <path d="M1400 696 V755 H515 V805 M640 846 H700 M970 846 H1060" class="flow-blue"/>
+  </g>
+  <g data-layout-region="lifecycle-footnote">
+    <rect data-layout-box="true" x="40" y="940" width="1520" height="45" fill="none" stroke="none"/>
+    <text x="40" y="970" class="foot">Commit Boundary: incomplete frames are invisible. Release Boundary: storage remains owned through AXI completion and CQ owner-last publication.</text>
+  </g>
 </svg>

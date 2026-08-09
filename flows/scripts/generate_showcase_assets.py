@@ -36,17 +36,26 @@ README_EN_PATH = Path("README.en.md")
 RESEARCH_PATH = Path("docs/zh-CN/research_branches.md")
 RESEARCH_EN_PATH = Path("docs/en/research_branches.md")
 
+OVERVIEW_ASSET = Path("docs/assets/slvc_dma_overview.svg")
+VIRTUAL_CHANNEL_ASSET = Path(
+    "docs/assets/slvc_dma_virtual_channel_buffering.svg"
+)
 FRAME_LIFECYCLE_ASSET = Path("docs/assets/slvc_dma_frame_lifecycle.svg")
 MEMORY_PROFILES_ASSET = Path("docs/assets/slvc_dma_memory_profiles.svg")
 PPA_ASSET = Path("docs/assets/slvc_dma_ppa_implementation.svg")
 GENERATED_ASSETS = (
+    OVERVIEW_ASSET,
+    VIRTUAL_CHANNEL_ASSET,
     FRAME_LIFECYCLE_ASSET,
     MEMORY_PROFILES_ASSET,
     PPA_ASSET,
 )
-AUTHORED_ASSETS = (
-    Path("docs/assets/slvc_dma_overview.svg"),
-    Path("docs/assets/slvc_dma_virtual_channel_buffering.svg"),
+README_ASSET_ORDER = (
+    OVERVIEW_ASSET,
+    FRAME_LIFECYCLE_ASSET,
+    VIRTUAL_CHANNEL_ASSET,
+    MEMORY_PROFILES_ASSET,
+    PPA_ASSET,
 )
 OBSOLETE_ASSETS = (Path("docs/assets/slvc_dma_results_at_a_glance.svg"),)
 
@@ -226,31 +235,106 @@ C2B4_SCOPE = {
     "public": True,
 }
 
-AUTHORED_RULES = {
-    "slvc_dma_overview.svg": (
-        "SLVC DMA: multiple sources, one shared-link contract",
-        "Channel admission",
-        "Memory and software ownership",
-    ),
-    "slvc_dma_virtual_channel_buffering.svg": (
-        "Virtual channels with dedicated and shared storage",
-        "Shared frame pool",
-        "Lock one frame",
-        "no source interleave",
-    ),
-}
+CANVAS_WIDTH = "1600"
+CANVAS_HEIGHT = "1000"
+VIEW_BOX = "0 0 1600 1000"
+PRESERVE_ASPECT_RATIO = "xMidYMid meet"
+
+REPORT_STYLE = """
+    .title{font:700 38px Arial,Helvetica,sans-serif;fill:#111827}
+    .subtitle{font:400 22px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .panel-title{font:700 25px Arial,Helvetica,sans-serif;fill:#102f5e}
+    .section{font:700 22px Arial,Helvetica,sans-serif;fill:#111827}
+    .body{font:400 19px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .body-bold{font:700 19px Arial,Helvetica,sans-serif;fill:#111827}
+    .metric{font:700 23px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .small{font:400 16px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .foot{font:400 17px Arial,Helvetica,sans-serif;fill:#374151}
+    .table-head{font:700 17px Arial,Helvetica,sans-serif;fill:#ffffff}
+    .table-header{font:700 16px Arial,Helvetica,sans-serif;fill:#111827}
+    .table{font:400 17px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .table-strong{font:700 17px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .rule{stroke:#102f5e;stroke-width:1.5}
+    .thin{stroke:#9ca3af;stroke-width:1}
+    .box{fill:#ffffff;stroke:#6b7280;stroke-width:1.2}
+    .box-blue{fill:#ffffff;stroke:#1456a0;stroke-width:1.4}
+    .panel-header{fill:#102f5e;stroke:#102f5e;stroke-width:1}
+    .flow{fill:none;stroke:#6b7280;stroke-width:1.5;marker-end:url(#arrow)}
+    .flow-blue{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .flow-return{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .boundary{fill:none;stroke:#8b9199;stroke-width:1.5;stroke-dasharray:8 6}
+    .orange{fill:#b45309}
+    .green{fill:#047857}
+""".strip()
+
+BANNED_COLORS = (
+    "#dbeafe", "#dcfce7", "#fef3c7", "#ede9fe", "#cffafe",
+    "#fee2e2", "#eff6ff", "#f0fdf4", "#fff7ed",
+)
+
+THEME_TOKENS = (
+    'width="1600"',
+    'height="1000"',
+    'viewBox="0 0 1600 1000"',
+    'preserveAspectRatio="xMidYMid meet"',
+    "#102f5e",
+    "#1456a0",
+    "#ffffff",
+    ".title{font:700 38px",
+    ".subtitle{font:400 22px",
+    ".rule{stroke:#102f5e;stroke-width:1.5}",
+)
 
 GENERATED_RULES = {
+    "slvc_dma_overview.svg": (
+        "SLVC DMA shared-link system overview",
+        "Source Boundaries",
+        "SHDR64 Shared Link",
+        "Channel Admission",
+        "Hybrid Buffering",
+        "DDR / Completion Ownership",
+        "End-to-End Contract / Boundary",
+        "Stream contract",
+        "Software ownership",
+        "Verification boundary",
+        "Aurora / native SHDR64",
+        "optional UDP adapter",
+        "local endpoint / MCF",
+        "AXI4-Lite",
+        "PAUSE / RESUME",
+        "CQ owner-last",
+    ),
+    "slvc_dma_virtual_channel_buffering.svg": (
+        "Virtual-channel buffering and frame isolation",
+        "SHDR64 context",
+        "Fixed ingress",
+        "dedicated capacity",
+        "Shared Frame Pool",
+        "free-list capacity",
+        "Only committed frames are visible",
+        "Selector locks one frame",
+        "no source interleave",
+        "channel 0 full",
+        "channel 1 progresses",
+    ),
     "slvc_dma_frame_lifecycle.svg": (
-        "SHDR64 frame lifecycle",
-        "Ingress + DDR Ring + CQ",
+        "SHDR64 frame lifecycle and ownership boundaries",
+        "Header beat",
+        "Parse / CRC",
+        "Match Context",
+        "Check Ingress + Ring + CQ",
+        "Reserve / Reject",
+        "admission gate",
+        "Payload beats",
+        "Fixed / Shared collect",
         "WHOLE-FRAME COMMIT",
+        "Frame-locked Source",
+        "Memory Backend",
+        "DDR / B response",
         "CQE body",
-        "owner / valid + IRQ",
-        "Release frame ownership",
-        "Data path",
-        "Admission / control",
-        "Software-visible completion",
+        "owner / valid",
+        "release frame ownership",
+        'data-requires="header-control,payload"',
     ),
     "slvc_dma_memory_profiles.svg": (
         "RX memory profiles and CDC boundaries",
@@ -258,29 +342,47 @@ GENERATED_RULES = {
         "Same-clock512",
         "Async64",
         "Async512",
-        "Command FIFO",
-        "Ordered payload FIFO",
-        "Completion FIFO",
-        "AW / W / B stay in mem_clk",
+        "Command",
+        "Ordered Payload",
+        "Tagged Completion",
+        'data-transaction="command" data-direction="aclk-to-mem-clk"',
+        'data-transaction="ordered-payload" data-direction="aclk-to-mem-clk"',
+        'data-transaction="tagged-completion" data-direction="mem-clk-to-aclk"',
+        "Async FIFO boundary",
+        "512-to-64 serializer",
+        "CDC bypass",
+        "AW / W / B",
+        "not measured in this matrix",
+        "64-bit compatibility path",
         "64 B/cycle",
         "8 B/cycle",
-        "ideal ready-memory RTL interface",
+        "ideal ready-memory RTL/interface rates, not board DDR throughput.",
     ),
     "slvc_dma_ppa_implementation.svg": (
-        "Verified throughput, Writer PPA, and ASIC implementation",
-        "Writer-only DC OOC",
+        "Throughput, Writer PPA, and C2B4 implementation",
+        "Writer-only paired DC",
         "32 -&gt; 7 bit",
         "-7.97%",
         "-15.84%",
+        "1.5 ns Nangate45 DC OOC",
+        "Writer-only scope",
+        "Interface throughput",
         "64 B/cycle",
+        "8 B/cycle",
         "100% W utilization",
         "peak outstanding 4",
+        "ready-memory scope",
+        "C2B4 implementation chain",
+        "2 channels x 4 KiB",
+        "register-expanded",
         "550 MHz DC handoff",
-        "450 MHz route / PT",
+        "450 MHz OpenROAD",
+        "OpenRCX",
+        "PrimeTime",
         "+0.041322 / +0.000341 ns",
         "1.04207 mm2",
-        "physical checks 0",
-        "Three separate scopes - not one complete-DMA result",
+        "Route DRC / antenna / electrical = 0",
+        "Three independent evidence scopes; not one complete-DMA PPA result.",
     ),
 }
 
@@ -587,100 +689,453 @@ def _extract_metrics(root):
     }
 
 
+def _svg_document(title, desc, body):
+    return """<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="{view_box}" preserveAspectRatio="{preserve}" role="img" aria-labelledby="title desc" data-theme-contract="mrtc-engineering-report">
+  <title id="title">{title}</title>
+  <desc id="desc">{desc}</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1456a0"/></marker>
+  </defs>
+  <style>{style}</style>
+  <rect width="1600" height="1000" fill="#ffffff"/>
+{body}</svg>
+""".format(
+        width=CANVAS_WIDTH,
+        height=CANVAS_HEIGHT,
+        view_box=VIEW_BOX,
+        preserve=PRESERVE_ASPECT_RATIO,
+        title=title,
+        desc=desc,
+        style=REPORT_STYLE,
+        body=body,
+    ).encode("ascii")
+
+
+def _report_header(title, subtitle):
+    return """  <g data-layout-region="page-header">
+    <rect data-layout-box="true" x="30" y="18" width="1540" height="112" fill="none" stroke="none"/>
+    <text x="40" y="60" class="title">{title}</text>
+    <text x="40" y="98" class="subtitle">{subtitle}</text>
+    <line x1="40" y1="124" x2="1560" y2="124" class="rule"/>
+  </g>
+""".format(title=title, subtitle=subtitle)
+
+
+def _overview_svg(_metrics):
+    body = _report_header(
+        "SLVC DMA shared-link system overview",
+        "Frame-aware admission, hybrid buffering, memory movement, and owner-last software completion.",
+    ) + """  <g data-layout-region="overview-source">
+    <rect data-layout-box="true" x="50" y="165" width="280" height="410" class="box"/>
+    <rect x="50" y="165" width="280" height="58" class="panel-header"/>
+    <text x="190" y="203" text-anchor="middle" class="table-head">Source Boundaries</text>
+    <text x="72" y="265" class="body-bold">Aurora / native SHDR64</text>
+    <text x="72" y="305" class="body">optional UDP adapter</text>
+    <text x="72" y="345" class="body">local endpoint / MCF</text>
+    <line x1="72" y1="372" x2="308" y2="372" class="thin"/>
+    <text x="72" y="415" class="body-bold">Control plane</text>
+    <text x="72" y="455" class="body">AXI4-Lite</text>
+    <text x="72" y="495" class="body">PAUSE / RESUME</text>
+    <text x="72" y="535" class="small">source-specific adaptation</text>
+  </g>
+  <g data-layout-region="overview-link">
+    <rect data-layout-box="true" x="355" y="165" width="280" height="410" class="box-blue"/>
+    <rect x="355" y="165" width="280" height="58" class="panel-header"/>
+    <text x="495" y="203" text-anchor="middle" class="table-head">SHDR64 Shared Link</text>
+    <text x="377" y="265" class="body-bold">512-bit segment stream</text>
+    <text x="377" y="305" class="body">64-byte frame header</text>
+    <text x="377" y="345" class="body">flow_id + payload length</text>
+    <line x1="377" y1="372" x2="613" y2="372" class="thin"/>
+    <text x="377" y="415" class="body-bold">Elastic ingress</text>
+    <text x="377" y="455" class="body">header / payload ordering</text>
+    <text x="377" y="495" class="body">CRC and metadata context</text>
+    <text x="377" y="535" class="small">one shared-link contract</text>
+  </g>
+  <g data-layout-region="overview-admission">
+    <rect data-layout-box="true" x="660" y="165" width="280" height="410" class="box-blue"/>
+    <rect x="660" y="165" width="280" height="58" class="panel-header"/>
+    <text x="800" y="203" text-anchor="middle" class="table-head">Channel Admission</text>
+    <text x="682" y="265" class="body-bold">flow_id match</text>
+    <text x="682" y="305" class="body">up to 16 contexts</text>
+    <text x="682" y="345" class="body">Ingress availability</text>
+    <text x="682" y="385" class="body">DDR Ring free space</text>
+    <text x="682" y="425" class="body">CQ credit</text>
+    <line x1="682" y1="452" x2="918" y2="452" class="thin"/>
+    <text x="682" y="495" class="body-bold">Joint reserve / reject</text>
+    <text x="682" y="535" class="small">before frame visibility</text>
+  </g>
+  <g data-layout-region="overview-buffering">
+    <rect data-layout-box="true" x="965" y="165" width="280" height="410" class="box-blue"/>
+    <rect x="965" y="165" width="280" height="58" class="panel-header"/>
+    <text x="1105" y="203" text-anchor="middle" class="table-head">Hybrid Buffering</text>
+    <text x="987" y="265" class="body-bold">Fixed ingress</text>
+    <text x="987" y="305" class="body">dedicated per-channel space</text>
+    <text x="987" y="355" class="body-bold">Shared Frame Pool</text>
+    <text x="987" y="395" class="body">block free list + chain</text>
+    <line x1="987" y1="422" x2="1223" y2="422" class="thin"/>
+    <text x="987" y="465" class="body-bold">Whole-frame commit</text>
+    <text x="987" y="505" class="body">frame-locked selection</text>
+    <text x="987" y="545" class="small">no source interleave</text>
+  </g>
+  <g data-layout-region="overview-ownership" data-stage="DDR / Completion Ownership">
+    <rect data-layout-box="true" x="1270" y="165" width="280" height="410" class="box-blue"/>
+    <rect x="1270" y="165" width="280" height="58" class="panel-header"/>
+    <text x="1410" y="192" text-anchor="middle" class="table-head">DDR / Completion</text>
+    <text x="1410" y="213" text-anchor="middle" class="table-head">Ownership</text>
+    <text x="1292" y="265" class="body-bold">AXI4 memory backend</text>
+    <text x="1292" y="305" class="body">AW / W / B progress</text>
+    <text x="1292" y="345" class="body">4 KiB split + completion</text>
+    <line x1="1292" y1="372" x2="1528" y2="372" class="thin"/>
+    <text x="1292" y="415" class="body-bold">CQE body first</text>
+    <text x="1292" y="455" class="body">CQ owner-last</text>
+    <text x="1292" y="495" class="body">IRQ publication</text>
+    <text x="1292" y="535" class="small">release frame ownership</text>
+  </g>
+  <path d="M330 370 H355 M635 370 H660 M940 370 H965 M1245 370 H1270" class="flow"/>
+  <g data-layout-region="overview-contract">
+    <rect data-layout-box="true" x="50" y="635" width="1500" height="285" class="box"/>
+    <rect x="50" y="635" width="1500" height="56" class="panel-header"/>
+    <text x="800" y="672" text-anchor="middle" class="table-head">End-to-End Contract / Boundary</text>
+    <line x1="550" y1="691" x2="550" y2="920" class="thin"/>
+    <line x1="1050" y1="691" x2="1050" y2="920" class="thin"/>
+    <text x="78" y="732" class="panel-title">Stream contract</text>
+    <text x="78" y="772" class="body">SHDR64 header precedes payload</text>
+    <text x="78" y="812" class="body">frame admission is atomic</text>
+    <text x="78" y="852" class="body">committed sources do not interleave</text>
+    <text x="578" y="732" class="panel-title">Software ownership</text>
+    <text x="578" y="772" class="body">DDR response precedes CQ publish</text>
+    <text x="578" y="812" class="body">CQ body precedes owner / valid</text>
+    <text x="578" y="852" class="body">IRQ precedes frame release</text>
+    <text x="1078" y="732" class="panel-title">Verification boundary</text>
+    <text x="1078" y="772" class="body">directed architecture regressions</text>
+    <text x="1078" y="812" class="body">profile-specific PPA evidence</text>
+    <text x="1078" y="852" class="body">no complete-DMA PPA transfer</text>
+  </g>
+"""
+    return _svg_document(
+        "SLVC DMA shared-link system overview",
+        "Five stages connect source adaptation, SHDR64 framing, channel admission, hybrid buffering, and DDR plus completion ownership.",
+        body,
+    )
+
+
+def _virtual_channel_svg(_metrics):
+    body = _report_header(
+        "Virtual-channel buffering and frame isolation",
+        "Per-flow context chooses dedicated or shared capacity; only committed frames reach the locked output selector.",
+    ) + """  <g data-layout-region="virtual-context">
+    <rect data-layout-box="true" x="50" y="165" width="460" height="620" class="box"/>
+    <rect x="50" y="165" width="460" height="58" class="panel-header"/>
+    <text x="280" y="203" text-anchor="middle" class="table-head">Context / Admission</text>
+    <text x="80" y="270" class="panel-title">SHDR64 context</text>
+    <text x="80" y="315" class="body">flow_id -&gt; channel table</text>
+    <text x="80" y="355" class="body">ingress + ring + CQ checks</text>
+    <text x="80" y="395" class="body">reserve before acceptance</text>
+    <line x1="80" y1="430" x2="480" y2="430" class="thin"/>
+    <text x="80" y="480" class="body-bold">Accept</text>
+    <text x="80" y="520" class="body">select Fixed or Shared target</text>
+    <text x="80" y="570" class="body-bold">Reject / Drop</text>
+    <text x="80" y="610" class="body">no partial frame visibility</text>
+    <line x1="80" y1="650" x2="480" y2="650" class="thin"/>
+    <text x="80" y="700" class="small">AXI4-Lite context configuration</text>
+    <text x="80" y="735" class="small">per-channel resource accounting</text>
+  </g>
+  <g data-layout-region="virtual-storage">
+    <rect data-layout-box="true" x="570" y="165" width="460" height="620" class="box-blue"/>
+    <rect x="570" y="165" width="460" height="58" class="panel-header"/>
+    <text x="800" y="203" text-anchor="middle" class="table-head">Fixed / Shared Storage</text>
+    <rect x="605" y="265" width="390" height="180" class="box"/>
+    <text x="635" y="305" class="panel-title">Fixed ingress</text>
+    <text x="635" y="350" class="body-bold">dedicated capacity</text>
+    <text x="635" y="390" class="body">per-channel frame collection</text>
+    <text x="635" y="425" class="small">independent storage ownership</text>
+    <rect x="605" y="485" width="390" height="210" class="box-blue"/>
+    <text x="635" y="525" class="panel-title">Shared Frame Pool</text>
+    <text x="635" y="570" class="body-bold">free-list capacity</text>
+    <text x="635" y="610" class="body">block queue + hardware chain</text>
+    <text x="635" y="650" class="body">whole-frame commit / release</text>
+    <text x="635" y="680" class="small">dynamic capacity across channels</text>
+    <text x="605" y="750" class="table-strong">Only committed frames are visible</text>
+  </g>
+  <g data-layout-region="virtual-selector">
+    <rect data-layout-box="true" x="1090" y="165" width="460" height="620" class="box-blue"/>
+    <rect x="1090" y="165" width="460" height="58" class="panel-header"/>
+    <text x="1320" y="203" text-anchor="middle" class="table-head">Selection / Output</text>
+    <text x="1120" y="275" class="panel-title">Source selector</text>
+    <text x="1120" y="320" class="body-bold">Selector locks one frame</text>
+    <text x="1120" y="360" class="body">Fixed and Shared arbitrate</text>
+    <text x="1120" y="400" class="body">no source interleave</text>
+    <line x1="1120" y1="435" x2="1520" y2="435" class="thin"/>
+    <text x="1120" y="485" class="panel-title">AXI / CQ</text>
+    <text x="1120" y="530" class="body">frame remains owned through B</text>
+    <text x="1120" y="570" class="body">CQE body before owner / valid</text>
+    <text x="1120" y="610" class="body">IRQ then frame release</text>
+    <line x1="1120" y1="650" x2="1520" y2="650" class="thin"/>
+    <text x="1120" y="700" class="small">per-channel DDR Ring destination</text>
+    <text x="1120" y="735" class="small">software-visible completion ownership</text>
+  </g>
+  <path d="M510 460 H570 M1030 460 H1090" class="flow-blue"/>
+  <g data-layout-region="virtual-caveat">
+    <rect data-layout-box="true" x="50" y="830" width="1500" height="105" class="box"/>
+    <text x="78" y="872" class="body-bold">Bounded evidence:</text>
+    <text x="270" y="872" class="body">channel 0 full</text>
+    <text x="450" y="872" class="body">while channel 1 progresses and publishes its CQE.</text>
+    <text x="78" y="910" class="small">Directed scenario only; not universal non-blocking behavior or formal channel-isolation proof.</text>
+  </g>
+"""
+    return _svg_document(
+        "Virtual-channel buffering and frame isolation",
+        "The diagram separates SHDR64 admission context, Fixed and Shared capacity, and frame-locked AXI plus CQ output ownership.",
+        body,
+    )
+
+
 def _frame_lifecycle_svg(_metrics):
-    return """<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="700" viewBox="0 0 1480 700" role="img" aria-labelledby="title desc">
-  <title id="title">SHDR64 frame lifecycle through SLVC DMA</title>
-  <desc id="desc">The diagram separates payload movement, admission control, and software-visible completion. It marks whole-frame commit and the final frame-ownership release point.</desc>
-  <defs><marker id="life-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#334155"/></marker></defs>
-  <style>.title{font:700 28px Arial,sans-serif;fill:#0f172a}.sub{font:400 16px Arial,sans-serif;fill:#475569}.lane{font:700 15px Arial,sans-serif}.head{font:700 16px Arial,sans-serif;fill:#0f172a}.body{font:400 14px Arial,sans-serif;fill:#334155}.tiny{font:400 13px Arial,sans-serif;fill:#475569}.box{stroke-width:2;rx:6}.flow{stroke:#334155;stroke-width:3;fill:none;marker-end:url(#life-arrow)}.dash{stroke:#d97706;stroke-width:2.5;stroke-dasharray:7 5;fill:none;marker-end:url(#life-arrow)}.soft{stroke:#16a34a;stroke-width:2.5;fill:none;marker-end:url(#life-arrow)}</style>
-  <rect width="1480" height="700" fill="#ffffff"/>
-  <text x="40" y="46" class="title">SHDR64 frame lifecycle</text>
-  <text x="40" y="74" class="sub">Admission is resolved before visibility; completion is published before ownership is released.</text>
-
-  <rect x="34" y="112" width="1412" height="128" fill="#fff7ed" stroke="#fed7aa" class="box"/>
-  <text x="58" y="142" class="lane" fill="#c2410c">Admission / control</text>
-  <rect x="190" y="142" width="170" height="66" fill="#ffffff" stroke="#d97706" class="box"/>
-  <text x="275" y="169" text-anchor="middle" class="head">SHDR64 parse / CRC</text><text x="275" y="191" text-anchor="middle" class="tiny">flow_id + length</text>
-  <rect x="410" y="142" width="160" height="66" fill="#ffffff" stroke="#d97706" class="box"/>
-  <text x="490" y="169" text-anchor="middle" class="head">Channel match</text><text x="490" y="191" text-anchor="middle" class="tiny">context lookup</text>
-  <rect x="620" y="132" width="230" height="86" fill="#ffffff" stroke="#d97706" class="box"/>
-  <text x="735" y="161" text-anchor="middle" class="head">Ingress + DDR Ring + CQ</text><text x="735" y="184" text-anchor="middle" class="tiny">joint availability check</text><text x="735" y="204" text-anchor="middle" class="tiny">fail closed before payload commit</text>
-  <rect x="900" y="142" width="150" height="66" fill="#ffffff" stroke="#d97706" class="box"/>
-  <text x="975" y="169" text-anchor="middle" class="head">Reserve</text><text x="975" y="191" text-anchor="middle" class="tiny">ring + buffer + CQ</text>
-  <path d="M360 175 H410 M570 175 H620 M850 175 H900" class="dash"/>
-
-  <rect x="34" y="270" width="1412" height="188" fill="#eff6ff" stroke="#bfdbfe" class="box"/>
-  <text x="58" y="302" class="lane" fill="#1d4ed8">Data path</text>
-  <rect x="90" y="328" width="150" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="165" y="359" text-anchor="middle" class="head">Shared-link RX</text><text x="165" y="383" text-anchor="middle" class="tiny">elastic 512-bit input</text>
-  <rect x="285" y="318" width="220" height="98" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="395" y="347" text-anchor="middle" class="head">Fixed ingress</text><text x="395" y="370" text-anchor="middle" class="body">or Shared Frame Pool</text><text x="395" y="394" text-anchor="middle" class="tiny">free-list + linked blocks</text>
-  <path d="M975 208 V254 H395 V318" class="dash"/>
-  <line x1="555" y1="292" x2="555" y2="438" stroke="#16a34a" stroke-width="4"/>
-  <text x="570" y="315" class="lane" fill="#166534">WHOLE-FRAME COMMIT</text>
-  <rect x="650" y="328" width="170" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="735" y="359" text-anchor="middle" class="head">Frame-locked source</text><text x="735" y="383" text-anchor="middle" class="tiny">no source interleave</text>
-  <rect x="865" y="328" width="170" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="950" y="359" text-anchor="middle" class="head">Memory backend</text><text x="950" y="383" text-anchor="middle" class="tiny">4 KiB burst split</text>
-  <rect x="1080" y="328" width="145" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="1152" y="359" text-anchor="middle" class="head">DDR Ring</text><text x="1152" y="383" text-anchor="middle" class="tiny">per channel</text>
-  <rect x="1270" y="328" width="130" height="78" fill="#ffffff" stroke="#2563eb" class="box"/>
-  <text x="1335" y="359" text-anchor="middle" class="head">AXI response</text><text x="1335" y="383" text-anchor="middle" class="tiny">B completion</text>
-  <path d="M240 367 H285 M505 367 H535 M590 367 H650 M820 367 H865 M1035 367 H1080 M1225 367 H1270" class="flow"/>
-
-  <rect x="34" y="488" width="1412" height="152" fill="#f0fdf4" stroke="#bbf7d0" class="box"/>
-  <text x="58" y="520" class="lane" fill="#166534">Software-visible completion</text>
-  <rect x="455" y="535" width="170" height="70" fill="#ffffff" stroke="#16a34a" class="box"/>
-  <text x="540" y="565" text-anchor="middle" class="head">CQE body</text><text x="540" y="587" text-anchor="middle" class="tiny">written first</text>
-  <rect x="690" y="535" width="190" height="70" fill="#ffffff" stroke="#16a34a" class="box"/>
-  <text x="785" y="565" text-anchor="middle" class="head">owner / valid + IRQ</text><text x="785" y="587" text-anchor="middle" class="tiny">published last</text>
-  <rect x="945" y="535" width="220" height="70" fill="#ffffff" stroke="#16a34a" class="box"/>
-  <text x="1055" y="565" text-anchor="middle" class="head">Release frame ownership</text><text x="1055" y="587" text-anchor="middle" class="tiny">blocks return to free list</text>
-  <path d="M1335 406 V470 H540 V535 M625 570 H690 M880 570 H945" class="soft"/>
-  <text x="40" y="674" class="tiny">Commit boundary: incomplete Shared frames are invisible. Release boundary: source storage is retained until AXI completion and CQ publication.</text>
-</svg>
-""".encode("ascii")
+    body = _report_header(
+        "SHDR64 frame lifecycle and ownership boundaries",
+        "Header control and payload data meet at one admission gate before collection, commit, memory completion, and release.",
+    ) + """  <g id="header-control-path" data-path="header-control" data-layout-region="lifecycle-control">
+    <rect data-layout-box="true" x="50" y="160" width="680" height="400" class="box"/>
+    <rect x="50" y="160" width="680" height="58" class="panel-header"/>
+    <text x="390" y="198" text-anchor="middle" class="table-head">Header / Admission Control</text>
+    <rect id="header-beat" x="90" y="245" width="260" height="65" class="box-blue"/>
+    <text x="220" y="286" text-anchor="middle" class="body-bold">Header beat</text>
+    <rect id="parse-crc" x="410" y="245" width="270" height="65" class="box"/>
+    <text x="545" y="286" text-anchor="middle" class="body-bold">Parse / CRC</text>
+    <rect id="match-context" x="90" y="350" width="260" height="65" class="box"/>
+    <text x="220" y="391" text-anchor="middle" class="body-bold">Match Context</text>
+    <rect id="check-resources" x="410" y="340" width="270" height="85" class="box"/>
+    <text x="545" y="376" text-anchor="middle" class="body-bold">Check Ingress + Ring + CQ</text>
+    <text x="545" y="405" text-anchor="middle" class="small">joint availability</text>
+    <rect id="reserve-reject" x="230" y="465" width="320" height="65" class="box-blue"/>
+    <text x="390" y="506" text-anchor="middle" class="body-bold">Reserve / Reject</text>
+    <path d="M350 278 H410 M545 310 V340 M410 382 H350 M220 415 V445 H390 V465" class="flow"/>
+    <path id="reject-drop" d="M550 498 H610" class="flow"/>
+    <text x="620" y="505" class="small orange">Reject / Drop</text>
+  </g>
+  <g id="payload-data-path" data-path="payload" data-layout-region="lifecycle-payload">
+    <rect data-layout-box="true" x="870" y="160" width="680" height="400" class="box"/>
+    <rect x="870" y="160" width="680" height="58" class="panel-header"/>
+    <text x="1210" y="198" text-anchor="middle" class="table-head">512-bit Shared-link RX Payload</text>
+    <rect id="payload-beats" x="1010" y="265" width="400" height="95" class="box-blue"/>
+    <text x="1210" y="306" text-anchor="middle" class="body-bold">Payload beats</text>
+    <text x="1210" y="337" text-anchor="middle" class="small">ordered behind the accepted Header beat</text>
+    <text x="1210" y="425" text-anchor="middle" class="body">Elastic input retains frame ordering</text>
+    <text x="1210" y="468" text-anchor="middle" class="body">No unconditional path into storage</text>
+    <text x="1210" y="515" text-anchor="middle" class="small">Payload proceeds only when admission resolves</text>
+  </g>
+  <g id="admission-gate" data-requires="header-control,payload" data-layout-region="lifecycle-gate">
+    <rect data-layout-box="true" x="50" y="610" width="250" height="86" class="box-blue"/>
+    <text x="175" y="649" text-anchor="middle" class="panel-title">admission gate</text>
+    <text x="175" y="679" text-anchor="middle" class="small">reserved frame only</text>
+  </g>
+  <path id="control-to-admission" data-connects="header-control-to-admission" d="M390 530 V580 H175 V610" class="flow-blue"/>
+  <path id="payload-to-admission" data-connects="payload-to-admission" d="M1210 360 V580 H175 V610" class="flow-blue"/>
+  <g data-layout-region="lifecycle-data-chain">
+    <rect data-layout-box="true" x="330" y="580" width="1220" height="140" fill="none" stroke="none"/>
+    <rect id="frame-collect" x="340" y="610" width="245" height="86" class="box-blue"/>
+    <text x="462" y="649" text-anchor="middle" class="body-bold">Fixed / Shared collect</text>
+    <text x="462" y="679" text-anchor="middle" class="small">whole frame remains private</text>
+    <line id="commit-boundary" data-boundary-order="1" x1="625" y1="585" x2="625" y2="720" class="boundary"/>
+    <text x="642" y="606" class="table-strong green">WHOLE-FRAME COMMIT</text>
+    <rect id="frame-locked-source" x="670" y="610" width="245" height="86" class="box-blue"/>
+    <text x="792" y="649" text-anchor="middle" class="body-bold">Frame-locked Source</text>
+    <text x="792" y="679" text-anchor="middle" class="small">no source interleave</text>
+    <rect id="memory-backend" x="960" y="610" width="245" height="86" class="box"/>
+    <text x="1082" y="649" text-anchor="middle" class="body-bold">Memory Backend</text>
+    <text x="1082" y="679" text-anchor="middle" class="small">burst planning + AXI</text>
+    <rect id="ddr-b-response" x="1250" y="610" width="300" height="86" class="box"/>
+    <text x="1400" y="649" text-anchor="middle" class="body-bold">DDR / B response</text>
+    <text x="1400" y="679" text-anchor="middle" class="small">memory completion</text>
+    <path d="M300 653 H340 M585 653 H605 M645 653 H670 M915 653 H960 M1205 653 H1250" class="flow-blue"/>
+  </g>
+  <g data-layout-region="lifecycle-completion">
+    <rect data-layout-box="true" x="350" y="790" width="1200" height="120" fill="none" stroke="none"/>
+    <rect id="cqe-body" data-completion-order="1" x="390" y="805" width="250" height="82" class="box"/>
+    <text x="515" y="842" text-anchor="middle" class="body-bold">CQE body</text>
+    <text x="515" y="872" text-anchor="middle" class="small">written first</text>
+    <rect id="owner-valid" data-completion-order="2" x="700" y="805" width="270" height="82" class="box-blue"/>
+    <text x="835" y="842" text-anchor="middle" class="body-bold">owner / valid + IRQ</text>
+    <text x="835" y="872" text-anchor="middle" class="small">published after body</text>
+    <line id="release-boundary" data-boundary-order="2" x1="1015" y1="780" x2="1015" y2="915" class="boundary"/>
+    <rect id="release-frame-ownership" data-completion-order="3" x="1060" y="805" width="360" height="82" class="box"/>
+    <text x="1240" y="842" text-anchor="middle" class="body-bold">release frame ownership</text>
+    <text x="1240" y="872" text-anchor="middle" class="small">return source capacity</text>
+    <path d="M1400 696 V755 H515 V805 M640 846 H700 M970 846 H1060" class="flow-blue"/>
+  </g>
+  <g data-layout-region="lifecycle-footnote">
+    <rect data-layout-box="true" x="40" y="940" width="1520" height="45" fill="none" stroke="none"/>
+    <text x="40" y="970" class="foot">Commit Boundary: incomplete frames are invisible. Release Boundary: storage remains owned through AXI completion and CQ owner-last publication.</text>
+  </g>
+"""
+    return _svg_document(
+        "SHDR64 frame lifecycle and ownership boundaries",
+        "Header control and payload data converge at a fail-closed admission gate before whole-frame commit; completion publishes the CQ body before owner and releases storage last.",
+        body,
+    )
 
 
 def _memory_profiles_svg(metrics):
-    return """<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="720" viewBox="0 0 1480 720" role="img" aria-labelledby="title desc">
-  <title id="title">SLVC DMA RX memory profiles and CDC boundaries</title>
-  <desc id="desc">Four profiles show where AXI writes run and how asynchronous command, ordered payload, and completion transactions cross clock domains. AXI AW, W, and B remain together in the memory clock domain.</desc>
-  <style>.title{{font:700 28px Arial,sans-serif;fill:#0f172a}}.sub{{font:400 16px Arial,sans-serif;fill:#475569}}.head{{font:700 18px Arial,sans-serif;fill:#0f172a}}.body{{font:400 14px Arial,sans-serif;fill:#334155}}.tiny{{font:400 13px Arial,sans-serif;fill:#475569}}.metric{{font:700 20px Arial,sans-serif;fill:#166534}}.panel{{stroke:#334155;stroke-width:2;rx:6}}.box{{stroke:#64748b;stroke-width:1.8;rx:5}}.arrow{{stroke:#334155;stroke-width:2.4;fill:none}}.cdc{{stroke:#d97706;stroke-width:2;stroke-dasharray:7 5;fill:none}}</style>
-  <rect width="1480" height="720" fill="#ffffff"/>
-  <text x="40" y="46" class="title">RX memory profiles and CDC boundaries</text>
-  <text x="40" y="74" class="sub">Cross Command / ordered Payload / Completion transactions - never five independent AXI channels.</text>
-
-  <g transform="translate(30 110)"><rect width="330" height="520" fill="#eff6ff" class="panel"/><text x="165" y="38" text-anchor="middle" class="head">Legacy64</text><text x="165" y="63" text-anchor="middle" class="tiny">default compatibility path</text><rect x="48" y="105" width="234" height="58" fill="#fff" class="box"/><text x="165" y="140" text-anchor="middle" class="body">Committed frame source</text><path d="M165 163 V202" class="arrow"/><rect x="48" y="202" width="234" height="70" fill="#fff" class="box"/><text x="165" y="233" text-anchor="middle" class="body">Legacy 64-bit AXI Writer</text><text x="165" y="254" text-anchor="middle" class="tiny">aclk</text><path d="M165 272 V315" class="arrow"/><rect x="48" y="315" width="234" height="66" fill="#fff" class="box"/><text x="165" y="343" text-anchor="middle" class="body">AW / W / B @ aclk</text><text x="165" y="365" text-anchor="middle" class="tiny">64-bit memory W channel</text><text x="165" y="438" text-anchor="middle" class="metric">compatibility profile</text><text x="165" y="469" text-anchor="middle" class="tiny">No RX payload CDC</text></g>
-
-  <g transform="translate(390 110)"><rect width="330" height="520" fill="#ecfdf5" class="panel"/><text x="165" y="38" text-anchor="middle" class="head">Same-clock512</text><text x="165" y="63" text-anchor="middle" class="tiny">wide development profile</text><rect x="48" y="105" width="234" height="58" fill="#fff" class="box"/><text x="165" y="140" text-anchor="middle" class="body">Committed 512-bit source</text><path d="M165 163 V202" class="arrow"/><rect x="48" y="202" width="234" height="70" fill="#fff" class="box"/><text x="165" y="233" text-anchor="middle" class="body">512-bit AXI Writer</text><text x="165" y="254" text-anchor="middle" class="tiny">aclk</text><path d="M165 272 V315" class="arrow"/><rect x="48" y="315" width="234" height="66" fill="#fff" class="box"/><text x="165" y="343" text-anchor="middle" class="body">AW / W / B @ aclk</text><text x="165" y="365" text-anchor="middle" class="tiny">512-bit memory W channel</text><text x="165" y="438" text-anchor="middle" class="metric">{wide_bytes} B/cycle</text><text x="165" y="469" text-anchor="middle" class="tiny">ideal ready-memory RTL interface</text></g>
-
-  <g transform="translate(750 110)"><rect width="330" height="520" fill="#fff7ed" class="panel"/><text x="165" y="38" text-anchor="middle" class="head">Async64</text><text x="165" y="63" text-anchor="middle" class="tiny">dual-clock serialized profile</text><text x="28" y="100" class="tiny">aclk</text><rect x="42" y="112" width="246" height="45" fill="#fff" class="box"/><text x="165" y="140" text-anchor="middle" class="body">Command FIFO</text><rect x="42" y="168" width="246" height="45" fill="#fff" class="box"/><text x="165" y="196" text-anchor="middle" class="body">Ordered payload FIFO</text><rect x="42" y="224" width="246" height="45" fill="#fff" class="box"/><text x="165" y="252" text-anchor="middle" class="body">Completion FIFO</text><line x1="18" y1="292" x2="312" y2="292" class="cdc"/><text x="165" y="286" text-anchor="middle" class="tiny">async transaction boundary</text><text x="28" y="318" class="tiny">mem_clk</text><rect x="42" y="330" width="246" height="48" fill="#fff" class="box"/><text x="165" y="360" text-anchor="middle" class="body">512-to-64 serializer</text><rect x="42" y="390" width="246" height="48" fill="#fff" class="box"/><text x="165" y="420" text-anchor="middle" class="body">64-bit AXI Writer</text><text x="165" y="465" text-anchor="middle" class="metric">{async64_bytes} B/cycle</text><text x="165" y="492" text-anchor="middle" class="tiny">AW / W / B stay in mem_clk</text><text x="165" y="514" text-anchor="middle" class="tiny">completion returns before release</text></g>
-
-  <g transform="translate(1110 110)"><rect width="330" height="520" fill="#f0fdf4" class="panel"/><text x="165" y="38" text-anchor="middle" class="head">Async512</text><text x="165" y="63" text-anchor="middle" class="tiny">dual-clock wide profile</text><text x="28" y="100" class="tiny">aclk</text><rect x="42" y="112" width="246" height="45" fill="#fff" class="box"/><text x="165" y="140" text-anchor="middle" class="body">Command FIFO</text><rect x="42" y="168" width="246" height="45" fill="#fff" class="box"/><text x="165" y="196" text-anchor="middle" class="body">Ordered payload FIFO</text><rect x="42" y="224" width="246" height="45" fill="#fff" class="box"/><text x="165" y="252" text-anchor="middle" class="body">Completion FIFO</text><line x1="18" y1="292" x2="312" y2="292" class="cdc"/><text x="165" y="286" text-anchor="middle" class="tiny">async transaction boundary</text><text x="28" y="318" class="tiny">mem_clk</text><rect x="42" y="340" width="246" height="58" fill="#fff" class="box"/><text x="165" y="368" text-anchor="middle" class="body">512-bit AXI Writer</text><text x="165" y="389" text-anchor="middle" class="tiny">AW / W / B stay in mem_clk</text><text x="165" y="465" text-anchor="middle" class="metric">{wide_bytes} B/cycle</text><text x="165" y="492" text-anchor="middle" class="tiny">completion returns before release</text></g>
-  <text x="740" y="677" text-anchor="middle" class="sub">All rates are ideal ready-memory RTL interface results; not measured board DDR throughput.</text>
-</svg>
-""".format(**metrics).encode("ascii")
+    body = _report_header(
+        "RX memory profiles and CDC boundaries",
+        "Committed-frame ownership stays in aclk while only Command, ordered Payload, and Tagged Completion cross asynchronous profiles.",
+    ) + """  <g data-layout-region="memory-table-header">
+    <rect data-layout-box="true" x="40" y="150" width="1520" height="58" class="panel-header"/>
+    <text x="60" y="187" class="table-head">Profile / measured rate</text>
+    <text x="300" y="177" class="table-head">Committed Frame Source / Ownership</text>
+    <text x="300" y="200" class="table-head">(aclk)</text>
+    <text x="650" y="187" class="table-head">CDC transaction boundary</text>
+    <text x="1010" y="187" class="table-head">Writer domain</text>
+    <text x="1320" y="187" class="table-head">AXI Memory Interface / DDR</text>
+  </g>
+  <g id="profile-legacy64" data-profile="legacy64" data-layout-region="memory-legacy64">
+    <rect data-layout-box="true" x="40" y="208" width="1520" height="150" class="box"/>
+    <text x="60" y="250" class="panel-title">Legacy64</text>
+    <text x="60" y="290" class="small">not measured in this matrix</text>
+    <text x="60" y="324" class="small">64-bit compatibility path</text>
+    <text x="300" y="270" class="body">Committed legacy frame source</text>
+    <text x="300" y="310" class="small">ownership retained through completion</text>
+    <text x="650" y="285" class="body">No RX payload CDC</text>
+    <text x="1010" y="270" class="body">64-bit compatibility writer @ aclk</text>
+    <text x="1010" y="310" class="small">same clock as source</text>
+    <text x="1340" y="285" class="body">64-bit memory interface</text>
+  </g>
+  <g id="profile-same-clock512" data-profile="same-clock512" data-cdc="bypass" data-layout-region="memory-same512">
+    <rect data-layout-box="true" x="40" y="358" width="1520" height="150" class="box-blue"/>
+    <text x="60" y="400" class="panel-title">Same-clock512</text>
+    <text x="60" y="448" class="metric">{wide_bytes} B/cycle</text>
+    <text x="300" y="420" class="body">Committed 512-bit frame source</text>
+    <text x="300" y="460" class="small">ownership retained through completion</text>
+    <text x="650" y="435" class="body-bold">CDC bypass</text>
+    <text x="1010" y="420" class="body">512-bit writer @ aclk</text>
+    <text x="1010" y="460" class="small">same clock as source</text>
+    <text x="1340" y="435" class="body">512-bit memory interface</text>
+  </g>
+  <g id="profile-async64" data-profile="async64" data-layout-region="memory-async64">
+    <rect data-layout-box="true" x="40" y="508" width="1520" height="185" class="box"/>
+    <text x="60" y="550" class="panel-title">Async64</text>
+    <text x="60" y="598" class="metric">{async64_bytes} B/cycle</text>
+    <text x="300" y="550" class="table">Command</text>
+    <text x="300" y="595" class="table">Ordered Payload</text>
+    <text x="300" y="640" class="table">Tagged Completion</text>
+    <text x="625" y="535" class="small">Async FIFO boundary</text>
+    <path id="async64-command" data-transaction="command" data-direction="aclk-to-mem-clk" d="M570 545 H940" class="flow-blue"/>
+    <path id="async64-payload" data-transaction="ordered-payload" data-direction="aclk-to-mem-clk" d="M570 590 H940" class="flow-blue"/>
+    <path id="async64-completion" data-transaction="tagged-completion" data-direction="mem-clk-to-aclk" d="M940 635 H570" class="flow-return"/>
+    <line x1="760" y1="520" x2="760" y2="680" class="boundary"/>
+    <text x="1010" y="550" class="body-bold">mem_clk: 512-to-64 serializer</text>
+    <text x="1010" y="595" class="body">64-bit AXI writer</text>
+    <text x="1010" y="640" class="small">completion returns before release</text>
+    <text x="1340" y="570" class="body-bold">AW / W / B</text>
+    <text x="1340" y="610" class="small">remain in mem_clk</text>
+  </g>
+  <g id="profile-async512" data-profile="async512" data-layout-region="memory-async512">
+    <rect data-layout-box="true" x="40" y="693" width="1520" height="185" class="box-blue"/>
+    <text x="60" y="735" class="panel-title">Async512</text>
+    <text x="60" y="783" class="metric">{wide_bytes} B/cycle</text>
+    <text x="300" y="735" class="table">Command</text>
+    <text x="300" y="780" class="table">Ordered Payload</text>
+    <text x="300" y="825" class="table">Tagged Completion</text>
+    <text x="625" y="720" class="small">Async FIFO boundary</text>
+    <path id="async512-command" data-transaction="command" data-direction="aclk-to-mem-clk" d="M570 730 H940" class="flow-blue"/>
+    <path id="async512-payload" data-transaction="ordered-payload" data-direction="aclk-to-mem-clk" d="M570 775 H940" class="flow-blue"/>
+    <path id="async512-completion" data-transaction="tagged-completion" data-direction="mem-clk-to-aclk" d="M940 820 H570" class="flow-return"/>
+    <line x1="760" y1="705" x2="760" y2="865" class="boundary"/>
+    <text x="1010" y="755" class="body-bold">mem_clk: 512-bit AXI writer</text>
+    <text x="1010" y="800" class="small">completion returns before release</text>
+    <text x="1340" y="755" class="body-bold">AW / W / B</text>
+    <text x="1340" y="795" class="small">remain in mem_clk</text>
+  </g>
+  <g data-layout-region="memory-footnote">
+    <rect data-layout-box="true" x="40" y="910" width="1520" height="65" fill="none" stroke="none"/>
+    <text x="800" y="950" text-anchor="middle" class="foot">ideal ready-memory RTL/interface rates, not board DDR throughput.</text>
+  </g>
+""".format(**metrics)
+    return _svg_document(
+        "RX memory profiles and CDC boundaries",
+        "Legacy and same-clock profiles stay in aclk; Async64 and Async512 cross command and payload toward mem_clk and tagged completion back toward aclk while AXI AW, W, and B stay in mem_clk.",
+        body,
+    )
 
 
 def _ppa_svg(metrics):
-    return """<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="500" viewBox="0 0 1480 500" role="img" aria-labelledby="title desc">
-  <title id="title">Verified SLVC DMA throughput, Writer PPA, and ASIC implementation</title>
-  <desc id="desc">Three isolated evidence scopes show Writer-only Design Compiler area, ideal-memory interface throughput, and the fixed C2B4 subsystem implementation point.</desc>
-  <style>.title{{font:700 28px Arial,sans-serif;fill:#0f172a}}.sub{{font:400 16px Arial,sans-serif;fill:#475569}}.head{{font:700 18px Arial,sans-serif;fill:#0f172a}}.metric{{font:700 28px Arial,sans-serif}}.body{{font:400 14px Arial,sans-serif;fill:#334155}}.tiny{{font:400 13px Arial,sans-serif;fill:#475569}}.panel{{stroke:#334155;stroke-width:2;rx:6}}</style>
-  <rect width="1480" height="500" fill="#ffffff"/>
-  <text x="40" y="46" class="title">Verified throughput, Writer PPA, and ASIC implementation</text>
-  <text x="40" y="74" class="sub">Evidence-bound fixed points with explicit, non-transferable scope.</text>
-  <rect x="35" y="110" width="440" height="300" fill="#eff6ff" class="panel"/>
-  <text x="65" y="148" class="head">Writer-only DC OOC</text><text x="65" y="181" class="body">reservation accounting</text><text x="65" y="221" class="metric" fill="#1d4ed8">32 -&gt; 7 bit</text><text x="65" y="274" class="metric" fill="#1d4ed8">{writer_total}% total area</text><text x="65" y="319" class="metric" fill="#1d4ed8">{writer_comb}% combinational</text><text x="65" y="363" class="tiny">Nangate45 paired DC OOC at {writer_period} ns</text><text x="65" y="387" class="tiny">not C2B4 or complete-DMA area</text>
-  <rect x="520" y="110" width="440" height="300" fill="#f0fdf4" class="panel"/>
-  <text x="550" y="148" class="head">Ideal-memory interface</text><text x="550" y="181" class="body">Same-clock512 / Async512</text><text x="550" y="231" class="metric" fill="#166534">{wide_bytes} B/cycle</text><text x="550" y="284" class="metric" fill="#166534">{w_utilization}% W utilization</text><text x="550" y="329" class="metric" fill="#166534">peak outstanding {peak_outstanding}</text><text x="550" y="363" class="tiny">ready-memory RTL workload</text><text x="550" y="387" class="tiny">not board DDR or 10G throughput</text>
-  <rect x="1005" y="110" width="440" height="300" fill="#fff7ed" class="panel"/>
-  <text x="1035" y="148" class="head">C2B4 subsystem</text><text x="1035" y="181" class="body">two-channel register-expanded RX512</text><text x="1035" y="221" class="metric" fill="#c2410c">{dc_mhz} MHz DC handoff</text><text x="1035" y="258" class="metric" fill="#c2410c">{route_mhz} MHz route / PT</text><text x="1035" y="300" class="metric" fill="#c2410c">+{setup_wns} / +{hold_wns} ns</text><text x="1035" y="340" class="metric" fill="#c2410c">{area_mm2} mm2</text><text x="1035" y="366" class="body">standard-cell area</text><text x="1035" y="394" class="tiny">physical checks {physical_checks}; not Fmax or signoff</text>
-  <rect x="240" y="438" width="1000" height="40" fill="#f8fafc" stroke="#cbd5e1" rx="6"/>
-  <text x="740" y="464" text-anchor="middle" class="body">Three separate scopes - not one complete-DMA result</text>
-</svg>
-""".format(**metrics).encode("ascii")
+    body = _report_header(
+        "Throughput, Writer PPA, and C2B4 implementation",
+        "Three evidence-bound result scopes are shown independently and must not be transferred to the complete DMA.",
+    ) + """  <g data-layout-region="ppa-writer">
+    <rect data-layout-box="true" x="50" y="165" width="480" height="690" class="box-blue"/>
+    <rect x="50" y="165" width="480" height="60" class="panel-header"/>
+    <text x="290" y="204" text-anchor="middle" class="table-head">A. Writer-only paired DC</text>
+    <text x="80" y="275" class="section">Reservation accounting</text>
+    <text x="80" y="330" class="metric">32 -&gt; 7 bit</text>
+    <line x1="80" y1="365" x2="500" y2="365" class="thin"/>
+    <text x="80" y="420" class="body">Total area</text>
+    <text x="300" y="420" class="metric">{writer_total}%</text>
+    <text x="80" y="475" class="body">Combinational area</text>
+    <text x="300" y="475" class="metric">{writer_comb}%</text>
+    <line x1="80" y1="515" x2="500" y2="515" class="thin"/>
+    <text x="80" y="565" class="body-bold">1.5 ns Nangate45 DC OOC</text>
+    <text x="80" y="610" class="body">same library + constraint</text>
+    <text x="80" y="655" class="body">both points setup-closed</text>
+    <line x1="80" y1="700" x2="500" y2="700" class="thin"/>
+    <text x="80" y="755" class="table-strong">Writer-only scope</text>
+    <text x="80" y="800" class="small">not C2B4 or complete-DMA area</text>
+  </g>
+  <g data-layout-region="ppa-throughput" data-throughput-contract="100% W utilization; peak outstanding 4">
+    <rect data-layout-box="true" x="560" y="165" width="480" height="690" class="box-blue"/>
+    <rect x="560" y="165" width="480" height="60" class="panel-header"/>
+    <text x="800" y="204" text-anchor="middle" class="table-head">B. Interface throughput</text>
+    <text x="590" y="275" class="section">Ready-memory profiles</text>
+    <text x="590" y="330" class="body">Same-clock512</text>
+    <text x="850" y="330" class="metric">{wide_bytes} B/cycle</text>
+    <text x="590" y="385" class="body">Async64</text>
+    <text x="850" y="385" class="metric">{async64_bytes} B/cycle</text>
+    <text x="590" y="440" class="body">Async512</text>
+    <text x="850" y="440" class="metric">{wide_bytes} B/cycle</text>
+    <line x1="590" y1="480" x2="1010" y2="480" class="thin"/>
+    <text x="590" y="535" class="body">W utilization</text>
+    <text x="850" y="535" class="metric">{w_utilization}%</text>
+    <text x="590" y="590" class="body">Peak outstanding</text>
+    <text x="850" y="590" class="metric">{peak_outstanding}</text>
+    <line x1="590" y1="635" x2="1010" y2="635" class="thin"/>
+    <text x="590" y="690" class="table-strong">ready-memory scope</text>
+    <text x="590" y="735" class="small">RTL/interface delivery only</text>
+    <text x="590" y="780" class="small">not board DDR or 10G throughput</text>
+  </g>
+  <g data-layout-region="ppa-c2b4" data-implementation-chain="550 MHz DC handoff; 450 MHz OpenROAD; OpenRCX; PrimeTime">
+    <rect data-layout-box="true" x="1070" y="165" width="480" height="690" class="box-blue"/>
+    <rect x="1070" y="165" width="480" height="60" class="panel-header"/>
+    <text x="1310" y="204" text-anchor="middle" class="table-head">C. C2B4 implementation chain</text>
+    <text x="1100" y="270" class="section">2 channels x 4 KiB</text>
+    <text x="1100" y="310" class="body">register-expanded RX512</text>
+    <line x1="1100" y1="345" x2="1520" y2="345" class="thin"/>
+    <text x="1100" y="395" class="body">Design Compiler</text>
+    <text x="1325" y="395" class="table-strong">{dc_mhz} MHz DC handoff</text>
+    <text x="1100" y="445" class="body">OpenROAD</text>
+    <text x="1325" y="445" class="table-strong">{route_mhz} MHz</text>
+    <text x="1100" y="495" class="body">OpenRCX</text>
+    <text x="1325" y="495" class="body">same-run extraction</text>
+    <text x="1100" y="545" class="body">PrimeTime</text>
+    <text x="1325" y="545" class="body">internal nominal STA</text>
+    <line x1="1100" y1="580" x2="1520" y2="580" class="thin"/>
+    <text x="1100" y="630" class="body">Setup / hold WNS</text>
+    <text x="1100" y="670" class="metric">+{setup_wns} / +{hold_wns} ns</text>
+    <text x="1100" y="720" class="body">Standard-cell area</text>
+    <text x="1325" y="720" class="table-strong">{area_mm2} mm2</text>
+    <text x="1100" y="770" class="small">Route DRC / antenna / electrical = {physical_checks}</text>
+    <text x="1100" y="810" class="small">C2B4 subsystem; not Fmax or signoff</text>
+  </g>
+  <g data-layout-region="ppa-footnote">
+    <rect data-layout-box="true" x="50" y="900" width="1500" height="70" class="box"/>
+    <text x="800" y="944" text-anchor="middle" class="body-bold">Three independent evidence scopes; not one complete-DMA PPA result.</text>
+  </g>
+""".format(**metrics)
+    return _svg_document(
+        "Throughput, Writer PPA, and C2B4 implementation",
+        "Independent columns summarize Writer-only paired Design Compiler area, ideal-memory interface throughput, and a fixed C2B4 implementation chain.",
+        body,
+    )
 
 
 def _validate_svg(path, payload, required):
@@ -692,20 +1147,42 @@ def _validate_svg(path, payload, required):
         root = ET.fromstring(text)
     except ET.ParseError as error:
         _fail("invalid SVG {}: {}".format(path, error))
-    if root.attrib.get("viewBox") is None or root.attrib.get("role") != "img":
-        _fail("{} is missing SVG accessibility metadata".format(path))
+    expected_root = {
+        "width": CANVAS_WIDTH,
+        "height": CANVAS_HEIGHT,
+        "viewBox": VIEW_BOX,
+        "preserveAspectRatio": PRESERVE_ASPECT_RATIO,
+        "role": "img",
+        "data-theme-contract": "mrtc-engineering-report",
+    }
+    if any(root.attrib.get(key) != value for key, value in expected_root.items()):
+        _fail("{} does not satisfy the exact theme canvas contract".format(path))
     children = {child.tag.rsplit("}", 1)[-1] for child in root}
     if not {"title", "desc"}.issubset(children):
         _fail("{} is missing title or desc".format(path))
     forbidden = (
-        r"<(?:image|linearGradient|radialGradient|filter)\b",
+        r"<(?:image|linearGradient|radialGradient|filter|foreignObject|script)\b",
         r"(?:href|xlink:href)\s*=\s*[\"'](?:https?:|data:)",
         r"base64",
+        r"@font-face",
+        r"drop-shadow",
         r"(?i)(?:(?<![A-Z])[A-Z]:[\\/]|/home/|\\\\)",
     )
     for pattern in forbidden:
         if re.search(pattern, text):
             _fail("{} contains forbidden SVG content".format(path))
+    lowered = text.lower()
+    for color in BANNED_COLORS:
+        if color in lowered:
+            _fail("{} contains forbidden pastel color {}".format(path, color))
+    for element in root.iter():
+        if "rx" in element.attrib or "ry" in element.attrib:
+            _fail("{} contains rounded box geometry".format(path))
+    for fragment in THEME_TOKENS:
+        if fragment not in text:
+            _fail("{} is missing theme token: {}".format(path, fragment))
+    if "data-layout-region=" not in text or "data-layout-box=" not in text:
+        _fail("{} is missing browser layout regions".format(path))
     for fragment in required:
         if fragment not in text:
             _fail("{} is missing required text: {}".format(path, fragment))
@@ -713,6 +1190,8 @@ def _validate_svg(path, payload, required):
 
 def _render_assets(metrics):
     return {
+        OVERVIEW_ASSET: _overview_svg(metrics),
+        VIRTUAL_CHANNEL_ASSET: _virtual_channel_svg(metrics),
         FRAME_LIFECYCLE_ASSET: _frame_lifecycle_svg(metrics),
         MEMORY_PROFILES_ASSET: _memory_profiles_svg(metrics),
         PPA_ASSET: _ppa_svg(metrics),
@@ -737,29 +1216,19 @@ def _asset_entry(root, path, payload, source, inputs, claim_ids):
 
 
 def _expected_manifest(root, rendered):
-    authored = [
-        {
-            "path": AUTHORED_ASSETS[0].as_posix(),
-            "sha256": _sha256(root / AUTHORED_ASSETS[0]),
-            "format": "svg",
-            "source": (
-                "hand-authored architecture diagram derived from the public "
-                "RTL hierarchy and interface documentation"
-            ),
-            "claim_ids": [],
-        },
-        {
-            "path": AUTHORED_ASSETS[1].as_posix(),
-            "sha256": _sha256(root / AUTHORED_ASSETS[1]),
-            "format": "svg",
-            "source": (
-                "hand-authored architecture diagram derived from the public "
-                "admission, fixed-ingress, shared-pool, selector, writer, and CQ RTL"
-            ),
-            "claim_ids": [ADMISSION_CLAIM],
-        },
-    ]
     generated = [
+        _asset_entry(
+            root, OVERVIEW_ASSET, rendered[OVERVIEW_ASSET],
+            "deterministically generated from tracked public integration RTL and architecture contracts",
+            (WRAPPER_PATH, FRAME_WRAPPER_PATH, RX_TOP_PATH, CLAIMS_PATH),
+            (),
+        ),
+        _asset_entry(
+            root, VIRTUAL_CHANNEL_ASSET, rendered[VIRTUAL_CHANNEL_ASSET],
+            "deterministically generated from tracked buffering RTL identity and the bounded admission claim",
+            (WRAPPER_PATH, FRAME_WRAPPER_PATH, RX_TOP_PATH, CLAIMS_PATH),
+            (ADMISSION_CLAIM,),
+        ),
         _asset_entry(
             root, FRAME_LIFECYCLE_ASSET, rendered[FRAME_LIFECYCLE_ASSET],
             "deterministically generated from tracked RTL architecture and the bounded admission claim",
@@ -784,7 +1253,7 @@ def _expected_manifest(root, rendered):
     return {
         "kind": "showcase_asset_manifest",
         "schema_version": "1.0.0",
-        "assets": authored + generated,
+        "assets": generated,
     }
 
 
@@ -795,10 +1264,6 @@ def _manifest_bytes(manifest):
 def _validate_all(root, rendered):
     for path, payload in rendered.items():
         _validate_svg(path, payload, GENERATED_RULES[path.name])
-    for path in AUTHORED_ASSETS:
-        if not (root / path).is_file():
-            _fail("missing authored asset {}".format(path))
-        _validate_svg(path, (root / path).read_bytes(), AUTHORED_RULES[path.name])
 
 
 def _validate_navigation(root):
@@ -816,13 +1281,34 @@ def _validate_navigation(root):
             positions.append(text.index(token))
         if positions != sorted(positions):
             _fail("{} showcase anchor order mismatch".format(path))
-        for asset in GENERATED_ASSETS:
-            token = "({})".format(asset.as_posix())
-            if text.count(token) != 1:
-                _fail("{} must reference {} exactly once".format(path, asset))
+        image_positions = []
+        for asset in README_ASSET_ORDER:
+            asset_text = re.escape(asset.as_posix())
+            block = re.compile(
+                r'<p align="center">\s*<a href="{0}">\s*'
+                r'<img src="{0}"\s+width="1000"\s+alt="[^"]+">\s*'
+                r'</a>\s*</p>'.format(asset_text),
+                re.MULTILINE,
+            )
+            matches = list(block.finditer(text))
+            if len(matches) != 1:
+                _fail("{} must embed {} exactly once with the centered clickable contract".format(
+                    path, asset
+                ))
+            if "({})".format(asset.as_posix()) in text:
+                _fail("{} must not use Markdown image syntax for {}".format(path, asset))
+            image_positions.append(matches[0].start())
+        if image_positions != sorted(image_positions):
+            _fail("{} showcase image order mismatch".format(path))
         marker_lists.append(CLAIM_MARKER.findall(text))
         if text.count(RESEARCH_BRANCH) != 1:
             _fail("{} canonical research branch identity mismatch".format(path))
+    expected_english = (
+        "Verified quantitative results are separated into three "
+        "non-transferable scopes"
+    )
+    if expected_english not in readmes[README_EN_PATH]:
+        _fail("README.en.md is missing the unambiguous quantitative-scope wording")
     if marker_lists[0] != marker_lists[1] or len(marker_lists[0]) != len(set(marker_lists[0])):
         _fail("README claim marker parity mismatch")
 

@@ -8,7 +8,11 @@
 
 多个传感器、基带处理单元或本地 endpoint 可以先复用为一条 SHDR64 segment stream。SLVC DMA 依据 header metadata 选择 channel 与 DDR ring，在固定通道缓冲和共享 frame pool 之间管理资源，并通过 Completion Queue 向软件发布完成事件。
 
-![SLVC DMA shared-link overview](docs/assets/slvc_dma_overview.svg)
+<p align="center">
+  <a href="docs/assets/slvc_dma_overview.svg">
+    <img src="docs/assets/slvc_dma_overview.svg" width="1000" alt="SLVC DMA shared-link system overview">
+  </a>
+</p>
 
 <a id="key-results-and-evidence"></a>
 
@@ -33,7 +37,17 @@
 
 RX 从 64-byte SHDR64 header 解析 `flow_id` 与长度，只有 ingress、目标 DDR Ring 和 CQ credit 同时可预留时才接收整帧。Payload 进入 per-channel Fixed ingress 或 block free-list 管理的 Shared Frame Pool；整帧 commit 后，source selector 才会锁定一个 source 直到 frame end。AXI response 完成后先写 CQE body，再发布 owner/valid 与 IRQ，最后释放 frame ownership。
 
-![SLVC DMA frame lifecycle](docs/assets/slvc_dma_frame_lifecycle.svg)
+<p align="center">
+  <a href="docs/assets/slvc_dma_frame_lifecycle.svg">
+    <img src="docs/assets/slvc_dma_frame_lifecycle.svg" width="1000" alt="SLVC DMA frame lifecycle and ownership boundaries">
+  </a>
+</p>
+
+<p align="center">
+  <a href="docs/assets/slvc_dma_virtual_channel_buffering.svg">
+    <img src="docs/assets/slvc_dma_virtual_channel_buffering.svg" width="1000" alt="SLVC DMA virtual-channel buffering and frame isolation">
+  </a>
+</p>
 
 [查看完整数据路径、资源边界和阻塞条件](docs/zh-CN/architecture.md)
 
@@ -47,7 +61,11 @@ Legacy64 和 Same-clock512 在 `aclk` 内完成 AXI 写入；Async64/Async512 �
 
 Same-clock512 与 Async512 在 ready-memory model 下为 `64 B/cycle`，Async64 为 `8 B/cycle`。这些是 RTL/interface 速率，不是板级 DDR throughput。
 
-![SLVC DMA RX memory profiles and CDC boundaries](docs/assets/slvc_dma_memory_profiles.svg)
+<p align="center">
+  <a href="docs/assets/slvc_dma_memory_profiles.svg">
+    <img src="docs/assets/slvc_dma_memory_profiles.svg" width="1000" alt="SLVC DMA RX memory profiles and CDC transaction directions">
+  </a>
+</p>
 
 [查看 512-bit Writer](docs/zh-CN/rx_payload_512_backend.md) · [查看 CDC Backend](docs/zh-CN/rx_payload_cdc_backends.md)
 
@@ -57,7 +75,11 @@ Same-clock512 与 Async512 在 ready-memory model 下为 `64 B/cycle`，Async64 
 
 正式量化结果按三个互不外推的 scope 管理：Writer-only paired DC 说明局部记账结构的面积变化；ideal-memory workload 说明接口供数能力；C2B4 说明固定两通道 RX512 子系统的 DC handoff 和 route/PT 实现点。三者不组合成“完整 DMA 同时获得全部结果”的结论。
 
-![SLVC DMA verified throughput, Writer PPA, and ASIC implementation](docs/assets/slvc_dma_ppa_implementation.svg)
+<p align="center">
+  <a href="docs/assets/slvc_dma_ppa_implementation.svg">
+    <img src="docs/assets/slvc_dma_ppa_implementation.svg" width="1000" alt="SLVC DMA independent throughput Writer PPA and C2B4 implementation scopes">
+  </a>
+</p>
 
 [查看完整结果表与计算边界](docs/zh-CN/results.md)
 

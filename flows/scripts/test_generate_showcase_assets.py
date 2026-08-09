@@ -320,6 +320,18 @@ class ShowcaseAssetsTest(unittest.TestCase):
             for name in ("cqe-body", "owner-valid", "release-frame-ownership")
         ]
         self.assertEqual(completion, [1, 2, 3])
+        control = [
+            int(by_id[name].attrib["data-control-order"])
+            for name in (
+                "header-beat", "parse-crc", "match-context",
+                "check-resources", "reserve-reject",
+            )
+        ]
+        self.assertEqual(control, [1, 2, 3, 4, 5])
+        for edge in (
+                "header-to-parse", "parse-to-match", "match-to-check",
+                "check-to-reserve"):
+            self.assertEqual(by_id[edge].attrib["class"], "flow")
 
     def test_visual_07_async_transaction_directions_are_explicit(self):
         root = ET.fromstring(

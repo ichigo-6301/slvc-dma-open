@@ -102,7 +102,10 @@
     <text x="1292" y="495" class="body">IRQ publication</text>
     <text x="1292" y="535" class="small">release frame ownership</text>
   </g>
-  <path d="M330 370 H355 M635 370 H660 M940 370 H965 M1245 370 H1270" class="flow"/>
+  <path d="M330 370 H355" class="flow"/>
+  <path d="M635 370 H660" class="flow"/>
+  <path d="M940 370 H965" class="flow"/>
+  <path d="M1245 370 H1270" class="flow"/>
   <g data-layout-region="overview-contract">
     <rect data-layout-box="true" x="50" y="635" width="1500" height="285" class="box"/>
     <rect x="50" y="635" width="1500" height="56" class="panel-header"/>

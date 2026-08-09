@@ -40,18 +40,21 @@
     <rect data-layout-box="true" x="50" y="160" width="680" height="400" class="box"/>
     <rect x="50" y="160" width="680" height="58" class="panel-header"/>
     <text x="390" y="198" text-anchor="middle" class="table-head">Header / Admission Control</text>
-    <rect id="header-beat" x="90" y="245" width="260" height="65" class="box-blue"/>
+    <rect id="header-beat" data-control-order="1" x="90" y="245" width="260" height="65" class="box-blue"/>
     <text x="220" y="286" text-anchor="middle" class="body-bold">Header beat</text>
-    <rect id="parse-crc" x="410" y="245" width="270" height="65" class="box"/>
+    <rect id="parse-crc" data-control-order="2" x="410" y="245" width="270" height="65" class="box"/>
     <text x="545" y="286" text-anchor="middle" class="body-bold">Parse / CRC</text>
-    <rect id="match-context" x="90" y="350" width="260" height="65" class="box"/>
+    <rect id="match-context" data-control-order="3" x="90" y="350" width="260" height="65" class="box"/>
     <text x="220" y="391" text-anchor="middle" class="body-bold">Match Context</text>
-    <rect id="check-resources" x="410" y="340" width="270" height="85" class="box"/>
+    <rect id="check-resources" data-control-order="4" x="410" y="340" width="270" height="85" class="box"/>
     <text x="545" y="376" text-anchor="middle" class="body-bold">Check Ingress + Ring + CQ</text>
     <text x="545" y="405" text-anchor="middle" class="small">joint availability</text>
-    <rect id="reserve-reject" x="230" y="465" width="320" height="65" class="box-blue"/>
+    <rect id="reserve-reject" data-control-order="5" x="230" y="465" width="320" height="65" class="box-blue"/>
     <text x="390" y="506" text-anchor="middle" class="body-bold">Reserve / Reject</text>
-    <path d="M350 278 H410 M545 310 V340 M410 382 H350 M220 415 V445 H390 V465" class="flow"/>
+    <path id="header-to-parse" d="M350 278 H410" class="flow"/>
+    <path id="parse-to-match" d="M545 310 V330 H220 V350" class="flow"/>
+    <path id="match-to-check" d="M350 382 H410" class="flow"/>
+    <path id="check-to-reserve" d="M545 425 V445 H390 V465" class="flow"/>
     <path id="reject-drop" d="M550 498 H610" class="flow"/>
     <text x="620" y="505" class="small orange">Reject / Drop</text>
   </g>
@@ -89,7 +92,11 @@
     <rect id="ddr-b-response" x="1250" y="610" width="300" height="86" class="box"/>
     <text x="1400" y="649" text-anchor="middle" class="body-bold">DDR / B response</text>
     <text x="1400" y="679" text-anchor="middle" class="small">memory completion</text>
-    <path d="M300 653 H340 M585 653 H605 M645 653 H670 M915 653 H960 M1205 653 H1250" class="flow-blue"/>
+    <path d="M300 653 H340" class="flow-blue"/>
+    <path d="M585 653 H605" class="flow-blue"/>
+    <path d="M645 653 H670" class="flow-blue"/>
+    <path d="M915 653 H960" class="flow-blue"/>
+    <path d="M1205 653 H1250" class="flow-blue"/>
   </g>
   <g data-layout-region="lifecycle-completion">
     <rect data-layout-box="true" x="350" y="790" width="1200" height="120" fill="none" stroke="none"/>
@@ -103,7 +110,9 @@
     <rect id="release-frame-ownership" data-completion-order="3" x="1060" y="805" width="360" height="82" class="box"/>
     <text x="1240" y="842" text-anchor="middle" class="body-bold">release frame ownership</text>
     <text x="1240" y="872" text-anchor="middle" class="small">return source capacity</text>
-    <path d="M1400 696 V755 H515 V805 M640 846 H700 M970 846 H1060" class="flow-blue"/>
+    <path d="M1400 696 V755 H515 V805" class="flow-blue"/>
+    <path d="M640 846 H700" class="flow-blue"/>
+    <path d="M970 846 H1060" class="flow-blue"/>
   </g>
   <g data-layout-region="lifecycle-footnote">
     <rect data-layout-box="true" x="40" y="940" width="1520" height="45" fill="none" stroke="none"/>

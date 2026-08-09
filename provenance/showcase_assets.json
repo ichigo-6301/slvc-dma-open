@@ -4,11 +4,11 @@
   "assets": [
     {
       "path": "docs/assets/slvc_dma_overview.svg",
-      "sha256": "c9d9f628f171102b111623780d46f64a320bf8d39d8e9521cfc56a0b1fadb015",
+      "sha256": "62cba54d496a93cb625520a4ebaaef31bef31658f838ab3b2a21e52df544e28a",
       "format": "svg",
       "source": "deterministically generated from tracked public integration RTL and architecture contracts",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "2ee0451b9762036833c5b83558c6d26867aa10ca799b3e3e3b6f218b486ea93e",
+      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -32,11 +32,11 @@
     },
     {
       "path": "docs/assets/slvc_dma_virtual_channel_buffering.svg",
-      "sha256": "e0c1f9a0d025be5d53b66e170bb913282e7db902982a8fb1ed959eeff996bf5a",
+      "sha256": "b704ebe05590055df9975df4e5daaaade408cd190d6ebfd36602738ac0ec77dc",
       "format": "svg",
       "source": "deterministically generated from tracked buffering RTL identity and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "2ee0451b9762036833c5b83558c6d26867aa10ca799b3e3e3b6f218b486ea93e",
+      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -62,11 +62,11 @@
     },
     {
       "path": "docs/assets/slvc_dma_frame_lifecycle.svg",
-      "sha256": "2669de888a24c4b21d3f3bf9e792275aa8b070157a783dc9723df160d2825ed2",
+      "sha256": "ad2361a72a0f1b9ae40c05bee4d4c3bdbf2b2f8a0061d33b3cbd2a9addc107a5",
       "format": "svg",
       "source": "deterministically generated from tracked RTL architecture and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "2ee0451b9762036833c5b83558c6d26867aa10ca799b3e3e3b6f218b486ea93e",
+      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -96,7 +96,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked RTL, regression evidence, and CDC claims",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "2ee0451b9762036833c5b83558c6d26867aa10ca799b3e3e3b6f218b486ea93e",
+      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -135,7 +135,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked public claims and sanitized implementation evidence",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "2ee0451b9762036833c5b83558c6d26867aa10ca799b3e3e3b6f218b486ea93e",
+      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {

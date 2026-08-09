@@ -25,6 +25,7 @@ KCONFIG_PATH := $(ROOT)/Kconfig
 FLOWCTL = $(PYTHON) "$(ROOT)/flows/scripts/flowctl.py" --root "$(ROOT)" --config "$(CONFIG_PATH)"
 CHECKSUM_GENERATOR = $(PYTHON) "$(ROOT)/provenance/generate_checksums.py" --root "$(ROOT)"
 RESULTS_ASSET_GENERATOR = $(PYTHON) "$(ROOT)/flows/scripts/generate_results_at_a_glance.py" --root "$(ROOT)"
+POWER_RESEARCH_VALIDATOR = $(PYTHON) "$(ROOT)/flows/scripts/validate_asic_power_storage_clock_gating_experiment.py" --root "$(ROOT)"
 
 export DMA_FLOW_ROOT := $(ROOT)
 export DMA_FLOW_CONFIG := $(CONFIG_PATH)
@@ -50,7 +51,7 @@ DEFCONFIG_TARGETS := slvc_dma_512_core_only_defconfig \
 
 .RECIPEPREFIX := >
 .DEFAULT_GOAL := help
-.PHONY: help showcase-check public-hygiene asic-evidence-check results-asset-check refresh-results-asset refresh-checksums verify-current-checksums \
+.PHONY: help showcase-check public-hygiene asic-evidence-check power-research-check results-asset-check refresh-results-asset refresh-checksums verify-current-checksums \
         defconfig $(DEFCONFIG_TARGETS) menuconfig showconfig validate-profile \
         list-stages selected selected-dry-run $(FLOW_STAGES) $(DRY_RUN_TARGETS)
 
@@ -69,6 +70,7 @@ help:
 >   '  make selected[-dry-run]           Run enabled stages in dependency order' \
 >   '  make showcase-check               Run public integrity and interface contracts' \
 >   '  make asic-evidence-check          Validate sanitized ASIC paired-DC evidence' \
+>   '  make power-research-check         Validate branch-only storage clock-gating research (no EDA)' \
 >   '  make results-asset-check          Verify the evidence-bound results SVG' \
 >   '  make verify-current-checksums      Verify the tracked checksum manifest' \
 >   '' \
@@ -87,6 +89,15 @@ public-hygiene:
 
 asic-evidence-check:
 > @$(PYTHON) "$(ROOT)/flows/scripts/validate_asic_evidence.py" --root "$(ROOT)"
+
+power-research-check:
+> @$(POWER_RESEARCH_VALIDATOR) --base-ref origin/main
+> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_validate_asic_power_storage_clock_gating_experiment
+> @$(CHECKSUM_GENERATOR) --check
+> @$(PYTHON) "$(ROOT)/flows/scripts/public_hygiene.py" --root "$(ROOT)"
+> @git -C "$(ROOT)" diff --check origin/main...HEAD
+> @git -C "$(ROOT)" diff --check
+> @printf '%s\n' 'POWER_RESEARCH_CHECK_PASS'
 
 results-asset-check:
 > @$(RESULTS_ASSET_GENERATOR) --check

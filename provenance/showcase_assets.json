@@ -1,6 +1,6 @@
 {
   "kind": "showcase_asset_manifest",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "assets": [
     {
       "path": "docs/assets/slvc_dma_overview.svg",
@@ -8,7 +8,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked public integration RTL and architecture contracts",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
+      "generator_sha256": "439c47800a435a7e9a626e2ba09c4159aa3e0a6a4ce2c177dea6acfc83313581",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -36,7 +36,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked buffering RTL identity and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
+      "generator_sha256": "439c47800a435a7e9a626e2ba09c4159aa3e0a6a4ce2c177dea6acfc83313581",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -66,7 +66,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked RTL architecture and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
+      "generator_sha256": "439c47800a435a7e9a626e2ba09c4159aa3e0a6a4ce2c177dea6acfc83313581",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -96,7 +96,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked RTL, regression evidence, and CDC claims",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
+      "generator_sha256": "439c47800a435a7e9a626e2ba09c4159aa3e0a6a4ce2c177dea6acfc83313581",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -135,7 +135,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked public claims and sanitized implementation evidence",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "60a844aed9877e2497bff8107140e2baa88f1603068662b441feff8dff1f6d33",
+      "generator_sha256": "439c47800a435a7e9a626e2ba09c4159aa3e0a6a4ce2c177dea6acfc83313581",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -164,6 +164,32 @@
         "slvc_dma_rx_payload_cdc_ideal_throughput",
         "slvc_dma_c2b4_n45_register_postroute_450"
       ]
+    },
+    {
+      "path": "docs/assets/showcase/slvc_dma_system_overview.png",
+      "sha256": "05bc9f882666dec639682a119741c6aefd2711ec751399dc7cee4e6c6131bffa",
+      "format": "png",
+      "size_bytes": 1129541,
+      "width": 1586,
+      "height": 992,
+      "role": "system_overview",
+      "source_type": "authored_binary_showcase",
+      "numeric_authority": false,
+      "source": "pixel-preserving metadata-free authored showcase; tracked public Evidence remains the numeric authority",
+      "claim_ids": []
+    },
+    {
+      "path": "docs/assets/showcase/slvc_dma_writer_transaction_cdc.png",
+      "sha256": "ec909aeb313ccc411def7273e6d6a6f158d59650dc1fd0cb2e8f160a7c76cb85",
+      "format": "png",
+      "size_bytes": 1166855,
+      "width": 1586,
+      "height": 992,
+      "role": "writer_transaction_cdc",
+      "source_type": "authored_binary_showcase",
+      "numeric_authority": false,
+      "source": "pixel-preserving metadata-free authored showcase; tracked public Evidence remains the numeric authority",
+      "claim_ids": []
     }
   ]
 }

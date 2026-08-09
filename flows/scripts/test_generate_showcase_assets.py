@@ -5,9 +5,11 @@ import json
 from pathlib import Path
 import re
 import shutil
+import struct
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
+import zlib
 
 from flows.scripts import check_showcase_render as render_check
 from flows.scripts import generate_showcase_assets as generator
@@ -32,9 +34,11 @@ class ShowcaseAssetsTest(unittest.TestCase):
             generator.GENERATOR_PATH,
             generator.README_PATH,
             generator.README_EN_PATH,
+            generator.ARCHITECTURE_PATH,
+            generator.ARCHITECTURE_EN_PATH,
             generator.RESEARCH_PATH,
             generator.RESEARCH_EN_PATH,
-        )
+        ) + tuple(generator.BINARY_ASSETS)
         for relative in inputs:
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -53,6 +57,20 @@ class ShowcaseAssetsTest(unittest.TestCase):
     def reset_file(self, relative):
         shutil.copyfile(REPOSITORY_ROOT / relative, self.root / relative)
 
+    def insert_png_chunk(self, relative, kind, data):
+        path = self.root / relative
+        payload = path.read_bytes()
+        iend = payload.rfind(b"IEND") - 4
+        self.assertGreaterEqual(iend, 8)
+        raw_kind = kind.encode("ascii")
+        crc = zlib.crc32(raw_kind)
+        crc = zlib.crc32(data, crc) & 0xffffffff
+        chunk = (
+            struct.pack(">I", len(data)) + raw_kind + data +
+            struct.pack(">I", crc)
+        )
+        path.write_bytes(payload[:iend] + chunk + payload[iend:])
+
     def test_tracked_assets_and_navigation_are_fresh(self):
         generator.check(REPOSITORY_ROOT)
 
@@ -66,7 +84,10 @@ class ShowcaseAssetsTest(unittest.TestCase):
         self.assertEqual((metrics["dc_mhz"], metrics["route_mhz"]), (550, 450))
 
     def test_repeated_generation_is_byte_identical(self):
-        tracked = generator.GENERATED_ASSETS + (generator.ASSET_MANIFEST_PATH,)
+        tracked = (
+            generator.GENERATED_ASSETS + tuple(generator.BINARY_ASSETS) +
+            (generator.ASSET_MANIFEST_PATH,)
+        )
         before = {path: (self.root / path).read_bytes() for path in tracked}
         generator.write(self.root)
         after = {path: (self.root / path).read_bytes() for path in tracked}
@@ -185,10 +206,11 @@ class ShowcaseAssetsTest(unittest.TestCase):
     def test_readme_asset_reference_deletion_fails(self):
         self.replace_text(
             generator.README_PATH,
-            'href="{}"'.format(generator.MEMORY_PROFILES_ASSET.as_posix()),
+            'href="{}"'.format(generator.WRITER_CDC_PNG.as_posix()),
             'href="docs/assets/missing.svg"',
         )
-        with self.assertRaisesRegex(generator.ShowcaseAssetError, "must embed"):
+        with self.assertRaisesRegex(
+                generator.ShowcaseAssetError, "href/src identity mismatch"):
             generator.check(self.root)
 
     def test_readme_anchor_deletion_fails(self):
@@ -219,6 +241,165 @@ class ShowcaseAssetsTest(unittest.TestCase):
         path.write_text(path.read_text(encoding="utf-8") + "\nBursty: -87.91%\n", encoding="utf-8")
         with self.assertRaisesRegex(generator.ShowcaseAssetError, "must not publish"):
             generator.check(self.root)
+
+    def test_binary_01_fixed_identity_and_metadata_free_chunks(self):
+        for relative, expected in generator.BINARY_ASSETS.items():
+            with self.subTest(asset=relative):
+                actual = generator._png_identity(self.root / relative)
+                for field in ("sha256", "size_bytes", "width", "height"):
+                    self.assertEqual(actual[field], expected[field])
+                self.assertEqual(actual["chunks"][0], "IHDR")
+                self.assertEqual(actual["chunks"][-1], "IEND")
+                self.assertEqual(set(actual["chunks"]), {"IHDR", "IDAT", "IEND"})
+
+    def test_binary_02_missing_or_payload_tamper_fails(self):
+        relative = generator.SYSTEM_OVERVIEW_PNG
+        path = self.root / relative
+        path.unlink()
+        with self.assertRaisesRegex(
+                generator.ShowcaseAssetError, "missing binary showcase asset"):
+            generator.check(self.root)
+        self.reset_file(relative)
+        payload = bytearray(path.read_bytes())
+        idat_data = payload.index(b"IDAT") + 4
+        payload[idat_data] ^= 0x01
+        path.write_bytes(payload)
+        with self.assertRaisesRegex(generator.ShowcaseAssetError, "CRC mismatch"):
+            generator.check(self.root)
+
+    def test_binary_03_metadata_chunks_and_trailing_data_fail(self):
+        relative = generator.WRITER_CDC_PNG
+        mutations = (
+            ("caBX", b"content-credentials"),
+            ("tEXt", b"Software\x00private-tool"),
+            ("eXIf", b"II*\x00"),
+        )
+        for kind, data in mutations:
+            with self.subTest(chunk=kind):
+                self.reset_file(relative)
+                self.insert_png_chunk(relative, kind, data)
+                with self.assertRaisesRegex(
+                        generator.ShowcaseAssetError, "forbidden metadata"):
+                    generator.check(self.root)
+        self.reset_file(relative)
+        path = self.root / relative
+        path.write_bytes(path.read_bytes() + b"private-path")
+        with self.assertRaisesRegex(generator.ShowcaseAssetError, "trailing data"):
+            generator.check(self.root)
+
+    def test_binary_04_manifest_scope_and_authority_are_fixed(self):
+        path = self.root / generator.ASSET_MANIFEST_PATH
+        manifest = json.loads(path.read_text(encoding="ascii"))
+        self.assertEqual(manifest["schema_version"], "1.1.0")
+        entries = {item["path"]: item for item in manifest["assets"]}
+        for relative, expected in generator.BINARY_ASSETS.items():
+            entry = entries[relative.as_posix()]
+            self.assertEqual(entry["source_type"], "authored_binary_showcase")
+            self.assertIs(entry["numeric_authority"], False)
+            self.assertEqual(entry["claim_ids"], [])
+            self.assertEqual(entry["role"], expected["role"])
+        original = path.read_bytes()
+        mutations = (
+            ("numeric_authority", True),
+            ("claim_ids", [generator.WRITER_CLAIM]),
+            ("source_type", "verified_numeric_evidence"),
+            ("role", "complete_dma_ppa"),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field):
+                path.write_bytes(original)
+                changed = json.loads(path.read_text(encoding="ascii"))
+                changed["assets"][-1][field] = value
+                path.write_text(json.dumps(changed, indent=2) + "\n", encoding="ascii")
+                with self.assertRaisesRegex(
+                        generator.ShowcaseAssetError, "manifest is stale"):
+                    generator.check(self.root)
+
+    def test_homepage_01_exact_three_image_order_and_alt_contract(self):
+        pattern = re.compile(
+            r'<p align="center">\s*<a href="([^"]+)">\s*'
+            r'<img src="([^"]+)"\s+width="([^"]+)"\s+alt="([^"]+)">\s*'
+            r'</a>\s*</p>', re.MULTILINE,
+        )
+        expected = [item.as_posix() for item in generator.README_ASSET_ORDER]
+        for readme in (generator.README_PATH, generator.README_EN_PATH):
+            text = (self.root / readme).read_text(encoding="utf-8")
+            blocks = [match.groups() for match in pattern.finditer(text)]
+            self.assertEqual([item[0] for item in blocks], expected)
+            self.assertEqual([item[1] for item in blocks], expected)
+            self.assertEqual([item[2] for item in blocks], ["1000"] * 3)
+            self.assertEqual(
+                [item[3] for item in blocks],
+                [generator.README_ASSET_ALTS[item]
+                 for item in generator.README_ASSET_ORDER],
+            )
+
+    def test_homepage_02_old_svg_extra_width_and_href_mutations_fail(self):
+        path = self.root / generator.README_PATH
+        original = path.read_text(encoding="utf-8")
+        mutations = (
+            original + (
+                '\n<p align="center"><a href="{0}"><img src="{0}" '
+                'width="1000" alt="old"></a></p>\n'
+            ).format(generator.FRAME_LIFECYCLE_ASSET.as_posix()),
+            original.replace('width="1000"', 'width="999"', 1),
+            original.replace(
+                'href="{}"'.format(generator.SYSTEM_OVERVIEW_PNG.as_posix()),
+                'href="docs/assets/showcase/mismatch.png"', 1,
+            ),
+        )
+        for index, changed in enumerate(mutations):
+            with self.subTest(mutation=index):
+                path.write_text(changed, encoding="utf-8")
+                with self.assertRaisesRegex(
+                        generator.ShowcaseAssetError,
+                        "exactly three|width must be 1000|href/src identity"):
+                    generator.check(self.root)
+        path.write_text(original, encoding="utf-8")
+
+    def test_homepage_03_detailed_assets_are_bilingual_and_off_homepage(self):
+        for readme in (generator.README_PATH, generator.README_EN_PATH):
+            text = (self.root / readme).read_text(encoding="utf-8")
+            for asset in generator.README_DETAILED_ASSETS:
+                self.assertEqual(text.count("({})".format(asset.as_posix())), 1)
+                self.assertNotRegex(
+                    text, r'<img[^>]+src="{}"'.format(re.escape(asset.as_posix()))
+                )
+        for document in (
+                generator.ARCHITECTURE_PATH,
+                generator.ARCHITECTURE_EN_PATH):
+            text = (self.root / document).read_text(encoding="utf-8")
+            for asset in generator.ARCHITECTURE_ASSETS:
+                self.assertEqual(text.count(asset.name), 1)
+
+    def test_homepage_04_binary_claim_and_research_metric_registration_fail(self):
+        claims = self.root / generator.CLAIMS_PATH
+        claims.write_text(
+            claims.read_text(encoding="utf-8") +
+            "\nasset: {}\n".format(generator.SYSTEM_OVERVIEW_PNG.as_posix()),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(generator.ShowcaseAssetError, "must not reference"):
+            generator.check(self.root)
+        self.reset_file(generator.CLAIMS_PATH)
+        readme = self.root / generator.README_EN_PATH
+        readme.write_text(
+            readme.read_text(encoding="utf-8") + "\nBursty dynamic: -87.91\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(generator.ShowcaseAssetError, "branch-only power metric"):
+            generator.check(self.root)
+
+    def test_homepage_05_real_browser_desktop_mobile_light_dark(self):
+        browser, reports = render_check.check_homepage_render(self.root)
+        self.assertTrue(browser.is_file())
+        self.assertEqual(set(reports), {
+            "desktop-light", "desktop-dark", "mobile-light", "mobile-dark",
+        })
+        for report in reports.values():
+            self.assertEqual(report["failures"], [])
+            self.assertEqual(report["image_count"], 3)
+            self.assertGreater(report["png_bytes"], 2000)
 
     def test_visual_01_exact_canvas_and_theme_contract(self):
         for relative in generator.GENERATED_ASSETS:
@@ -268,7 +449,7 @@ class ShowcaseAssetsTest(unittest.TestCase):
                     self.validate_mutated_svg(path)
         (self.root / path).write_text(original, encoding="ascii")
 
-    def test_visual_04_readmes_embed_all_five_clickable_assets(self):
+    def test_visual_04_readmes_embed_exact_three_clickable_assets(self):
         for readme in (generator.README_PATH, generator.README_EN_PATH):
             text = (self.root / readme).read_text(encoding="utf-8")
             positions = []

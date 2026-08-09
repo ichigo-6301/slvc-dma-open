@@ -9,8 +9,10 @@ from decimal import Decimal, ROUND_HALF_EVEN, ROUND_HALF_UP
 import hashlib
 import json
 import re
+import struct
 import sys
 import xml.etree.ElementTree as ET
+import zlib
 from pathlib import Path
 
 
@@ -33,6 +35,8 @@ C2B4_PROFILE_PATH = Path(
 GENERATOR_PATH = Path("flows/scripts/generate_showcase_assets.py")
 README_PATH = Path("README.md")
 README_EN_PATH = Path("README.en.md")
+ARCHITECTURE_PATH = Path("docs/zh-CN/architecture.md")
+ARCHITECTURE_EN_PATH = Path("docs/en/architecture.md")
 RESEARCH_PATH = Path("docs/zh-CN/research_branches.md")
 RESEARCH_EN_PATH = Path("docs/en/research_branches.md")
 
@@ -43,6 +47,12 @@ VIRTUAL_CHANNEL_ASSET = Path(
 FRAME_LIFECYCLE_ASSET = Path("docs/assets/slvc_dma_frame_lifecycle.svg")
 MEMORY_PROFILES_ASSET = Path("docs/assets/slvc_dma_memory_profiles.svg")
 PPA_ASSET = Path("docs/assets/slvc_dma_ppa_implementation.svg")
+SYSTEM_OVERVIEW_PNG = Path(
+    "docs/assets/showcase/slvc_dma_system_overview.png"
+)
+WRITER_CDC_PNG = Path(
+    "docs/assets/showcase/slvc_dma_writer_transaction_cdc.png"
+)
 GENERATED_ASSETS = (
     OVERVIEW_ASSET,
     VIRTUAL_CHANNEL_ASSET,
@@ -51,12 +61,42 @@ GENERATED_ASSETS = (
     PPA_ASSET,
 )
 README_ASSET_ORDER = (
+    SYSTEM_OVERVIEW_PNG,
+    WRITER_CDC_PNG,
+    PPA_ASSET,
+)
+README_ASSET_ALTS = {
+    SYSTEM_OVERVIEW_PNG: "SLVC DMA shared-link system overview",
+    WRITER_CDC_PNG: "512-bit AXI4 Writer and transaction-level CDC",
+    PPA_ASSET: "SLVC DMA Writer PPA and C2B4 ASIC implementation",
+}
+README_DETAILED_ASSETS = (
+    FRAME_LIFECYCLE_ASSET,
+    VIRTUAL_CHANNEL_ASSET,
+    MEMORY_PROFILES_ASSET,
+)
+ARCHITECTURE_ASSETS = (
     OVERVIEW_ASSET,
     FRAME_LIFECYCLE_ASSET,
     VIRTUAL_CHANNEL_ASSET,
     MEMORY_PROFILES_ASSET,
-    PPA_ASSET,
 )
+BINARY_ASSETS = {
+    SYSTEM_OVERVIEW_PNG: {
+        "role": "system_overview",
+        "sha256": "05bc9f882666dec639682a119741c6aefd2711ec751399dc7cee4e6c6131bffa",
+        "size_bytes": 1129541,
+        "width": 1586,
+        "height": 992,
+    },
+    WRITER_CDC_PNG: {
+        "role": "writer_transaction_cdc",
+        "sha256": "ec909aeb313ccc411def7273e6d6a6f158d59650dc1fd0cb2e8f160a7c76cb85",
+        "size_bytes": 1166855,
+        "width": 1586,
+        "height": 992,
+    },
+}
 OBSOLETE_ASSETS = (Path("docs/assets/slvc_dma_results_at_a_glance.svg"),)
 
 NAVIGATION_ANCHORS = (
@@ -401,6 +441,82 @@ def _sha256(path):
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _png_identity(path):
+    payload = path.read_bytes()
+    if payload[:8] != b"\x89PNG\r\n\x1a\n":
+        _fail("invalid PNG signature: {}".format(path))
+    offset = 8
+    chunks = []
+    ihdr = None
+    while offset < len(payload):
+        if len(payload) - offset < 12:
+            _fail("truncated PNG chunk header: {}".format(path))
+        length = struct.unpack(">I", payload[offset:offset + 4])[0]
+        chunk_end = offset + 12 + length
+        if chunk_end > len(payload):
+            _fail("truncated PNG chunk payload: {}".format(path))
+        raw_kind = payload[offset + 4:offset + 8]
+        try:
+            kind = raw_kind.decode("ascii")
+        except UnicodeDecodeError:
+            _fail("non-ASCII PNG chunk type: {}".format(path))
+        if not re.fullmatch(r"[A-Za-z]{4}", kind):
+            _fail("invalid PNG chunk type {}: {}".format(kind, path))
+        data = payload[offset + 8:offset + 8 + length]
+        stored_crc = struct.unpack(">I", payload[offset + 8 + length:chunk_end])[0]
+        actual_crc = zlib.crc32(raw_kind)
+        actual_crc = zlib.crc32(data, actual_crc) & 0xffffffff
+        if stored_crc != actual_crc:
+            _fail("PNG chunk CRC mismatch for {}: {}".format(kind, path))
+        chunks.append(kind)
+        if kind == "IHDR":
+            if ihdr is not None or length != 13:
+                _fail("invalid or duplicate PNG IHDR: {}".format(path))
+            ihdr = struct.unpack(">IIBBBBB", data)
+        if kind == "IEND" and length != 0:
+            _fail("PNG IEND chunk must be empty: {}".format(path))
+        offset = chunk_end
+        if kind == "IEND":
+            break
+    if offset != len(payload):
+        _fail("PNG has trailing data after IEND: {}".format(path))
+    if not chunks or chunks[0] != "IHDR" or chunks[-1] != "IEND":
+        _fail("PNG chunk order must start with IHDR and end with IEND: {}".format(path))
+    if chunks.count("IHDR") != 1 or chunks.count("IEND") != 1:
+        _fail("PNG must contain one IHDR and one IEND: {}".format(path))
+    if set(chunks) != {"IHDR", "IDAT", "IEND"}:
+        _fail("PNG contains forbidden metadata or ancillary chunks: {} {}".format(
+            path, ",".join(chunks)
+        ))
+    idat_positions = [index for index, kind in enumerate(chunks) if kind == "IDAT"]
+    if not idat_positions or idat_positions != list(range(
+            idat_positions[0], idat_positions[-1] + 1)):
+        _fail("PNG IDAT chunks must be present and contiguous: {}".format(path))
+    width, height, bit_depth, color_type, compression, filtering, interlace = ihdr
+    if (bit_depth, color_type, compression, filtering, interlace) != (8, 2, 0, 0, 0):
+        _fail("PNG must be non-interlaced 8-bit RGB: {}".format(path))
+    return {
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "size_bytes": len(payload),
+        "width": width,
+        "height": height,
+        "chunks": tuple(chunks),
+    }
+
+
+def _validate_binary_assets(root):
+    for relative, expected in BINARY_ASSETS.items():
+        path = root / relative
+        if not path.is_file():
+            _fail("missing binary showcase asset: {}".format(relative))
+        actual = _png_identity(path)
+        for field in ("sha256", "size_bytes", "width", "height"):
+            if actual[field] != expected[field]:
+                _fail("binary showcase {} mismatch for {}: expected={} actual={}".format(
+                    field, relative, expected[field], actual[field]
+                ))
 
 
 def _decode_scalar(raw):
@@ -1228,6 +1344,25 @@ def _asset_entry(root, path, payload, source, inputs, claim_ids):
     }
 
 
+def _binary_asset_entry(path, identity):
+    return {
+        "path": path.as_posix(),
+        "sha256": identity["sha256"],
+        "format": "png",
+        "size_bytes": identity["size_bytes"],
+        "width": identity["width"],
+        "height": identity["height"],
+        "role": identity["role"],
+        "source_type": "authored_binary_showcase",
+        "numeric_authority": False,
+        "source": (
+            "pixel-preserving metadata-free authored showcase; tracked public "
+            "Evidence remains the numeric authority"
+        ),
+        "claim_ids": [],
+    }
+
+
 def _expected_manifest(root, rendered):
     generated = [
         _asset_entry(
@@ -1263,9 +1398,13 @@ def _expected_manifest(root, rendered):
             (WRITER_CLAIM, THROUGHPUT_CLAIM, C2B4_CLAIM),
         ),
     ]
+    generated.extend(
+        _binary_asset_entry(path, identity)
+        for path, identity in BINARY_ASSETS.items()
+    )
     return {
         "kind": "showcase_asset_manifest",
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "assets": generated,
     }
 
@@ -1294,25 +1433,42 @@ def _validate_navigation(root):
             positions.append(text.index(token))
         if positions != sorted(positions):
             _fail("{} showcase anchor order mismatch".format(path))
-        image_positions = []
-        for asset in README_ASSET_ORDER:
-            asset_text = re.escape(asset.as_posix())
-            block = re.compile(
-                r'<p align="center">\s*<a href="{0}">\s*'
-                r'<img src="{0}"\s+width="1000"\s+alt="[^"]+">\s*'
-                r'</a>\s*</p>'.format(asset_text),
-                re.MULTILINE,
-            )
-            matches = list(block.finditer(text))
-            if len(matches) != 1:
-                _fail("{} must embed {} exactly once with the centered clickable contract".format(
+        image_block = re.compile(
+            r'<p align="center">\s*<a href="([^"]+)">\s*'
+            r'<img src="([^"]+)"\s+width="([^"]+)"\s+alt="([^"]+)">\s*'
+            r'</a>\s*</p>',
+            re.MULTILINE,
+        )
+        blocks = list(image_block.finditer(text))
+        if len(blocks) != len(README_ASSET_ORDER) or text.count("<img ") != 3:
+            _fail("{} must contain exactly three centered homepage images".format(path))
+        for block, expected in zip(blocks, README_ASSET_ORDER):
+            href, source, width, alt = block.groups()
+            expected_path = expected.as_posix()
+            if href != expected_path or source != expected_path:
+                _fail("{} homepage image order or href/src identity mismatch".format(path))
+            if width != "1000":
+                _fail("{} homepage image width must be 1000".format(path))
+            if alt != README_ASSET_ALTS[expected]:
+                _fail("{} homepage image alt mismatch for {}".format(path, expected))
+            if "![]({})".format(expected_path) in text:
+                _fail("{} must not use Markdown image syntax for {}".format(path, expected))
+        for asset in GENERATED_ASSETS:
+            if asset == PPA_ASSET:
+                continue
+            if re.search(
+                    r'<img[^>]+src="{}"'.format(re.escape(asset.as_posix())), text):
+                _fail("{} must not embed detailed SVG {} on the homepage".format(
                     path, asset
                 ))
-            if "({})".format(asset.as_posix()) in text:
-                _fail("{} must not use Markdown image syntax for {}".format(path, asset))
-            image_positions.append(matches[0].start())
-        if image_positions != sorted(image_positions):
-            _fail("{} showcase image order mismatch".format(path))
+        for asset in README_DETAILED_ASSETS:
+            if text.count("({})".format(asset.as_posix())) != 1:
+                _fail("{} must link detailed asset {} exactly once".format(path, asset))
+        for forbidden in ("102,976", "837 x", "-87.91", "-87.30", "-20.82", "-89.53"):
+            if forbidden in text:
+                _fail("{} must not publish branch-only power metric {}".format(
+                    path, forbidden
+                ))
         marker_lists.append(CLAIM_MARKER.findall(text))
         if text.count(RESEARCH_BRANCH) != 1:
             _fail("{} canonical research branch identity mismatch".format(path))
@@ -1324,6 +1480,24 @@ def _validate_navigation(root):
         _fail("README.en.md is missing the unambiguous quantitative-scope wording")
     if marker_lists[0] != marker_lists[1] or len(marker_lists[0]) != len(set(marker_lists[0])):
         _fail("README claim marker parity mismatch")
+
+    architecture_texts = {
+        ARCHITECTURE_PATH: (root / ARCHITECTURE_PATH).read_text(encoding="utf-8"),
+        ARCHITECTURE_EN_PATH: (root / ARCHITECTURE_EN_PATH).read_text(encoding="utf-8"),
+    }
+    for path, text in architecture_texts.items():
+        for asset in ARCHITECTURE_ASSETS:
+            if text.count(asset.name) != 1:
+                _fail("{} must embed detailed asset {} exactly once".format(
+                    path, asset
+                ))
+
+    claims_text = (root / CLAIMS_PATH).read_text(encoding="utf-8")
+    if "authored_binary_showcase" in claims_text:
+        _fail("formal claims must not register authored binary showcase assets")
+    for asset in BINARY_ASSETS:
+        if asset.as_posix() in claims_text:
+            _fail("formal claims must not reference {}".format(asset))
 
     research_texts = {
         RESEARCH_PATH: (root / RESEARCH_PATH).read_text(encoding="utf-8"),
@@ -1344,6 +1518,7 @@ def _validate_navigation(root):
 
 
 def write(root):
+    _validate_binary_assets(root)
     metrics = _extract_metrics(root)
     rendered = _render_assets(metrics)
     _validate_all(root, rendered)
@@ -1362,6 +1537,7 @@ def write(root):
 
 
 def check(root):
+    _validate_binary_assets(root)
     metrics = _extract_metrics(root)
     rendered = _render_assets(metrics)
     _validate_all(root, rendered)

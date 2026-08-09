@@ -203,7 +203,7 @@ def _windows_file_uri(path):
     return "file:///" + translated
 
 
-def _browser_command(browser, profile, extra, page):
+def _browser_command(browser, profile, extra, page, width=1000, height=625):
     interop = _uses_wsl_windows_browser(browser)
     profile_text = _windows_path(profile) if interop else str(profile)
     translated_extra = []
@@ -223,7 +223,7 @@ def _browser_command(browser, profile, extra, page):
         "--no-sandbox",
         "--allow-file-access-from-files",
         "--force-device-scale-factor=1",
-        "--window-size=1000,625",
+        "--window-size={},{}".format(width, height),
         "--user-data-dir={}".format(profile_text),
     ] + translated_extra + [page_uri]
 
@@ -247,18 +247,208 @@ def _run_browser(command):
     return completed.stdout
 
 
-def _png_dimensions(path):
+def _png_dimensions(path, expected=(1000, 625)):
     payload = path.read_bytes()
     if len(payload) < 24 or payload[:8] != b"\x89PNG\r\n\x1a\n":
         raise ShowcaseRenderError("browser did not produce a valid PNG: {}".format(path))
     width, height = struct.unpack(">II", payload[16:24])
-    if (width, height) != (1000, 625):
+    if (width, height) != expected:
         raise ShowcaseRenderError(
             "preview dimensions mismatch for {}: {}x{}".format(path, width, height)
         )
     if len(payload) < 2000:
         raise ShowcaseRenderError("preview is unexpectedly small or blank: {}".format(path))
     return len(payload)
+
+
+def _asset_uri(path, browser):
+    if _uses_wsl_windows_browser(browser):
+        return _windows_file_uri(path)
+    return path.resolve().as_uri()
+
+
+def _homepage_document(root, browser, dark):
+    assets = []
+    expected_dimensions = {
+        generator.SYSTEM_OVERVIEW_PNG: (1586, 992),
+        generator.WRITER_CDC_PNG: (1586, 992),
+        generator.PPA_ASSET: (1600, 1000),
+    }
+    blocks = []
+    for relative in generator.README_ASSET_ORDER:
+        uri = _asset_uri(root / relative, browser)
+        width, height = expected_dimensions[relative]
+        assets.append({
+            "path": relative.as_posix(),
+            "uri": uri,
+            "width": width,
+            "height": height,
+        })
+        blocks.append(
+            '<p align="center"><a href="{uri}"><img src="{uri}" '
+            'width="1000" alt="{alt}"></a></p>'.format(
+                uri=html.escape(uri, quote=True),
+                alt=html.escape(generator.README_ASSET_ALTS[relative], quote=True),
+            )
+        )
+    script = r"""
+(() => {
+  const evaluate = () => {
+  const failures = [];
+  const expected = EXPECTED_ASSETS;
+  const images = Array.from(document.querySelectorAll('main img'));
+  const record = (code, detail) => failures.push(code + ': ' + detail);
+  if (images.length !== expected.length) {
+    record('image-count', images.length + ' != ' + expected.length);
+  }
+  if (document.documentElement.scrollWidth > document.documentElement.clientWidth + 1) {
+    record('horizontal-scroll', document.documentElement.scrollWidth + ' > ' +
+      document.documentElement.clientWidth);
+  }
+  const margins = [];
+  const rendered = [];
+  images.forEach((image, index) => {
+    const identity = expected[index];
+    const rect = image.getBoundingClientRect();
+    const anchor = image.closest('a');
+    const paragraph = image.closest('p');
+    if (!image.complete || image.naturalWidth === 0) {
+      record('not-loaded', identity.path);
+    }
+    if (image.naturalWidth !== identity.width || image.naturalHeight !== identity.height) {
+      record('natural-size', identity.path + ': ' + image.naturalWidth + 'x' +
+        image.naturalHeight);
+    }
+    if (image.getAttribute('width') !== '1000') {
+      record('width-contract', identity.path);
+    }
+    if (!anchor || anchor.getAttribute('href') !== image.getAttribute('src')) {
+      record('click-target', identity.path);
+    }
+    if (rect.left < -1 || rect.right > window.innerWidth + 1 || rect.width <= 0 ||
+        rect.height <= 0) {
+      record('viewport-overflow', identity.path + ': ' + JSON.stringify({
+        left: rect.left, right: rect.right, width: rect.width, height: rect.height
+      }));
+    }
+    if (window.innerWidth >= 1040 && Math.abs(rect.width - 1000) > 1) {
+      record('desktop-width', identity.path + ': ' + rect.width);
+    }
+    if (paragraph) {
+      const style = getComputedStyle(paragraph);
+      margins.push(style.marginTop + '/' + style.marginBottom);
+    }
+    rendered.push({path: identity.path, width: rect.width, height: rect.height});
+  });
+  if (new Set(margins).size > 1) {
+    record('spacing', JSON.stringify(margins));
+  }
+  const output = {
+    failures,
+    image_count: images.length,
+    viewport_width: window.innerWidth,
+    viewport_height: window.innerHeight,
+    page_scroll_width: document.documentElement.scrollWidth,
+    rendered
+  };
+  document.getElementById('showcase-render-result').textContent = JSON.stringify(output);
+  };
+  if (document.readyState === 'complete') {
+    evaluate();
+  } else {
+    window.addEventListener('load', evaluate, {once: true});
+  }
+})();
+""".replace("EXPECTED_ASSETS", json.dumps(assets, separators=(",", ":")))
+    background = "#0d1117" if dark else "#ffffff"
+    return """<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html,body{{margin:0;min-width:0;background:{background};}}
+body{{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}}
+main{{box-sizing:border-box;width:100%;max-width:1040px;margin:0 auto;padding:20px;}}
+p{{margin:24px 0;}}
+a{{display:block;}}
+img{{box-sizing:border-box;display:block;width:1000px;max-width:100%;height:auto;
+     margin:0 auto;background:#ffffff;}}
+@media (max-width:600px){{main{{padding:16px;}}}}
+#showcase-render-result{{display:none}}
+</style></head><body>
+<main>{blocks}</main>
+<pre id="showcase-render-result">pending</pre>
+<script>{script}</script>
+</body></html>
+""".format(
+        background=background,
+        blocks="\n".join(blocks),
+        script=script,
+    )
+
+
+def check_homepage_render(root, browser=None):
+    root = Path(root).resolve()
+    browser = Path(browser).resolve() if browser else discover_browser()
+    cases = (
+        ("desktop-light", 1200, 900, False),
+        ("desktop-dark", 1200, 900, True),
+        ("mobile-light", 390, 844, False),
+        ("mobile-dark", 390, 844, True),
+    )
+    reports = {}
+    temporary_parent = None
+    if _uses_wsl_windows_browser(browser):
+        temporary_parent = root / "build"
+        temporary_parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+            prefix="slvc-dma-homepage-render-",
+            dir=str(temporary_parent) if temporary_parent else None) as temporary:
+        temporary_root = Path(temporary)
+        for index, (name, width, height, dark) in enumerate(cases):
+            html_path = temporary_root / (name + ".html")
+            png_path = temporary_root / (name + ".png")
+            html_path.write_text(
+                _homepage_document(root, browser, dark), encoding="utf-8"
+            )
+            dump_profile = temporary_root / "profile-dump-{}".format(index)
+            dumped = _run_browser(_browser_command(
+                browser,
+                dump_profile,
+                ("--dump-dom", "--virtual-time-budget=2000"),
+                html_path,
+                width,
+                height,
+            ))
+            match = RESULT_PATTERN.search(dumped)
+            if not match:
+                raise ShowcaseRenderError(
+                    "browser homepage result missing for {}".format(name)
+                )
+            try:
+                report = json.loads(html.unescape(match.group(1)))
+            except (TypeError, ValueError) as error:
+                raise ShowcaseRenderError(
+                    "invalid homepage browser result for {}: {}".format(name, error)
+                )
+            if report.get("failures"):
+                raise ShowcaseRenderError(
+                    "homepage layout failure for {}: {}".format(
+                        name, "; ".join(report["failures"])
+                    )
+                )
+            shot_profile = temporary_root / "profile-shot-{}".format(index)
+            _run_browser(_browser_command(
+                browser,
+                shot_profile,
+                (
+                    "--run-all-compositor-stages-before-draw",
+                    "--screenshot={}".format(png_path),
+                ),
+                html_path,
+                width,
+                height,
+            ))
+            report["png_bytes"] = _png_dimensions(png_path, (width, height))
+            reports[name] = report
+    return browser, reports
 
 
 def check_render(root, assets=None, browser=None):
@@ -338,16 +528,19 @@ def main(argv=None):
     parser.add_argument("--browser")
     args = parser.parse_args(argv)
     try:
-        browser, reports = check_render(args.root, browser=args.browser)
+        browser = Path(args.browser).resolve() if args.browser else discover_browser()
+        browser, reports = check_render(args.root, browser=browser)
+        _, homepage_reports = check_homepage_render(args.root, browser=browser)
     except (OSError, subprocess.SubprocessError, ShowcaseRenderError) as error:
         print("showcase-render: error: {}".format(error), file=sys.stderr)
         return 2
     print(
-        "SHOWCASE_RENDER_PASS browser={} assets={} texts={} regions={}".format(
+        "SHOWCASE_RENDER_PASS browser={} assets={} texts={} regions={} homepage_cases={}".format(
             browser,
             len(reports),
             sum(item["text_count"] for item in reports.values()),
             sum(item["region_count"] for item in reports.values()),
+            len(homepage_reports),
         )
     )
     return 0

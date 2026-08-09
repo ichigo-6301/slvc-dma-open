@@ -1,0 +1,196 @@
+{
+  "schema": "slvc_dma_asic_power_storage_clock_gating_positive_v1",
+  "experiment": "c2b4_storage_clock_gating_dc",
+  "publication_class": "sanitized_branch_only_research",
+  "branch": "research/dma-a3-clock-gating-storage-positive-2026-08",
+  "classification": "POSITIVE_MAPPED_DC / BRANCH_ONLY",
+  "branch_only": true,
+  "promotion_eligible": true,
+  "main_merge_recommended": false,
+  "production_rtl_changed": false,
+  "postroute_pair_completed": false,
+  "lec_status": "not_available",
+  "registered_verified_claim": false,
+  "release_or_tag_changed": false,
+  "numeric_authority": "points.csv",
+  "generated_derivative": "comparisons.csv",
+  "raw_commercial_artifacts_published": false,
+  "fixed_provenance_revisions": {
+    "experiment_baseline": "14538a48b1483a50ba7fceef6f4abde8f6e5ea86",
+    "flow_as_run": "0b7b4f489eaf8004b0e578f1333f45c20d6e6591",
+    "annotation_launcher_identity": "40de1a2fa016c558e63f715cc27115a6ab26de21",
+    "report_quantization_contract": "e33019b2594eb335dbf7dc9a8aebcccd8066c13c",
+    "machine_evidence": "899af6d698980b17b71c67c35afa381511dff429",
+    "final_documentation": "cb597a290301e284b1c2bca52ba8a2b122aa4f46",
+    "rtl_closure": "45cd49764d26861027639cd1e3de638dfdc35454",
+    "shared_source_set": "348df4949d4d88954a4402cd47118c6444099a17"
+  },
+  "raw_bindings": {
+    "pair_pass_sha256": "a970761b1adaf3caa317dc7b0a6dc84da94086d9227c142d1b3421a46da1990d",
+    "collection_probe_result_sha256": "956b6dd8128b7fb2b02cfc2c1de64a7556fcaf15d75fc92a234bd242529bdb62",
+    "S0_result_sha256": "0183b5971ea889fad805c6757990272ee5d7059e704a2c23903242ba03f7d2cf",
+    "S1_result_sha256": "e2edca94e12c4d5dbe6442566daa8929c9b35a214c67c4eef2b8893f6dcdca82",
+    "S0_identity_sha256": "d9b9213fa4bad8bfc0597bcd55f681d5b5692b7962dd3ef0effc083629e2c2b2",
+    "S1_identity_sha256": "83f5e5d3d9358e22e0f0097176f57844fae174316e3a20383ceaa70b497625e3",
+    "S0_annotation_audit_sha256": "eada0562b234cea3a71cf54e607bff4ad98b3e46ba3d1476d0d32eb135960221",
+    "S1_annotation_audit_sha256": "907eb9fa5d2b62d739338adac0ce5e3a64c3a77dacb8602cdbba158435ce057f"
+  },
+  "tool_identity": {
+    "dc_version": "O-2018.06-SP1",
+    "vcd2saif_version": "O-2018.06-SP1",
+    "questa_version": "Questa Sim-64 10.7c",
+    "dc_executable_sha256": "185937f0aef4f430288f5ebbc35e39b6aa6fe038f1ef348522478f3fe0e01edf",
+    "vcd2saif_executable_sha256": "100e35e860983342c6590ca894461273fb6b8de8b2efc4865b973bfdac4bb6da",
+    "questa_executable_sha256": "45c6fe768922fa291b8209f7c4a1a04f8b5c6fb426db2e495fd6ad161903ac14"
+  },
+  "scope": {
+    "top": "dma_rx512_memory_subsystem_top",
+    "profile": "dma_rx512_reg_c2_b4_m2_sp64",
+    "channels": 2,
+    "fixed_payload_bytes_per_channel": 4096,
+    "shared_block_count": 64,
+    "shared_block_width_bits": 512,
+    "max_burst_beats": 16,
+    "max_outstanding": 4,
+    "storage_model": "register_expanded",
+    "source_commit": "45cd49764d26861027639cd1e3de638dfdc35454",
+    "shared_source_set_sha256": "2316525a44e38bde84ea4d4cbf5139ff49f26e4abbcc91d1bfc1905919087bbb",
+    "s0_prepared_manifest_sha256": "e55b69ddd343b2c20b93e8de674da95c7ea0ea6b7dc2e15ba2157eedb7de097f",
+    "s1_prepared_manifest_sha256": "c1533ec05ac2ab5c5159f573ef0ab7919c503b71021fdc27cdf05d8c491d3270"
+  },
+  "mapped_dc_identity": {
+    "tool": "Design Compiler",
+    "tool_version": "O-2018.06-SP1",
+    "library": "Nangate45",
+    "corner": "typical",
+    "library_db_sha256": "111c429e7ae9341d51f5f04b0e4c7574e5c1359de32d51b151470463abe187de",
+    "library_power_audit": {
+      "internal_power_groups": 2459,
+      "leakage_power_groups": 2071,
+      "legal_icg_cells": 8
+    },
+    "constraint_id": "c2b4_storage_clock_gating_dc_2ns",
+    "constraints_sha256": "0ded9f241bb7a14d13c284b5895fec3c16dfbb35866a78c481a47f97d3bcc6a7",
+    "clock_period_ns": "2.000000",
+    "frequency_mhz": 500,
+    "activity_identity_sha256": "3c67a84e0bf9c8f284b14ccd2ccfd25d0c6237905b65b2978be84c1ceb8e480b",
+    "floorplan_identity_sha256": "72e362371ca7dae86e06f9d1a5a5ce2228445ce2b526196476421e6de2a094f8",
+    "handoff_policy_sha256": "92b643edf57a73935f36d7f3cf0bfe931470a6c87460037746810ea638803aba"
+  },
+  "pair_methodology": {
+    "baseline": "S0: compile_ultra",
+    "candidate": "S1: compile_ultra -gate_clock",
+    "shared_identity": [
+      "production RTL closure",
+      "top and profile",
+      "shared source-set digest",
+      "library and constraint",
+      "workload contract",
+      "normalized mapped-GLS functional trace"
+    ],
+    "prepared_manifest_boundary": "S0 and S1 prepared-manifest hashes differ only because the flow-only clock-gating wrapper is materialized per variant; production RTL is unchanged.",
+    "per_point_activity": "Each mapped implementation has its own VCD/SAIF digest under one deterministic workload contract."
+  },
+  "activity_contract": {
+    "seed": 71,
+    "warmup_cycles": 4096,
+    "workloads": {
+      "idle": {
+        "window_cycles": 4096,
+        "functional_bytes": 0,
+        "definition": "No transaction in the sampled window."
+      },
+      "bursty": {
+        "window_cycles": 4096,
+        "functional_bytes": 65536,
+        "definition": "Sixteen 4 KiB frames; 64 active and 192 idle cycles per 256-cycle interval."
+      },
+      "saturated": {
+        "window_cycles": 4096,
+        "functional_bytes": 1048576,
+        "definition": "1 MiB, 16-beat bursts, four outstanding, ready-memory model; steady-state power window."
+      }
+    },
+    "coverage_gate": {
+      "input_percent": 100,
+      "sequential_percent": 100,
+      "overall_percent": 100,
+      "clock_annotation_percent": 100,
+      "s1_icg_enable_annotation_percent": 100
+    },
+    "mapped_gls_trace_equivalent": true,
+    "power_test_en_functional_value": 0,
+    "verification_tool": "Questa Sim-64 10.7c"
+  },
+  "clock_gating_policy": {
+    "icg_cells": {
+      "CLKGATETST_X1": 837
+    },
+    "icg_count": 837,
+    "gated_bits": 102976,
+    "gated_state_coverage_percent": "90.53551489788203022656737676",
+    "minimum_bit_width": 32,
+    "maximum_gate_fanout": 128,
+    "allowlist_categories": {
+      "fixed_payload": 65536,
+      "shared_payload": 32768,
+      "shared_keep": 4096,
+      "writer": 576
+    },
+    "excluded_scope": [
+      "metadata and read-side control",
+      "CDC synchronizers and pointers",
+      "reset handshakes",
+      "AXI control",
+      "completion",
+      "IRQ/error/status",
+      "whole-domain gating"
+    ]
+  },
+  "promotion_gate": {
+    "primary_workload": "bursty",
+    "minimum_gated_state_coverage_percent": 20,
+    "maximum_bursty_dynamic_delta_percent": -10,
+    "maximum_saturated_dynamic_delta_percent": 1,
+    "maximum_total_area_delta_percent": 2,
+    "observed_bursty_dynamic_delta_percent": "-87.90999922944545758097243983",
+    "observed_saturated_dynamic_delta_percent": "-87.2953250302983419715840231",
+    "observed_total_area_delta_percent": "-20.8239925353542605200602866",
+    "decision": "POSITIVE_MAPPED_DC"
+  },
+  "report_quantization": {
+    "top_power_arithmetic_tolerance_mw": "1.1",
+    "basis": "bounded independent half-LSB sum for three-significant-digit DC hierarchy fields"
+  },
+  "physical_boundary": {
+    "pnr_started": false,
+    "cts_started": false,
+    "openrcx_started": false,
+    "primetime_started": false,
+    "paired_postroute_power": "not_completed"
+  },
+  "prior_negative_experiment": {
+    "public_commit": "78d4d3336270d4d01c4731050e9eea7fe8e47497",
+    "classification": "NEGATIVE / NOT_PROMOTED / PHYSICALLY_BLOCKED",
+    "relationship": "The earlier Writer-only allowlist gated 576 bits; this independent experiment expands only to existing storage-bank write enables."
+  },
+  "artifact_policy": {
+    "published": "logical artifact ID, byte size, and SHA-256 only",
+    "not_distributed": [
+      "commercial logs and reports",
+      "DDC and mapped netlist",
+      "SDC, VCD, and SAIF",
+      "library payload",
+      "host, account, license, and local-path data"
+    ]
+  },
+  "nonclaims": [
+    "No complete-DMA power result.",
+    "No SRAM-profile result.",
+    "No maximum-frequency statement.",
+    "Mapped-DC clock power is not CTS clock-tree power.",
+    "No P&R, CTS, OpenRCX, PrimeTime, or post-route paired-power result.",
+    "No LEC/Formality pass.",
+    "No foundry, signoff, or silicon conclusion."
+  ]
+}

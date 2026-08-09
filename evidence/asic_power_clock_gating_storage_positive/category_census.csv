@@ -1,0 +1,5 @@
+category,eligible_bits,gated_bits,coverage_percent
+fixed_payload,65536,65536,100
+shared_keep,4096,4096,100
+shared_payload,32768,32768,100
+writer,576,576,100

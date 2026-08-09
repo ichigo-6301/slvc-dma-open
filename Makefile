@@ -25,6 +25,7 @@ KCONFIG_PATH := $(ROOT)/Kconfig
 FLOWCTL = $(PYTHON) "$(ROOT)/flows/scripts/flowctl.py" --root "$(ROOT)" --config "$(CONFIG_PATH)"
 CHECKSUM_GENERATOR = $(PYTHON) "$(ROOT)/provenance/generate_checksums.py" --root "$(ROOT)"
 SHOWCASE_ASSET_GENERATOR = $(PYTHON) "$(ROOT)/flows/scripts/generate_showcase_assets.py" --root "$(ROOT)"
+SHOWCASE_RENDER_CHECKER = $(PYTHON) "$(ROOT)/flows/scripts/check_showcase_render.py" --root "$(ROOT)"
 
 export DMA_FLOW_ROOT := $(ROOT)
 export DMA_FLOW_CONFIG := $(CONFIG_PATH)
@@ -91,6 +92,7 @@ asic-evidence-check:
 
 showcase-assets-check:
 > @$(SHOWCASE_ASSET_GENERATOR) --check
+> @$(SHOWCASE_RENDER_CHECKER)
 
 refresh-showcase-assets:
 > @$(SHOWCASE_ASSET_GENERATOR) --write

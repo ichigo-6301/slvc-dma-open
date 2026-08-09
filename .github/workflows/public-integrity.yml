@@ -67,6 +67,11 @@ jobs:
         with:
           python-version: "3.8"
       -
+        name: Verify deterministic showcase assets and browser previews
+        run: |
+          python flows/scripts/generate_showcase_assets.py --root . --check
+          python flows/scripts/check_showcase_render.py --root .
+      -
         name: Verify provenance and documentation links
         run: python flows/scripts/public_hygiene.py --root .
       -

@@ -3,10 +3,13 @@
 
 import json
 from pathlib import Path
+import re
 import shutil
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
+from flows.scripts import check_showcase_render as render_check
 from flows.scripts import generate_showcase_assets as generator
 
 
@@ -31,7 +34,7 @@ class ShowcaseAssetsTest(unittest.TestCase):
             generator.README_EN_PATH,
             generator.RESEARCH_PATH,
             generator.RESEARCH_EN_PATH,
-        ) + generator.AUTHORED_ASSETS
+        )
         for relative in inputs:
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -154,31 +157,38 @@ class ShowcaseAssetsTest(unittest.TestCase):
         with self.assertRaisesRegex(generator.ShowcaseAssetError, "stale showcase assets"):
             generator.check(self.root)
 
-    def test_authored_svg_external_resource_fails(self):
-        path = generator.AUTHORED_ASSETS[0]
+    def validate_mutated_svg(self, relative):
+        generator._validate_svg(
+            relative,
+            (self.root / relative).read_bytes(),
+            generator.GENERATED_RULES[relative.name],
+        )
+
+    def test_generated_svg_external_resource_fails(self):
+        path = generator.OVERVIEW_ASSET
         self.replace_text(path, "</svg>", '<image href="https://example.com/x.png"/></svg>')
         with self.assertRaisesRegex(generator.ShowcaseAssetError, "forbidden SVG content"):
-            generator.check(self.root)
+            self.validate_mutated_svg(path)
 
-    def test_authored_svg_private_path_fails(self):
-        path = generator.AUTHORED_ASSETS[0]
+    def test_generated_svg_private_path_fails(self):
+        path = generator.OVERVIEW_ASSET
         self.replace_text(path, "</svg>", "<text>C:\\private\\asset</text></svg>")
         with self.assertRaisesRegex(generator.ShowcaseAssetError, "forbidden SVG content"):
-            generator.check(self.root)
+            self.validate_mutated_svg(path)
 
-    def test_authored_svg_gradient_fails(self):
-        path = generator.AUTHORED_ASSETS[0]
+    def test_generated_svg_gradient_fails(self):
+        path = generator.OVERVIEW_ASSET
         self.replace_text(path, "</svg>", '<linearGradient id="g"/></svg>')
         with self.assertRaisesRegex(generator.ShowcaseAssetError, "forbidden SVG content"):
-            generator.check(self.root)
+            self.validate_mutated_svg(path)
 
     def test_readme_asset_reference_deletion_fails(self):
         self.replace_text(
             generator.README_PATH,
-            "({})".format(generator.MEMORY_PROFILES_ASSET.as_posix()),
-            "(docs/assets/missing.svg)",
+            'href="{}"'.format(generator.MEMORY_PROFILES_ASSET.as_posix()),
+            'href="docs/assets/missing.svg"',
         )
-        with self.assertRaisesRegex(generator.ShowcaseAssetError, "must reference"):
+        with self.assertRaisesRegex(generator.ShowcaseAssetError, "must embed"):
             generator.check(self.root)
 
     def test_readme_anchor_deletion_fails(self):
@@ -209,6 +219,201 @@ class ShowcaseAssetsTest(unittest.TestCase):
         path.write_text(path.read_text(encoding="utf-8") + "\nBursty: -87.91%\n", encoding="utf-8")
         with self.assertRaisesRegex(generator.ShowcaseAssetError, "must not publish"):
             generator.check(self.root)
+
+    def test_visual_01_exact_canvas_and_theme_contract(self):
+        for relative in generator.GENERATED_ASSETS:
+            with self.subTest(asset=relative.name):
+                text = (self.root / relative).read_text(encoding="ascii")
+                root = ET.fromstring(text)
+                self.assertEqual(root.attrib["width"], "1600")
+                self.assertEqual(root.attrib["height"], "1000")
+                self.assertEqual(root.attrib["viewBox"], "0 0 1600 1000")
+                self.assertEqual(
+                    root.attrib["preserveAspectRatio"], "xMidYMid meet"
+                )
+                for token in generator.THEME_TOKENS:
+                    self.assertIn(token, text)
+
+    def test_visual_02_banned_palette_and_rounded_box_mutations_fail(self):
+        path = generator.VIRTUAL_CHANNEL_ASSET
+        original = (self.root / path).read_text(encoding="ascii")
+        for mutation in ('#dbeafe', '#f0fdf4', 'rx="8"'):
+            with self.subTest(mutation=mutation):
+                if mutation.startswith("#"):
+                    changed = original.replace("#ffffff", mutation, 1)
+                else:
+                    changed = original.replace('<rect ', '<rect {} '.format(mutation), 1)
+                (self.root / path).write_text(changed, encoding="ascii")
+                with self.assertRaisesRegex(
+                        generator.ShowcaseAssetError,
+                        "forbidden pastel|rounded box"):
+                    self.validate_mutated_svg(path)
+        (self.root / path).write_text(original, encoding="ascii")
+
+    def test_visual_03_forbidden_svg_feature_mutations_fail(self):
+        path = generator.OVERVIEW_ASSET
+        original = (self.root / path).read_text(encoding="ascii")
+        mutations = (
+            '<filter id="shadow"/>',
+            '<image href="data:image/png;base64,AAAA"/>',
+            '<style>@font-face{font-family:private}</style>',
+            '<foreignObject/>',
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                changed = original.replace("</svg>", mutation + "</svg>")
+                (self.root / path).write_text(changed, encoding="ascii")
+                with self.assertRaisesRegex(
+                        generator.ShowcaseAssetError, "forbidden SVG content"):
+                    self.validate_mutated_svg(path)
+        (self.root / path).write_text(original, encoding="ascii")
+
+    def test_visual_04_readmes_embed_all_five_clickable_assets(self):
+        for readme in (generator.README_PATH, generator.README_EN_PATH):
+            text = (self.root / readme).read_text(encoding="utf-8")
+            positions = []
+            for asset in generator.README_ASSET_ORDER:
+                pattern = re.compile(
+                    r'<p align="center">\s*<a href="{0}">\s*'
+                    r'<img src="{0}"\s+width="1000"\s+alt="[^"]+">\s*'
+                    r'</a>\s*</p>'.format(re.escape(asset.as_posix())),
+                    re.MULTILINE,
+                )
+                matches = list(pattern.finditer(text))
+                self.assertEqual(len(matches), 1, (readme, asset))
+                positions.append(matches[0].start())
+            self.assertEqual(positions, sorted(positions))
+
+    def test_visual_05_lifecycle_requires_header_and_payload_at_gate(self):
+        root = ET.fromstring(
+            (self.root / generator.FRAME_LIFECYCLE_ASSET).read_bytes()
+        )
+        by_id = {
+            element.attrib["id"]: element
+            for element in root.iter() if "id" in element.attrib
+        }
+        self.assertEqual(
+            by_id["admission-gate"].attrib["data-requires"],
+            "header-control,payload",
+        )
+        self.assertEqual(
+            by_id["control-to-admission"].attrib["data-connects"],
+            "header-control-to-admission",
+        )
+        self.assertEqual(
+            by_id["payload-to-admission"].attrib["data-connects"],
+            "payload-to-admission",
+        )
+
+    def test_visual_06_lifecycle_commit_completion_release_order(self):
+        root = ET.fromstring(
+            (self.root / generator.FRAME_LIFECYCLE_ASSET).read_bytes()
+        )
+        by_id = {
+            element.attrib["id"]: element
+            for element in root.iter() if "id" in element.attrib
+        }
+        self.assertEqual(by_id["commit-boundary"].attrib["data-boundary-order"], "1")
+        self.assertEqual(by_id["release-boundary"].attrib["data-boundary-order"], "2")
+        completion = [
+            int(by_id[name].attrib["data-completion-order"])
+            for name in ("cqe-body", "owner-valid", "release-frame-ownership")
+        ]
+        self.assertEqual(completion, [1, 2, 3])
+
+    def test_visual_07_async_transaction_directions_are_explicit(self):
+        root = ET.fromstring(
+            (self.root / generator.MEMORY_PROFILES_ASSET).read_bytes()
+        )
+        by_id = {
+            element.attrib["id"]: element
+            for element in root.iter() if "id" in element.attrib
+        }
+        expected = {
+            "command": "aclk-to-mem-clk",
+            "payload": "aclk-to-mem-clk",
+            "completion": "mem-clk-to-aclk",
+        }
+        for profile in ("async64", "async512"):
+            for suffix, direction in expected.items():
+                edge = by_id["{}-{}".format(profile, suffix)]
+                self.assertEqual(edge.attrib["data-direction"], direction)
+                self.assertIn(edge.attrib.get("class"), ("flow-blue", "flow-return"))
+                if direction == "aclk-to-mem-clk":
+                    self.assertTrue(edge.attrib["d"].startswith("M570"))
+                else:
+                    self.assertTrue(edge.attrib["d"].startswith("M940"))
+
+    def test_visual_08_profile_serializer_bypass_and_axi_domain(self):
+        root = ET.fromstring(
+            (self.root / generator.MEMORY_PROFILES_ASSET).read_bytes()
+        )
+        by_id = {
+            element.attrib["id"]: element
+            for element in root.iter() if "id" in element.attrib
+        }
+        same = by_id["profile-same-clock512"]
+        async64 = by_id["profile-async64"]
+        async512 = by_id["profile-async512"]
+        self.assertEqual(same.attrib["data-cdc"], "bypass")
+        self.assertIn("512-to-64 serializer", "".join(async64.itertext()))
+        self.assertNotIn("serializer", "".join(async512.itertext()).lower())
+        self.assertNotIn("AW / W / B", "".join(same.itertext()))
+        self.assertIn("AW / W / B", "".join(async64.itertext()))
+        self.assertIn("AW / W / B", "".join(async512.itertext()))
+
+    def test_visual_09_virtual_channel_semantics_and_caveat(self):
+        text = (self.root / generator.VIRTUAL_CHANNEL_ASSET).read_text(
+            encoding="ascii"
+        )
+        for token in (
+                "dedicated capacity", "free-list capacity",
+                "Only committed frames are visible", "Selector locks one frame",
+                "no source interleave", "channel 0 full",
+                "channel 1 progresses"):
+            self.assertIn(token, text)
+
+    def test_visual_10_ppa_values_remain_evidence_bound(self):
+        metrics = generator._extract_metrics(self.root)
+        text = (self.root / generator.PPA_ASSET).read_text(encoding="ascii")
+        expected = (
+            "{}%".format(metrics["writer_total"]),
+            "{}%".format(metrics["writer_comb"]),
+            "{} B/cycle".format(metrics["wide_bytes"]),
+            "{} B/cycle".format(metrics["async64_bytes"]),
+            "+{} / +{} ns".format(metrics["setup_wns"], metrics["hold_wns"]),
+            "{} mm2".format(metrics["area_mm2"]),
+        )
+        for token in expected:
+            self.assertIn(token, text)
+        self.assertIn(
+            "Three independent evidence scopes; not one complete-DMA PPA result.",
+            text,
+        )
+
+    def test_visual_11_all_five_regenerate_byte_identically(self):
+        before = {
+            path: (self.root / path).read_bytes()
+            for path in generator.GENERATED_ASSETS
+        }
+        generator.write(self.root)
+        after = {
+            path: (self.root / path).read_bytes()
+            for path in generator.GENERATED_ASSETS
+        }
+        self.assertEqual(before, after)
+
+    def test_visual_12_real_browser_previews_have_clean_layout(self):
+        browser, reports = render_check.check_render(self.root)
+        self.assertTrue(browser.is_file())
+        self.assertEqual(set(reports), {
+            path.as_posix() for path in generator.GENERATED_ASSETS
+        })
+        for report in reports.values():
+            self.assertEqual(report["failures"], [])
+            self.assertEqual(report["rendered_width"], 1000)
+            self.assertEqual(report["rendered_height"], 625)
+            self.assertGreater(report["png_bytes"], 2000)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,33 @@
+{
+  "schema": "slvc_dma_experimental_storage_power_branch_v1",
+  "branch": "research/dma-a3-clock-gating-storage-positive-2026-08",
+  "evidence_path": "evidence/asic_power_clock_gating_storage_positive/manifest.json",
+  "status": "positive_mapped_dc",
+  "classification": "POSITIVE_MAPPED_DC / BRANCH_ONLY",
+  "promotion_eligible": true,
+  "main_merge_recommended": false,
+  "production_rtl_changed": false,
+  "postroute_pair_completed": false,
+  "lec_status": "not_available",
+  "registered_verified_claim": false,
+  "release_or_tag_changed": false,
+  "fixed_provenance_revisions": {
+    "experiment_baseline": "14538a48b1483a50ba7fceef6f4abde8f6e5ea86",
+    "flow_as_run": "0b7b4f489eaf8004b0e578f1333f45c20d6e6591",
+    "annotation_launcher_identity": "40de1a2fa016c558e63f715cc27115a6ab26de21",
+    "report_quantization_contract": "e33019b2594eb335dbf7dc9a8aebcccd8066c13c",
+    "machine_evidence": "899af6d698980b17b71c67c35afa381511dff429",
+    "final_documentation": "cb597a290301e284b1c2bca52ba8a2b122aa4f46",
+    "rtl_closure": "45cd49764d26861027639cd1e3de638dfdc35454",
+    "shared_source_set": "348df4949d4d88954a4402cd47118c6444099a17"
+  },
+  "prior_negative_public_commit": "78d4d3336270d4d01c4731050e9eea7fe8e47497",
+  "publication_boundary": {
+    "branch_only": true,
+    "main_modified": false,
+    "pull_request_created": false,
+    "release_tag_changed": false,
+    "raw_commercial_artifacts_published": false
+  },
+  "decision": "The bounded storage-bank experiment passes its mapped-DC promotion gates; production RTL remains unchanged and there is no main merge recommendation or post-route power claim."
+}

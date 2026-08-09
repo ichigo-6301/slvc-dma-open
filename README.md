@@ -2,7 +2,12 @@
 
 [![Public Integrity](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml/badge.svg?branch=main)](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml) ![RTL](https://img.shields.io/badge/RTL-Verilog-2f6f9f) [![License](https://img.shields.io/github/license/ichigo-6301/slvc-dma-open)](LICENSE)
 
-[English](README.en.md) · [架构](docs/zh-CN/architecture.md) · [集成](docs/zh-CN/integration.md) · [验证](docs/zh-CN/verification.md) · [结果](docs/zh-CN/results.md) · [限制](docs/zh-CN/limitations.md)
+[English](README.en.md) · [架构](docs/zh-CN/architecture.md) · [集成](docs/zh-CN/integration.md) · [验证](docs/zh-CN/verification.md) · [结果](docs/zh-CN/results.md) · [限制](docs/zh-CN/limitations.md) · [功耗研究](docs/zh-CN/asic_power_storage_clock_gating_experiment.md)
+
+> [!WARNING]
+> 本分支是独立的 ASIC 功耗研究记录，不属于 `main`、`v0.1.0-rc1` 或任何生产
+> Profile。实验在 Mapped-DC 层面达到预设门禁，但没有运行 P&R/CTS/Post-route
+> 功耗流程，不修改生产 RTL，也不建议合入 `main`。
 
 **面向多源共享高速链路的 512-bit 虚拟通道 DMA：在协议适配层与 DDR 之间提供 channel-aware admission、混合缓冲、独立控制消息和可审计的 completion ownership。**
 
@@ -21,6 +26,42 @@
 | 缓冲策略 | 每通道 fixed ingress buffer，或由 free list 管理的 shared frame pool |
 | 流控边界 | Payload `valid/ready` 与 PAUSE/RESUME control-message 通道分离；后者不是网络端到端流控 |
 | 实现证据 | Windows ModelSim + Linux Questa；Vivado routed OOC；Nangate45 DC/OpenROAD/OpenRCX/PrimeTime |
+
+## ASIC 存储 Bank Clock Gating 研究分支
+
+> [!WARNING]
+> 本节是 `POSITIVE_MAPPED_DC / BRANCH_ONLY` 研究结果，不是 `main` 的正式
+> verified claim。`promotion_eligible` 只表示通过本实验预先定义的 Mapped-DC
+> 门禁；不等于生产合入建议。
+
+本实验在两通道 C2B4 register-expanded RX512 子系统上，以相同生产 RTL closure、
+500 MHz 约束、Nangate45 typical library 和确定性 workload 比较普通
+`compile_ultra`（S0）与 `compile_ultra -gate_clock`（S1）。S1 只利用既有存储 Bank
+写使能，没有新增或修改生产 RTL。
+
+| 项目 | 结果 |
+| --- | --- |
+| Scope | 两通道 C2B4 register-expanded RX512 子系统；不是完整 DMA 或 SRAM Profile |
+| Clock gates | `837 x CLKGATETST_X1`，门控 `102,976` bit |
+| Gated-state coverage | `90.535515%` |
+| Bursty dynamic | `-87.909999%` |
+| Saturated dynamic | `-87.295325%` |
+| Mapped total area | `-20.823993%` |
+| Timing/electrical | S0/S1 均在 500 MHz setup/hold closed；映射电气与结构违例为 `0` |
+| 决策 | 通过实验门禁；不修改生产 RTL，不建议合入 `main` |
+
+较大的面积变化来自 DC 将逐 bit recirculation mux 转换为共享 ICG 后的映射结果，
+不是 RTL 面积或 SRAM 结论。Mapped-DC clock power 也不是 CTS 后 Clock Tree Power。
+本轮没有 post-route paired power，没有 LEC/Formality PASS，也不声明 Fmax、P&R、
+foundry 或 signoff。与早期 576-bit Writer-only 负结果的区别及完整解释见
+[中文研究说明](docs/zh-CN/asic_power_storage_clock_gating_experiment.md)。
+
+机器入口：[English research note](docs/en/asic_power_storage_clock_gating_experiment.md) ·
+[Evidence README](evidence/asic_power_clock_gating_storage_positive/README.md) ·
+[points.csv](evidence/asic_power_clock_gating_storage_positive/points.csv) ·
+[comparisons.csv](evidence/asic_power_clock_gating_storage_positive/comparisons.csv) ·
+[category census](evidence/asic_power_clock_gating_storage_positive/category_census.csv) ·
+[branch-only validator](flows/scripts/validate_asic_power_storage_clock_gating_experiment.py)
 
 <a id="key-results-and-evidence"></a>
 ## 关键结果与证据入口

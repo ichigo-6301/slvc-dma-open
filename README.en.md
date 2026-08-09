@@ -2,7 +2,13 @@
 
 [![Public Integrity](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml/badge.svg?branch=main)](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml) ![RTL](https://img.shields.io/badge/RTL-Verilog-2f6f9f) [![License](https://img.shields.io/github/license/ichigo-6301/slvc-dma-open)](LICENSE)
 
-[中文](README.md) · [Architecture](docs/en/architecture.md) · [Integration](docs/en/integration.md) · [Verification](docs/en/verification.md) · [Results](docs/en/results.md) · [Limitations](docs/en/limitations.md)
+[中文](README.md) · [Architecture](docs/en/architecture.md) · [Integration](docs/en/integration.md) · [Verification](docs/en/verification.md) · [Results](docs/en/results.md) · [Limitations](docs/en/limitations.md) · [Power research](docs/en/asic_power_storage_clock_gating_experiment.md)
+
+> [!WARNING]
+> This is a branch-only ASIC power research record. It is not part of `main`,
+> `v0.1.0-rc1`, or any production profile. The experiment passes its mapped-DC
+> gates, but no P&R, CTS, or post-route power flow was run. It makes no
+> production RTL change and is not recommended for merge into `main`.
 
 **A 512-bit virtual-channel DMA for multi-source shared high-speed links, providing channel-aware admission, hybrid buffering, a separate control-message path, and auditable completion ownership between protocol adapters and DDR.**
 
@@ -21,6 +27,45 @@ Sensors, baseband pipelines, or local endpoints can first be multiplexed into on
 | Buffering | Per-channel fixed ingress storage or a free-list-managed shared frame pool |
 | Flow-control boundary | Payload `valid/ready` is separate from PAUSE/RESUME control messages; the latter is not network end-to-end flow control |
 | Implementation evidence | Windows ModelSim + Linux Questa, Vivado routed OOC, and Nangate45 DC/OpenROAD/OpenRCX/PrimeTime |
+
+## ASIC Storage-Bank Clock-Gating Research Branch
+
+> [!WARNING]
+> This is a `POSITIVE_MAPPED_DC / BRANCH_ONLY` research result, not a formal
+> verified claim on `main`. `promotion_eligible` means only that it passes this
+> experiment's predefined mapped-DC gates; it is not a production merge
+> recommendation.
+
+The experiment compares ordinary `compile_ultra` (S0) with
+`compile_ultra -gate_clock` (S1) on the two-channel C2B4 register-expanded RX512
+subsystem. Both points share the same production RTL closure, 500 MHz
+constraint, Nangate45 typical library, and deterministic workload contract. S1
+uses existing storage-bank write enables; there is no production RTL change.
+
+| Item | Result |
+| --- | --- |
+| Scope | Two-channel C2B4 register-expanded RX512 subsystem; not a complete DMA or SRAM profile |
+| Clock gates | `837 x CLKGATETST_X1`, gating `102,976` bits |
+| Gated-state coverage | `90.535515%` |
+| Bursty dynamic | `-87.909999%` |
+| Saturated dynamic | `-87.295325%` |
+| Mapped total area | `-20.823993%` |
+| Timing/electrical | S0 and S1 setup/hold close at 500 MHz; mapped electrical and structural violation counts are `0` |
+| Decision | Experiment gates pass; no production RTL change; not recommended for merge into `main` |
+
+The large area change is a mapped result from replacing per-bit recirculation
+muxing with shared ICGs; it is not an RTL-area or SRAM conclusion. Mapped-DC
+clock power is not CTS clock-tree power. There is no post-route paired power and
+no LEC/Formality PASS. This branch makes no Fmax, P&R, foundry, or signoff
+claim. The [English research note](docs/en/asic_power_storage_clock_gating_experiment.md)
+explains the difference from the earlier 576-bit Writer-only negative result.
+
+Machine entry points: [Chinese research note](docs/zh-CN/asic_power_storage_clock_gating_experiment.md) ·
+[Evidence README](evidence/asic_power_clock_gating_storage_positive/README.md) ·
+[points.csv](evidence/asic_power_clock_gating_storage_positive/points.csv) ·
+[comparisons.csv](evidence/asic_power_clock_gating_storage_positive/comparisons.csv) ·
+[category census](evidence/asic_power_clock_gating_storage_positive/category_census.csv) ·
+[branch-only validator](flows/scripts/validate_asic_power_storage_clock_gating_experiment.py)
 
 <a id="key-results-and-evidence"></a>
 ## Key Results And Evidence

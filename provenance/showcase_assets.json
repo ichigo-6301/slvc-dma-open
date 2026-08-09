@@ -24,12 +24,16 @@
       "format": "svg",
       "source": "deterministically generated from tracked RTL architecture and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "03f40a48ecf6cf3c5fb7a6600499c24c189ffaa646523150784cc54fe7b8ddb0",
+      "generator_sha256": "662aef165d724191afe386950f41e73c11992e15bde4ddeac7f8b23b4304fb2c",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
           "path": "rtl/integration/slvc_dma_wrapper.v",
           "sha256": "312d87a2eb87fc958f0fe6a7043c12ec416974d86131077b8048d6beda99e976"
+        },
+        {
+          "path": "rtl/integration/frame_dma_wrapper.v",
+          "sha256": "4a2624d40d0faea11a7ceef6f3a957f1ba7fa87a4677ca07e592e948cec70093"
         },
         {
           "path": "rtl/integration/frame_dma_rx_top.v",
@@ -50,7 +54,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked RTL, regression evidence, and CDC claims",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "03f40a48ecf6cf3c5fb7a6600499c24c189ffaa646523150784cc54fe7b8ddb0",
+      "generator_sha256": "662aef165d724191afe386950f41e73c11992e15bde4ddeac7f8b23b4304fb2c",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -58,8 +62,16 @@
           "sha256": "312d87a2eb87fc958f0fe6a7043c12ec416974d86131077b8048d6beda99e976"
         },
         {
+          "path": "rtl/integration/frame_dma_wrapper.v",
+          "sha256": "4a2624d40d0faea11a7ceef6f3a957f1ba7fa87a4677ca07e592e948cec70093"
+        },
+        {
           "path": "rtl/integration/frame_dma_rx_top.v",
           "sha256": "f7de4e5c02b6e9608f606e0915514c11fc4f7f580981be0b5c4aee0314036062"
+        },
+        {
+          "path": "flows/profiles/dma_rx512_reg_c2_b4_m2_sp64/profile.yaml",
+          "sha256": "8b196400f4f6a08783b90afbb27ecb1b3c4cf8a04bb0328557facf754dd9c2dc"
         },
         {
           "path": "evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml",
@@ -81,7 +93,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked public claims and sanitized implementation evidence",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "03f40a48ecf6cf3c5fb7a6600499c24c189ffaa646523150784cc54fe7b8ddb0",
+      "generator_sha256": "662aef165d724191afe386950f41e73c11992e15bde4ddeac7f8b23b4304fb2c",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -95,6 +107,10 @@
         {
           "path": "evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml",
           "sha256": "8438cba00f5a7327124c321fe0724846cfc292d75f9ca2c4cf6caad22d893765"
+        },
+        {
+          "path": "flows/profiles/dma_rx512_reg_c2_b4_m2_sp64/profile.yaml",
+          "sha256": "8b196400f4f6a08783b90afbb27ecb1b3c4cf8a04bb0328557facf754dd9c2dc"
         },
         {
           "path": "provenance/claims.yaml",

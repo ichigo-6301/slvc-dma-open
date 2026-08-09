@@ -111,6 +111,7 @@ C2B4 Writer paired A/B 未满足 subsystem promotion 条件：W0 本身已闭合
 以下命令不运行 ModelSim/Questa、Vivado、DC、OpenROAD 或 PrimeTime：
 
 ```bash
+make showcase-assets-check
 make showcase-check
 make slvc_dma_512_defconfig
 make sim-dry-run

@@ -31,6 +31,10 @@ C2B4_PROFILE_PATH = Path(
     "flows/profiles/dma_rx512_reg_c2_b4_m2_sp64/profile.yaml"
 )
 GENERATOR_PATH = Path("flows/scripts/generate_showcase_assets.py")
+README_PATH = Path("README.md")
+README_EN_PATH = Path("README.en.md")
+RESEARCH_PATH = Path("docs/zh-CN/research_branches.md")
+RESEARCH_EN_PATH = Path("docs/en/research_branches.md")
 
 FRAME_LIFECYCLE_ASSET = Path("docs/assets/slvc_dma_frame_lifecycle.svg")
 MEMORY_PROFILES_ASSET = Path("docs/assets/slvc_dma_memory_profiles.svg")
@@ -45,6 +49,23 @@ AUTHORED_ASSETS = (
     Path("docs/assets/slvc_dma_virtual_channel_buffering.svg"),
 )
 OBSOLETE_ASSETS = (Path("docs/assets/slvc_dma_results_at_a_glance.svg"),)
+
+NAVIGATION_ANCHORS = (
+    "key-results-and-evidence",
+    "frame-lifecycle",
+    "memory-profiles-and-cdc",
+    "throughput-ppa-and-asic",
+    "fixed-implementation-points",
+    "research-branches",
+    "result-scope-levels",
+    "quick-public-checks",
+    "ten-minute-rtl-reading-path",
+)
+RESEARCH_BRANCH = "research/dma-a3-clock-gating-storage-positive-2026-08"
+RESEARCH_COMMIT = "d99234ffb3d7d9a5b068ca4434fcfce8b7fd5c79"
+CLAIM_MARKER = re.compile(
+    r"<!-- claim:([A-Za-z0-9_.-]+) maturity:verified -->"
+)
 
 ADMISSION_CLAIM = "slvc_dma_channel_admission_isolation_directed"
 WRITER_CLAIM = "slvc_dma_writer_reservation_component_paired_dc"
@@ -780,10 +801,54 @@ def _validate_all(root, rendered):
         _validate_svg(path, (root / path).read_bytes(), AUTHORED_RULES[path.name])
 
 
+def _validate_navigation(root):
+    readmes = {
+        README_PATH: (root / README_PATH).read_text(encoding="utf-8"),
+        README_EN_PATH: (root / README_EN_PATH).read_text(encoding="utf-8"),
+    }
+    marker_lists = []
+    for path, text in readmes.items():
+        positions = []
+        for anchor in NAVIGATION_ANCHORS:
+            token = '<a id="{}"></a>'.format(anchor)
+            if text.count(token) != 1:
+                _fail("{} must contain anchor {} exactly once".format(path, anchor))
+            positions.append(text.index(token))
+        if positions != sorted(positions):
+            _fail("{} showcase anchor order mismatch".format(path))
+        for asset in GENERATED_ASSETS:
+            token = "({})".format(asset.as_posix())
+            if text.count(token) != 1:
+                _fail("{} must reference {} exactly once".format(path, asset))
+        marker_lists.append(CLAIM_MARKER.findall(text))
+        if text.count(RESEARCH_BRANCH) != 1:
+            _fail("{} canonical research branch identity mismatch".format(path))
+    if marker_lists[0] != marker_lists[1] or len(marker_lists[0]) != len(set(marker_lists[0])):
+        _fail("README claim marker parity mismatch")
+
+    research_texts = {
+        RESEARCH_PATH: (root / RESEARCH_PATH).read_text(encoding="utf-8"),
+        RESEARCH_EN_PATH: (root / RESEARCH_EN_PATH).read_text(encoding="utf-8"),
+    }
+    for path, text in research_texts.items():
+        if text.count(RESEARCH_BRANCH) != 2 or text.count(RESEARCH_COMMIT) != 2:
+            _fail("{} research branch or fixed-commit identity mismatch".format(path))
+        if "%" in text or any(token in text for token in (
+                "102,976", "837", "-87.91", "-87.30", "-20.82", "-89.53")):
+            _fail("{} must not publish branch-only power metrics".format(path))
+        for boundary in (
+                "not complete DMA" if path == RESEARCH_EN_PATH else "不是完整 DMA",
+                "post-route power",
+                "Production RTL"):
+            if boundary not in text:
+                _fail("{} is missing research boundary {}".format(path, boundary))
+
+
 def write(root):
     metrics = _extract_metrics(root)
     rendered = _render_assets(metrics)
     _validate_all(root, rendered)
+    _validate_navigation(root)
     ASSET_DIR_ABS = root / ASSET_DIR
     ASSET_DIR_ABS.mkdir(parents=True, exist_ok=True)
     for path, payload in rendered.items():
@@ -801,6 +866,7 @@ def check(root):
     metrics = _extract_metrics(root)
     rendered = _render_assets(metrics)
     _validate_all(root, rendered)
+    _validate_navigation(root)
     stale = [path.as_posix() for path, payload in rendered.items()
              if not (root / path).is_file() or (root / path).read_bytes() != payload]
     stale.extend(path.as_posix() for path in OBSOLETE_ASSETS if (root / path).exists())

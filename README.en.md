@@ -111,6 +111,7 @@ The C2B4 Writer paired A/B did not meet subsystem promotion conditions: W0 alrea
 These commands do not run ModelSim/Questa, Vivado, DC, OpenROAD, or PrimeTime:
 
 ```bash
+make showcase-assets-check
 make showcase-check
 make slvc_dma_512_defconfig
 make sim-dry-run

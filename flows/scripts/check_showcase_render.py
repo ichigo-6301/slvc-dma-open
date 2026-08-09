@@ -8,6 +8,7 @@ import html
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import shutil
 import struct
@@ -56,6 +57,9 @@ def _candidate_paths():
     for root in roots:
         for suffix in suffixes:
             yield root / suffix
+    if sys.platform.startswith("linux") and "microsoft" in platform.release().lower():
+        yield Path("/mnt/c/Program Files/Google/Chrome/Application/chrome.exe")
+        yield Path("/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe")
 
 
 def discover_browser():
@@ -171,7 +175,45 @@ svg{{display:block;width:1000px;height:625px}}
 """.format(svg=svg_text, script=script)
 
 
+def _uses_wsl_windows_browser(browser):
+    return (
+        sys.platform.startswith("linux") and
+        "microsoft" in platform.release().lower() and
+        browser.suffix.lower() == ".exe"
+    )
+
+
+def _windows_path(path):
+    completed = subprocess.run(
+        ("wslpath", "-w", str(path)),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        timeout=10,
+    )
+    if completed.returncode != 0 or not completed.stdout.strip():
+        raise ShowcaseRenderError(
+            "failed to translate WSL path for Windows browser: {}".format(path)
+        )
+    return completed.stdout.strip()
+
+
+def _windows_file_uri(path):
+    translated = _windows_path(path).replace("\\", "/").replace(" ", "%20")
+    return "file:///" + translated
+
+
 def _browser_command(browser, profile, extra, page):
+    interop = _uses_wsl_windows_browser(browser)
+    profile_text = _windows_path(profile) if interop else str(profile)
+    translated_extra = []
+    for item in extra:
+        if interop and item.startswith("--screenshot="):
+            item = "--screenshot={}".format(
+                _windows_path(Path(item.split("=", 1)[1]))
+            )
+        translated_extra.append(item)
+    page_uri = _windows_file_uri(page) if interop else page.as_uri()
     return [
         str(browser),
         "--headless=new",
@@ -182,8 +224,8 @@ def _browser_command(browser, profile, extra, page):
         "--allow-file-access-from-files",
         "--force-device-scale-factor=1",
         "--window-size=1000,625",
-        "--user-data-dir={}".format(profile),
-    ] + list(extra) + [page.as_uri()]
+        "--user-data-dir={}".format(profile_text),
+    ] + translated_extra + [page_uri]
 
 
 def _run_browser(command):
@@ -224,7 +266,13 @@ def check_render(root, assets=None, browser=None):
     browser = Path(browser).resolve() if browser else discover_browser()
     selected = tuple(assets or generator.GENERATED_ASSETS)
     reports = {}
-    with tempfile.TemporaryDirectory(prefix="slvc-dma-showcase-render-") as temporary:
+    temporary_parent = None
+    if _uses_wsl_windows_browser(browser):
+        temporary_parent = root / "build"
+        temporary_parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+            prefix="slvc-dma-showcase-render-",
+            dir=str(temporary_parent) if temporary_parent else None) as temporary:
         temporary_root = Path(temporary)
         for index, relative in enumerate(selected):
             svg_path = root / relative

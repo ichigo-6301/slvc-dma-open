@@ -32,6 +32,8 @@ RX parses the fixed 64-byte SHDR64 header, admits the segment using channel meta
 
 ## Virtual-Channel Lifecycle
 
+![SLVC DMA frame lifecycle and ownership boundaries](../assets/slvc_dma_frame_lifecycle.svg)
+
 1. **Parse**: the elastic input captures SHDR64 and extracts `flow_id`, payload length, sequence, timestamp, and CRC-related fields.
 2. **Match**: `dma_rx_channel_match` combines dynamic header metadata with software-programmed context from `dma_rx_channel_table` without owning table state.
 3. **Check**: the RX state machine checks destination-ring space, ingress/shared storage, CQ credit, reset state, and flow-control state.
@@ -69,6 +71,8 @@ The UDP adapter is outside `frame_dma_wrapper`, so frozen-core FPGA OOC results 
 ## RX Memory Development Profiles
 
 Default-off RX memory profiles leave parsing and admission unchanged. After a fixed-ingress or shared-pool frame reaches the existing commit point, `dma_rx_ingress_source_selector` locks one 512-bit drain source:
+
+![SLVC DMA RX memory profiles and CDC transaction directions](../assets/slvc_dma_memory_profiles.svg)
 
 - same-clock 512 feeds `dma_axi_write_engine_512` directly;
 - async64/async512 cross a command, ordered 512-bit payload, and tagged completion through three FIFO channels;

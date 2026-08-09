@@ -32,6 +32,8 @@ RX 解析固定 64-byte SHDR64 header，根据 channel metadata 执行 admission
 
 ## 虚拟通道生命周期
 
+![SLVC DMA frame lifecycle and ownership boundaries](../assets/slvc_dma_frame_lifecycle.svg)
+
 1. **Parse**：elastic input 先锁存 SHDR64，提取 `flow_id`、payload length、sequence、timestamp 和 CRC 相关字段。
 2. **Match**：`dma_rx_channel_match` 将动态 header metadata 与 `dma_rx_channel_table` 中的软件配置组合，但不拥有表状态。
 3. **Check**：RX 状态机检查目标 ring free space、ingress/shared storage、CQ credit 和当前 reset/flow-control 状态。
@@ -69,6 +71,8 @@ UDP adapter 不属于 `frame_dma_wrapper`，因此冻结 core 的 FPGA OOC 结�
 ## RX Memory 开发 Profile
 
 默认关闭的 RX memory profile 不改变 parser/admission 前端。fixed ingress 或 shared pool frame 到达现有 commit 点后，`dma_rx_ingress_source_selector` 锁定一个 512-bit drain source：
+
+![SLVC DMA RX memory profiles and CDC transaction directions](../assets/slvc_dma_memory_profiles.svg)
 
 - same-clock 512 直接进入 `dma_axi_write_engine_512`；
 - async64/async512 通过 command、ordered 512-bit payload 和 tagged completion 三条 FIFO channel 跨域；

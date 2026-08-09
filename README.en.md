@@ -9,10 +9,12 @@
 Sensors, baseband pipelines, or local endpoints can first be multiplexed into one SHDR64 segment stream. SLVC DMA selects a channel and DDR ring from header metadata, manages either fixed channel storage or a shared frame pool, and publishes software-visible completion events through a Completion Queue.
 
 <p align="center">
-  <a href="docs/assets/slvc_dma_overview.svg">
-    <img src="docs/assets/slvc_dma_overview.svg" width="1000" alt="SLVC DMA shared-link system overview">
+  <a href="docs/assets/showcase/slvc_dma_system_overview.png">
+    <img src="docs/assets/showcase/slvc_dma_system_overview.png" width="1000" alt="SLVC DMA shared-link system overview">
   </a>
 </p>
+
+This view places shared-link RX, descriptor-driven TX, joint admission, hybrid buffering, and DDR/CQ ownership in one system boundary; public tables and Evidence remain the numeric authority.
 
 <a id="key-results-and-evidence"></a>
 
@@ -37,19 +39,7 @@ Sensors, baseband pipelines, or local endpoints can first be multiplexed into on
 
 RX parses `flow_id` and length from the 64-byte SHDR64 header and admits a frame only when ingress, target DDR Ring, and CQ credits can all be reserved. Payload enters either per-channel Fixed ingress or the block-free-list-managed Shared Frame Pool. Only a whole-frame commit makes it visible to the source selector, which remains locked through frame end. After AXI responses complete, hardware writes the CQE body, publishes owner/valid and IRQ, and finally releases frame ownership.
 
-<p align="center">
-  <a href="docs/assets/slvc_dma_frame_lifecycle.svg">
-    <img src="docs/assets/slvc_dma_frame_lifecycle.svg" width="1000" alt="SLVC DMA frame lifecycle and ownership boundaries">
-  </a>
-</p>
-
-<p align="center">
-  <a href="docs/assets/slvc_dma_virtual_channel_buffering.svg">
-    <img src="docs/assets/slvc_dma_virtual_channel_buffering.svg" width="1000" alt="SLVC DMA virtual-channel buffering and frame isolation">
-  </a>
-</p>
-
-[Read the complete data path, resource boundaries, and blocking conditions](docs/en/architecture.md)
+[Detailed frame lifecycle](docs/assets/slvc_dma_frame_lifecycle.svg) · [Fixed/Shared virtual-channel view](docs/assets/slvc_dma_virtual_channel_buffering.svg) · [Complete data path, resource boundaries, and blocking conditions](docs/en/architecture.md)
 
 <a id="memory-profiles-and-cdc"></a>
 
@@ -62,12 +52,14 @@ Legacy64 and Same-clock512 issue AXI writes in `aclk`. Async64/Async512 cross on
 Same-clock512 and Async512 sustain `64 B/cycle` under the ready-memory model, while Async64 sustains `8 B/cycle`. These are RTL/interface rates, not board DDR throughput.
 
 <p align="center">
-  <a href="docs/assets/slvc_dma_memory_profiles.svg">
-    <img src="docs/assets/slvc_dma_memory_profiles.svg" width="1000" alt="SLVC DMA RX memory profiles and CDC transaction directions">
+  <a href="docs/assets/showcase/slvc_dma_writer_transaction_cdc.png">
+    <img src="docs/assets/showcase/slvc_dma_writer_transaction_cdc.png" width="1000" alt="512-bit AXI4 Writer and transaction-level CDC">
   </a>
 </p>
 
-[Read the 512-bit Writer](docs/en/rx_payload_512_backend.md) · [Read the CDC Backends](docs/en/rx_payload_cdc_backends.md)
+The `32 -> 7 bit` and area changes shown in the figure are Writer-only paired-DC results; they do not transfer to C2B4 or the complete DMA.
+
+[Detailed memory-profile matrix](docs/assets/slvc_dma_memory_profiles.svg) · [Read the 512-bit Writer](docs/en/rx_payload_512_backend.md) · [Read the CDC Backends](docs/en/rx_payload_cdc_backends.md)
 
 <a id="throughput-ppa-and-asic"></a>
 
@@ -77,7 +69,7 @@ Verified quantitative results are separated into three non-transferable scopes: 
 
 <p align="center">
   <a href="docs/assets/slvc_dma_ppa_implementation.svg">
-    <img src="docs/assets/slvc_dma_ppa_implementation.svg" width="1000" alt="SLVC DMA independent throughput Writer PPA and C2B4 implementation scopes">
+    <img src="docs/assets/slvc_dma_ppa_implementation.svg" width="1000" alt="SLVC DMA Writer PPA and C2B4 ASIC implementation">
   </a>
 </p>
 

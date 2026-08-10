@@ -1,35 +1,158 @@
 {
   "kind": "showcase_asset_manifest",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "assets": [
     {
       "path": "docs/assets/slvc_dma_overview.svg",
-      "sha256": "a05575192a4fe06474c7c027ea197b6c7edfc9753f8d7b3790569cbfa6130f71",
+      "sha256": "3f255f5b435abac46d98d90283a8f9e1c9bc25e90a67ef0020ee4e31202efb9d",
       "format": "svg",
-      "source": "hand-authored architecture diagram derived from the public RTL hierarchy and interface documentation",
+      "source": "deterministically generated from tracked public integration RTL and architecture contracts",
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
+      "inputs": [
+        {
+          "path": "rtl/integration/slvc_dma_wrapper.v",
+          "sha256": "312d87a2eb87fc958f0fe6a7043c12ec416974d86131077b8048d6beda99e976"
+        },
+        {
+          "path": "rtl/integration/frame_dma_wrapper.v",
+          "sha256": "4a2624d40d0faea11a7ceef6f3a957f1ba7fa87a4677ca07e592e948cec70093"
+        },
+        {
+          "path": "rtl/integration/frame_dma_rx_top.v",
+          "sha256": "f7de4e5c02b6e9608f606e0915514c11fc4f7f580981be0b5c4aee0314036062"
+        },
+        {
+          "path": "provenance/claims.yaml",
+          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+        }
+      ],
       "claim_ids": []
     },
     {
       "path": "docs/assets/slvc_dma_virtual_channel_buffering.svg",
-      "sha256": "bf9701bdfec0cc26f366f9381aedf8159d92dc1928635b58697bf5c4b648b6b9",
+      "sha256": "b08e210d0d63dd06d0d882f0d68a9e5b5f808f220696fd263a8780ad2338dda3",
       "format": "svg",
-      "source": "hand-authored architecture diagram derived from the public admission, fixed-ingress, shared-pool, selector, writer, and CQ RTL",
+      "source": "deterministically generated from tracked buffering RTL identity and the bounded admission claim",
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
+      "inputs": [
+        {
+          "path": "rtl/integration/slvc_dma_wrapper.v",
+          "sha256": "312d87a2eb87fc958f0fe6a7043c12ec416974d86131077b8048d6beda99e976"
+        },
+        {
+          "path": "rtl/integration/frame_dma_wrapper.v",
+          "sha256": "4a2624d40d0faea11a7ceef6f3a957f1ba7fa87a4677ca07e592e948cec70093"
+        },
+        {
+          "path": "rtl/integration/frame_dma_rx_top.v",
+          "sha256": "f7de4e5c02b6e9608f606e0915514c11fc4f7f580981be0b5c4aee0314036062"
+        },
+        {
+          "path": "provenance/claims.yaml",
+          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+        }
+      ],
       "claim_ids": [
         "slvc_dma_channel_admission_isolation_directed"
       ]
     },
     {
-      "path": "docs/assets/slvc_dma_results_at_a_glance.svg",
-      "sha256": "2eabba7ef72425af29409007906e2cf85ac740f3e9eebefea9e73e76c20358fd",
+      "path": "docs/assets/slvc_dma_frame_lifecycle.svg",
+      "sha256": "2c0865a39aa12d600a6cadba2bd5ed93774803378e388c89b7aa2d23add04401",
       "format": "svg",
-      "source": "deterministically generated from tracked public claims and sanitized paired-DC comparisons",
-      "generator": "flows/scripts/generate_results_at_a_glance.py",
-      "generator_sha256": "562b1b5b57b17f3febc447568606202181a15298c0f3a50bf8145304b1ac41a3",
-      "command": "python flows/scripts/generate_results_at_a_glance.py --root . --write",
+      "source": "deterministically generated from tracked RTL architecture and the bounded admission claim",
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
+      "inputs": [
+        {
+          "path": "rtl/integration/slvc_dma_wrapper.v",
+          "sha256": "312d87a2eb87fc958f0fe6a7043c12ec416974d86131077b8048d6beda99e976"
+        },
+        {
+          "path": "rtl/integration/frame_dma_wrapper.v",
+          "sha256": "4a2624d40d0faea11a7ceef6f3a957f1ba7fa87a4677ca07e592e948cec70093"
+        },
+        {
+          "path": "rtl/integration/frame_dma_rx_top.v",
+          "sha256": "f7de4e5c02b6e9608f606e0915514c11fc4f7f580981be0b5c4aee0314036062"
+        },
+        {
+          "path": "provenance/claims.yaml",
+          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+        }
+      ],
+      "claim_ids": [
+        "slvc_dma_channel_admission_isolation_directed"
+      ]
+    },
+    {
+      "path": "docs/assets/slvc_dma_memory_profiles.svg",
+      "sha256": "0bd132e76df2e459b2d3528e70bed525a8b3fc61ccc55d4ca8c98c11803a46ec",
+      "format": "svg",
+      "source": "deterministically generated from tracked RTL, regression evidence, and CDC claims",
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
+      "inputs": [
+        {
+          "path": "rtl/integration/slvc_dma_wrapper.v",
+          "sha256": "312d87a2eb87fc958f0fe6a7043c12ec416974d86131077b8048d6beda99e976"
+        },
+        {
+          "path": "rtl/integration/frame_dma_wrapper.v",
+          "sha256": "4a2624d40d0faea11a7ceef6f3a957f1ba7fa87a4677ca07e592e948cec70093"
+        },
+        {
+          "path": "rtl/integration/frame_dma_rx_top.v",
+          "sha256": "f7de4e5c02b6e9608f606e0915514c11fc4f7f580981be0b5c4aee0314036062"
+        },
+        {
+          "path": "flows/profiles/dma_rx512_reg_c2_b4_m2_sp64/profile.yaml",
+          "sha256": "8b196400f4f6a08783b90afbb27ecb1b3c4cf8a04bb0328557facf754dd9c2dc"
+        },
+        {
+          "path": "evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml",
+          "sha256": "282266eea3f9d7193f640288d83a01373323b25681f159d942d1daee5d8784f5"
+        },
+        {
+          "path": "provenance/claims.yaml",
+          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+        }
+      ],
+      "claim_ids": [
+        "slvc_dma_rx_payload_cdc_regression",
+        "slvc_dma_rx_payload_cdc_ideal_throughput"
+      ]
+    },
+    {
+      "path": "docs/assets/slvc_dma_ppa_implementation.svg",
+      "sha256": "2ec72e75876ca120342f1bc7a990f0aa65818631af3e9b385eba78df5b446628",
+      "format": "svg",
+      "source": "deterministically generated from tracked public claims and sanitized implementation evidence",
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
           "path": "evidence/asic_paired_dc/comparisons.csv",
           "sha256": "0b921860201edf85fb1c77932eda8ee56299be10adb2dc7978a67b49021dfafe"
+        },
+        {
+          "path": "evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml",
+          "sha256": "282266eea3f9d7193f640288d83a01373323b25681f159d942d1daee5d8784f5"
+        },
+        {
+          "path": "evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml",
+          "sha256": "8438cba00f5a7327124c321fe0724846cfc292d75f9ca2c4cf6caad22d893765"
+        },
+        {
+          "path": "flows/profiles/dma_rx512_reg_c2_b4_m2_sp64/profile.yaml",
+          "sha256": "8b196400f4f6a08783b90afbb27ecb1b3c4cf8a04bb0328557facf754dd9c2dc"
         },
         {
           "path": "provenance/claims.yaml",
@@ -41,6 +164,32 @@
         "slvc_dma_rx_payload_cdc_ideal_throughput",
         "slvc_dma_c2b4_n45_register_postroute_450"
       ]
+    },
+    {
+      "path": "docs/assets/showcase/slvc_dma_system_overview.png",
+      "sha256": "2806fe6d6826b3fcd513e6c353ecfd5d119463da0ca419c68ac05054a5a0c77f",
+      "format": "png",
+      "size_bytes": 1122850,
+      "width": 1586,
+      "height": 992,
+      "role": "system_overview",
+      "source_type": "authored_binary_showcase",
+      "numeric_authority": false,
+      "source": "metadata-free authored showcase; tracked public Evidence remains the numeric authority",
+      "claim_ids": []
+    },
+    {
+      "path": "docs/assets/showcase/slvc_dma_writer_transaction_cdc.png",
+      "sha256": "ec909aeb313ccc411def7273e6d6a6f158d59650dc1fd0cb2e8f160a7c76cb85",
+      "format": "png",
+      "size_bytes": 1166855,
+      "width": 1586,
+      "height": 992,
+      "role": "writer_transaction_cdc",
+      "source_type": "authored_binary_showcase",
+      "numeric_authority": false,
+      "source": "metadata-free authored showcase; tracked public Evidence remains the numeric authority",
+      "claim_ids": []
     }
   ]
 }

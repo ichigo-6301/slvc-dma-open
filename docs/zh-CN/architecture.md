@@ -32,13 +32,15 @@ RX 解析固定 64-byte SHDR64 header，根据 channel metadata 执行 admission
 
 ## 虚拟通道生命周期
 
+![SLVC DMA frame lifecycle and ownership boundaries](../assets/slvc_dma_frame_lifecycle.svg)
+
 1. **Parse**：elastic input 先锁存 SHDR64，提取 `flow_id`、payload length、sequence、timestamp 和 CRC 相关字段。
 2. **Match**：`dma_rx_channel_match` 将动态 header metadata 与 `dma_rx_channel_table` 中的软件配置组合，但不拥有表状态。
 3. **Check**：RX 状态机检查目标 ring free space、ingress/shared storage、CQ credit 和当前 reset/flow-control 状态。
 4. **Reserve**：只有全部资源同时可用时才为本 frame 预留容量；预留资源不会被后来请求抢占。
 5. **Commit and collect**：payload 进入 fixed ingress 或 shared pool。未完整提交的 shared frame 不可被 writer 读出。
 6. **Drain**：source selector 锁定一个 committed frame 直到结束，再由 64-bit legacy writer 或可选 512-bit backend 产生 AXI burst。
-7. **Complete**：AXI response 完成后写 CQ body，再发布 owner/valid 和 IRQ；软件推进 ring/CQ ownership 后资源才能复用。
+7. **Complete**：AXI response 完成后写 CQ body，再发布 owner/valid；随后的 `WR_POP` 释放 source frame capacity，IRQ status 则经寄存器化 event path 稍后置位。软件消费 CQ 并推进 ring/CQ ownership 是另一条独立的软件交接边界。
 
 ## 混合缓冲与真实隔离边界
 
@@ -69,6 +71,8 @@ UDP adapter 不属于 `frame_dma_wrapper`，因此冻结 core 的 FPGA OOC 结�
 ## RX Memory 开发 Profile
 
 默认关闭的 RX memory profile 不改变 parser/admission 前端。fixed ingress 或 shared pool frame 到达现有 commit 点后，`dma_rx_ingress_source_selector` 锁定一个 512-bit drain source：
+
+![SLVC DMA RX memory profiles and CDC transaction directions](../assets/slvc_dma_memory_profiles.svg)
 
 - same-clock 512 直接进入 `dma_axi_write_engine_512`；
 - async64/async512 通过 command、ordered 512-bit payload 和 tagged completion 三条 FIFO channel 跨域；

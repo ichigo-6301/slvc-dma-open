@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc" data-theme-contract="mrtc-engineering-report">
+  <title id="title">Throughput, Writer PPA, and C2B4 implementation</title>
+  <desc id="desc">Independent columns summarize Writer-only paired Design Compiler area, ideal-memory interface throughput, and a fixed C2B4 implementation chain.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1456a0"/></marker>
+  </defs>
+  <style>.title{font:700 38px Arial,Helvetica,sans-serif;fill:#111827}
+    .subtitle{font:400 22px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .panel-title{font:700 25px Arial,Helvetica,sans-serif;fill:#102f5e}
+    .section{font:700 22px Arial,Helvetica,sans-serif;fill:#111827}
+    .body{font:400 19px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .body-bold{font:700 19px Arial,Helvetica,sans-serif;fill:#111827}
+    .metric{font:700 23px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .small{font:400 16px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .foot{font:400 17px Arial,Helvetica,sans-serif;fill:#374151}
+    .table-head{font:700 17px Arial,Helvetica,sans-serif;fill:#ffffff}
+    .table-header{font:700 16px Arial,Helvetica,sans-serif;fill:#111827}
+    .table{font:400 17px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .table-strong{font:700 17px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .rule{stroke:#102f5e;stroke-width:1.5}
+    .thin{stroke:#9ca3af;stroke-width:1}
+    .box{fill:#ffffff;stroke:#6b7280;stroke-width:1.2}
+    .box-blue{fill:#ffffff;stroke:#1456a0;stroke-width:1.4}
+    .panel-header{fill:#102f5e;stroke:#102f5e;stroke-width:1}
+    .flow{fill:none;stroke:#6b7280;stroke-width:1.5;marker-end:url(#arrow)}
+    .flow-blue{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .flow-return{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .boundary{fill:none;stroke:#8b9199;stroke-width:1.5;stroke-dasharray:8 6}
+    .orange{fill:#b45309}
+    .green{fill:#047857}</style>
+  <rect width="1600" height="1000" fill="#ffffff"/>
+  <g data-layout-region="page-header">
+    <rect data-layout-box="true" x="30" y="18" width="1540" height="112" fill="none" stroke="none"/>
+    <text x="40" y="60" class="title">Throughput, Writer PPA, and C2B4 implementation</text>
+    <text x="40" y="98" class="subtitle">Three evidence-bound result scopes are shown independently and must not be transferred to the complete DMA.</text>
+    <line x1="40" y1="124" x2="1560" y2="124" class="rule"/>
+  </g>
+  <g data-layout-region="ppa-writer">
+    <rect data-layout-box="true" x="50" y="165" width="480" height="690" class="box-blue"/>
+    <rect x="50" y="165" width="480" height="60" class="panel-header"/>
+    <text x="290" y="204" text-anchor="middle" class="table-head">A. Writer-only paired DC</text>
+    <text x="80" y="275" class="section">Reservation accounting</text>
+    <text x="80" y="330" class="metric">32 -&gt; 7 bit</text>
+    <line x1="80" y1="365" x2="500" y2="365" class="thin"/>
+    <text x="80" y="420" class="body">Total area</text>
+    <text x="300" y="420" class="metric">-7.97%</text>
+    <text x="80" y="475" class="body">Combinational area</text>
+    <text x="300" y="475" class="metric">-15.84%</text>
+    <line x1="80" y1="515" x2="500" y2="515" class="thin"/>
+    <text x="80" y="565" class="body-bold">1.5 ns Nangate45 DC OOC</text>
+    <text x="80" y="610" class="body">same library + constraint</text>
+    <text x="80" y="655" class="body">both points setup-closed</text>
+    <line x1="80" y1="700" x2="500" y2="700" class="thin"/>
+    <text x="80" y="755" class="table-strong">Writer-only scope</text>
+    <text x="80" y="800" class="small">not C2B4 or complete-DMA area</text>
+  </g>
+  <g data-layout-region="ppa-throughput" data-throughput-contract="100% W utilization; peak outstanding 4">
+    <rect data-layout-box="true" x="560" y="165" width="480" height="690" class="box-blue"/>
+    <rect x="560" y="165" width="480" height="60" class="panel-header"/>
+    <text x="800" y="204" text-anchor="middle" class="table-head">B. Interface throughput</text>
+    <text x="590" y="275" class="section">Ready-memory profiles</text>
+    <text x="590" y="330" class="body">Same-clock512</text>
+    <text x="850" y="330" class="metric">64 B/cycle</text>
+    <text x="590" y="385" class="body">Async64</text>
+    <text x="850" y="385" class="metric">8 B/cycle</text>
+    <text x="590" y="440" class="body">Async512</text>
+    <text x="850" y="440" class="metric">64 B/cycle</text>
+    <line x1="590" y1="480" x2="1010" y2="480" class="thin"/>
+    <text x="590" y="535" class="body">W utilization</text>
+    <text x="850" y="535" class="metric">100%</text>
+    <text x="590" y="590" class="body">Peak outstanding</text>
+    <text x="850" y="590" class="metric">4</text>
+    <line x1="590" y1="635" x2="1010" y2="635" class="thin"/>
+    <text x="590" y="690" class="table-strong">ready-memory scope</text>
+    <text x="590" y="735" class="small">RTL/interface delivery only</text>
+    <text x="590" y="780" class="small">not board DDR or 10G throughput</text>
+  </g>
+  <g data-layout-region="ppa-c2b4" data-implementation-chain="550 MHz DC handoff; 450 MHz OpenROAD; OpenRCX; PrimeTime">
+    <rect data-layout-box="true" x="1070" y="165" width="480" height="690" class="box-blue"/>
+    <rect x="1070" y="165" width="480" height="60" class="panel-header"/>
+    <text x="1310" y="204" text-anchor="middle" class="table-head">C. C2B4 implementation chain</text>
+    <text x="1100" y="270" class="section">2 channels x 4 KiB</text>
+    <text x="1100" y="310" class="body">register-expanded RX512</text>
+    <line x1="1100" y1="345" x2="1520" y2="345" class="thin"/>
+    <text x="1100" y="395" class="body">Design Compiler</text>
+    <text x="1325" y="395" class="table-strong">550 MHz DC handoff</text>
+    <text x="1100" y="445" class="body">OpenROAD</text>
+    <text x="1325" y="445" class="table-strong">450 MHz</text>
+    <text x="1100" y="495" class="body">OpenRCX</text>
+    <text x="1325" y="495" class="body">same-run extraction</text>
+    <text x="1100" y="545" class="body">PrimeTime</text>
+    <text x="1325" y="545" class="body">internal nominal STA</text>
+    <line x1="1100" y1="580" x2="1520" y2="580" class="thin"/>
+    <text x="1100" y="630" class="body">Setup / hold WNS</text>
+    <text x="1100" y="670" class="metric">+0.041322 / +0.000341 ns</text>
+    <text x="1100" y="720" class="body">Standard-cell area</text>
+    <text x="1325" y="720" class="table-strong">1.04207 mm2</text>
+    <text x="1100" y="770" class="small">Route DRC / antenna / electrical = 0</text>
+    <text x="1100" y="810" class="small">C2B4 subsystem; not Fmax or signoff</text>
+  </g>
+  <g data-layout-region="ppa-footnote">
+    <rect data-layout-box="true" x="50" y="900" width="1500" height="70" class="box"/>
+    <text x="800" y="944" text-anchor="middle" class="body-bold">Three independent evidence scopes; not one complete-DMA PPA result.</text>
+  </g>
+</svg>

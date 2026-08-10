@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc" data-theme-contract="mrtc-engineering-report">
+  <title id="title">RX memory profiles and CDC boundaries</title>
+  <desc id="desc">Legacy and same-clock profiles stay in aclk; Async64 and Async512 cross command and payload toward mem_clk and tagged completion back toward aclk while AXI AW, W, and B stay in mem_clk.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1456a0"/></marker>
+  </defs>
+  <style>.title{font:700 38px Arial,Helvetica,sans-serif;fill:#111827}
+    .subtitle{font:400 22px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .panel-title{font:700 25px Arial,Helvetica,sans-serif;fill:#102f5e}
+    .section{font:700 22px Arial,Helvetica,sans-serif;fill:#111827}
+    .body{font:400 19px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .body-bold{font:700 19px Arial,Helvetica,sans-serif;fill:#111827}
+    .metric{font:700 23px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .small{font:400 16px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .foot{font:400 17px Arial,Helvetica,sans-serif;fill:#374151}
+    .table-head{font:700 17px Arial,Helvetica,sans-serif;fill:#ffffff}
+    .table-header{font:700 16px Arial,Helvetica,sans-serif;fill:#111827}
+    .table{font:400 17px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .table-strong{font:700 17px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .rule{stroke:#102f5e;stroke-width:1.5}
+    .thin{stroke:#9ca3af;stroke-width:1}
+    .box{fill:#ffffff;stroke:#6b7280;stroke-width:1.2}
+    .box-blue{fill:#ffffff;stroke:#1456a0;stroke-width:1.4}
+    .panel-header{fill:#102f5e;stroke:#102f5e;stroke-width:1}
+    .flow{fill:none;stroke:#6b7280;stroke-width:1.5;marker-end:url(#arrow)}
+    .flow-blue{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .flow-return{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .boundary{fill:none;stroke:#8b9199;stroke-width:1.5;stroke-dasharray:8 6}
+    .orange{fill:#b45309}
+    .green{fill:#047857}</style>
+  <rect width="1600" height="1000" fill="#ffffff"/>
+  <g data-layout-region="page-header">
+    <rect data-layout-box="true" x="30" y="18" width="1540" height="112" fill="none" stroke="none"/>
+    <text x="40" y="60" class="title">RX memory profiles and CDC boundaries</text>
+    <text x="40" y="98" class="subtitle">Committed-frame ownership stays in aclk while only Command, ordered Payload, and Tagged Completion cross asynchronous profiles.</text>
+    <line x1="40" y1="124" x2="1560" y2="124" class="rule"/>
+  </g>
+  <g data-layout-region="memory-table-header">
+    <rect data-layout-box="true" x="40" y="150" width="1520" height="58" class="panel-header"/>
+    <text x="60" y="187" class="table-head">Profile / measured rate</text>
+    <text x="300" y="177" class="table-head">Committed Frame Source / Ownership</text>
+    <text x="300" y="200" class="table-head">(aclk)</text>
+    <text x="650" y="187" class="table-head">CDC transaction boundary</text>
+    <text x="1010" y="187" class="table-head">Writer domain</text>
+    <text x="1320" y="187" class="table-head">AXI Memory Interface / DDR</text>
+  </g>
+  <g id="profile-legacy64" data-profile="legacy64" data-layout-region="memory-legacy64">
+    <rect data-layout-box="true" x="40" y="208" width="1520" height="150" class="box"/>
+    <text x="60" y="250" class="panel-title">Legacy64</text>
+    <text x="60" y="290" class="small">not measured in this matrix</text>
+    <text x="60" y="324" class="small">64-bit compatibility path</text>
+    <text x="300" y="270" class="body">Committed legacy frame source</text>
+    <text x="300" y="310" class="small">ownership retained through completion</text>
+    <text x="650" y="285" class="body">No RX payload CDC</text>
+    <text x="1010" y="270" class="body">64-bit compatibility writer @ aclk</text>
+    <text x="1010" y="310" class="small">same clock as source</text>
+    <text x="1340" y="285" class="body">64-bit memory interface</text>
+  </g>
+  <g id="profile-same-clock512" data-profile="same-clock512" data-cdc="bypass" data-layout-region="memory-same512">
+    <rect data-layout-box="true" x="40" y="358" width="1520" height="150" class="box-blue"/>
+    <text x="60" y="400" class="panel-title">Same-clock512</text>
+    <text x="60" y="448" class="metric">64 B/cycle</text>
+    <text x="300" y="420" class="body">Committed 512-bit frame source</text>
+    <text x="300" y="460" class="small">ownership retained through completion</text>
+    <text x="650" y="435" class="body-bold">CDC bypass</text>
+    <text x="1010" y="420" class="body">512-bit writer @ aclk</text>
+    <text x="1010" y="460" class="small">same clock as source</text>
+    <text x="1340" y="435" class="body">512-bit memory interface</text>
+  </g>
+  <g id="profile-async64" data-profile="async64" data-layout-region="memory-async64">
+    <rect data-layout-box="true" x="40" y="508" width="1520" height="185" class="box"/>
+    <text x="60" y="550" class="panel-title">Async64</text>
+    <text x="60" y="598" class="metric">8 B/cycle</text>
+    <text x="300" y="550" class="table">Command</text>
+    <text x="300" y="595" class="table">Ordered Payload</text>
+    <text x="300" y="640" class="table">Tagged Completion</text>
+    <text x="625" y="535" class="small">Async FIFO boundary</text>
+    <path id="async64-command" data-transaction="command" data-direction="aclk-to-mem-clk" d="M570 545 H940" class="flow-blue"/>
+    <path id="async64-payload" data-transaction="ordered-payload" data-direction="aclk-to-mem-clk" d="M570 590 H940" class="flow-blue"/>
+    <path id="async64-completion" data-transaction="tagged-completion" data-direction="mem-clk-to-aclk" d="M940 635 H570" class="flow-return"/>
+    <line x1="760" y1="520" x2="760" y2="680" class="boundary"/>
+    <text x="1010" y="550" class="body-bold">mem_clk: 512-to-64 serializer</text>
+    <text x="1010" y="595" class="body">64-bit AXI writer</text>
+    <text x="1010" y="640" class="small">completion returns before release</text>
+    <text x="1340" y="570" class="body-bold">AW / W / B</text>
+    <text x="1340" y="610" class="small">remain in mem_clk</text>
+  </g>
+  <g id="profile-async512" data-profile="async512" data-layout-region="memory-async512">
+    <rect data-layout-box="true" x="40" y="693" width="1520" height="185" class="box-blue"/>
+    <text x="60" y="735" class="panel-title">Async512</text>
+    <text x="60" y="783" class="metric">64 B/cycle</text>
+    <text x="300" y="735" class="table">Command</text>
+    <text x="300" y="780" class="table">Ordered Payload</text>
+    <text x="300" y="825" class="table">Tagged Completion</text>
+    <text x="625" y="720" class="small">Async FIFO boundary</text>
+    <path id="async512-command" data-transaction="command" data-direction="aclk-to-mem-clk" d="M570 730 H940" class="flow-blue"/>
+    <path id="async512-payload" data-transaction="ordered-payload" data-direction="aclk-to-mem-clk" d="M570 775 H940" class="flow-blue"/>
+    <path id="async512-completion" data-transaction="tagged-completion" data-direction="mem-clk-to-aclk" d="M940 820 H570" class="flow-return"/>
+    <line x1="760" y1="705" x2="760" y2="865" class="boundary"/>
+    <text x="1010" y="755" class="body-bold">mem_clk: 512-bit AXI writer</text>
+    <text x="1010" y="800" class="small">completion returns before release</text>
+    <text x="1340" y="755" class="body-bold">AW / W / B</text>
+    <text x="1340" y="795" class="small">remain in mem_clk</text>
+  </g>
+  <g data-layout-region="memory-footnote">
+    <rect data-layout-box="true" x="40" y="910" width="1520" height="65" fill="none" stroke="none"/>
+    <text x="800" y="950" text-anchor="middle" class="foot">ideal ready-memory RTL/interface rates, not board DDR throughput.</text>
+  </g>
+</svg>

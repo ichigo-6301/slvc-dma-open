@@ -67,6 +67,11 @@ jobs:
         with:
           python-version: "3.8"
       -
+        name: Verify deterministic showcase assets and browser previews
+        run: |
+          python flows/scripts/generate_showcase_assets.py --root . --check
+          python flows/scripts/check_showcase_render.py --root .
+      -
         name: Verify provenance and documentation links
         run: python flows/scripts/public_hygiene.py --root .
       -
@@ -74,7 +79,7 @@ jobs:
         run: python flows/scripts/validate_asic_evidence.py --root .
       -
         name: Verify backend, compatibility aliases, and showcase contracts
-        run: python -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy
+        run: python -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy flows.scripts.test_generate_showcase_assets
       -
         name: Verify generic C2B4 backend without GNU Make
         run: python flows/scripts/flowctl.py --config configs/dma_rx512_reg_c2_b4_m2_sp64_defconfig run-selected --dry-run

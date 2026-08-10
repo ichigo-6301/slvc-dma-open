@@ -2,7 +2,7 @@
 
 [![Public Integrity](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml/badge.svg?branch=main)](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml) ![RTL](https://img.shields.io/badge/RTL-Verilog-2f6f9f) [![License](https://img.shields.io/github/license/ichigo-6301/slvc-dma-open)](LICENSE)
 
-[English](README.en.md) · [架构](docs/zh-CN/architecture.md) · [RTL 导读](docs/zh-CN/rtl_reading_guide.md) · [验证](docs/zh-CN/verification.md) · [结果](docs/zh-CN/results.md) · [研究分支](docs/zh-CN/research_branches.md) · [限制](docs/zh-CN/limitations.md)
+[English](README.en.md) · [架构](docs/zh-CN/architecture.md) · [RTL 导读](docs/zh-CN/rtl_reading_guide.md) · [验证](docs/zh-CN/verification.md) · [结果](docs/zh-CN/results.md) · [研究快照](docs/zh-CN/research_branches.md) · [限制](docs/zh-CN/limitations.md)
 
 **面向多源共享高速链路的 512-bit 多通道 DMA，覆盖 SHDR64 RX 分流、Descriptor TX 回放、AXI4-Lite 控制、AXI4 DDR 搬运及 CQ/IRQ 软硬件交接。**
 
@@ -95,11 +95,11 @@ Same-clock512 与 Async512 在 ready-memory model 下为 `64 B/cycle`，Async64 
 
 <a id="research-branches"></a>
 
-## 实验性研究入口
+## 实验性研究快照
 
-**ASIC Storage-Bank Clock Gating** 是两通道 C2B4 register-expanded RX512 子系统上的 branch-only Mapped-DC 研究。它不是生产 Profile、P&R/CTS、post-route power 或正式 main Claim；生产 RTL 未修改。
+**ASIC Storage-Bank Clock Gating** 是两通道 C2B4 register-expanded RX512 子系统上的独立 Mapped-DC 研究快照。该结果已通过不可变 Archive Tag 和固定 Commit 归档，不属于生产 Profile、P&R/CTS、post-route power 或正式 main Claim；Production RTL 未修改。
 
-[研究分支说明](docs/zh-CN/research_branches.md) · [Canonical branch](https://github.com/ichigo-6301/slvc-dma-open/tree/research/dma-a3-clock-gating-storage-positive-2026-08)
+[研究快照说明](docs/zh-CN/research_branches.md) · [固定研究提交](https://github.com/ichigo-6301/slvc-dma-open/tree/d99234ffb3d7d9a5b068ca4434fcfce8b7fd5c79) · [Archive Tag `archive/slvc-dma-storage-clock-gating-positive-2026-08`](https://github.com/ichigo-6301/slvc-dma-open/tree/archive/slvc-dma-storage-clock-gating-positive-2026-08)
 
 <a id="result-scope-levels"></a>
 
@@ -169,6 +169,6 @@ make asic-evidence-check
 
 ## 文档与发行边界
 
-[接口](docs/zh-CN/interfaces.md) · [RTL 阅读指南](docs/zh-CN/rtl_reading_guide.md) · [验证矩阵](docs/zh-CN/verification_matrix.md) · [双时钟后端](docs/zh-CN/rx_payload_cdc_backends.md) · [FPGA 实现](docs/zh-CN/fpga_implementation.md) · [ASIC 实现](docs/zh-CN/asic_implementation.md) · [Delivery 状态](docs/zh-CN/delivery_status.md) · [研究分支](docs/zh-CN/research_branches.md) · [Evidence](provenance/evidence.yaml) · [Claims](provenance/claims.yaml)
+[接口](docs/zh-CN/interfaces.md) · [RTL 阅读指南](docs/zh-CN/rtl_reading_guide.md) · [验证矩阵](docs/zh-CN/verification_matrix.md) · [双时钟后端](docs/zh-CN/rx_payload_cdc_backends.md) · [FPGA 实现](docs/zh-CN/fpga_implementation.md) · [ASIC 实现](docs/zh-CN/asic_implementation.md) · [Delivery 状态](docs/zh-CN/delivery_status.md) · [研究快照](docs/zh-CN/research_branches.md) · [Evidence](provenance/evidence.yaml) · [Claims](provenance/claims.yaml)
 
 当前 `main` 是 `v0.1.0-rc1` 之后的展示与开发线。不可变 annotated tag `v0.1.0-rc1` 仍固定原始 release source、Evidence 和 checksum。完整 nonclaim 见[限制](docs/zh-CN/limitations.md)与[公开范围](PUBLIC_SCOPE.md)。

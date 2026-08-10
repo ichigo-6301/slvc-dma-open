@@ -110,8 +110,9 @@ NAVIGATION_ANCHORS = (
     "quick-public-checks",
     "ten-minute-rtl-reading-path",
 )
-RESEARCH_BRANCH = "research/dma-a3-clock-gating-storage-positive-2026-08"
+RESEARCH_ARCHIVE_TAG = "archive/slvc-dma-storage-clock-gating-positive-2026-08"
 RESEARCH_COMMIT = "d99234ffb3d7d9a5b068ca4434fcfce8b7fd5c79"
+LEGACY_RESEARCH_BRANCH = "research/dma-a3-clock-gating-storage-positive-2026-08"
 CLAIM_MARKER = re.compile(
     r"<!-- claim:([A-Za-z0-9_.-]+) maturity:verified -->"
 )
@@ -1470,8 +1471,10 @@ def _validate_navigation(root):
                     path, forbidden
                 ))
         marker_lists.append(CLAIM_MARKER.findall(text))
-        if text.count(RESEARCH_BRANCH) != 1:
-            _fail("{} canonical research branch identity mismatch".format(path))
+        if LEGACY_RESEARCH_BRANCH in text:
+            _fail("{} must not link the deleted research branch".format(path))
+        if text.count(RESEARCH_ARCHIVE_TAG) != 2 or text.count(RESEARCH_COMMIT) != 1:
+            _fail("{} archive tag or fixed-commit identity mismatch".format(path))
     expected_english = (
         "Verified quantitative results are separated into three "
         "non-transferable scopes"
@@ -1504,8 +1507,10 @@ def _validate_navigation(root):
         RESEARCH_EN_PATH: (root / RESEARCH_EN_PATH).read_text(encoding="utf-8"),
     }
     for path, text in research_texts.items():
-        if text.count(RESEARCH_BRANCH) != 2 or text.count(RESEARCH_COMMIT) != 2:
-            _fail("{} research branch or fixed-commit identity mismatch".format(path))
+        if LEGACY_RESEARCH_BRANCH in text:
+            _fail("{} must not link the deleted research branch".format(path))
+        if text.count(RESEARCH_ARCHIVE_TAG) != 2 or text.count(RESEARCH_COMMIT) != 2:
+            _fail("{} archive tag or fixed-commit identity mismatch".format(path))
         if "%" in text or any(token in text for token in (
                 "102,976", "837", "-87.91", "-87.30", "-20.82", "-89.53")):
             _fail("{} must not publish branch-only power metrics".format(path))

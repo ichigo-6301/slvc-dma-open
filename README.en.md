@@ -2,7 +2,7 @@
 
 [![Public Integrity](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml/badge.svg?branch=main)](https://github.com/ichigo-6301/slvc-dma-open/actions/workflows/public-integrity.yml) ![RTL](https://img.shields.io/badge/RTL-Verilog-2f6f9f) [![License](https://img.shields.io/github/license/ichigo-6301/slvc-dma-open)](LICENSE)
 
-[中文](README.md) · [Architecture](docs/en/architecture.md) · [RTL Guide](docs/en/rtl_reading_guide.md) · [Verification](docs/en/verification.md) · [Results](docs/en/results.md) · [Research](docs/en/research_branches.md) · [Limitations](docs/en/limitations.md)
+[中文](README.md) · [Architecture](docs/en/architecture.md) · [RTL Guide](docs/en/rtl_reading_guide.md) · [Verification](docs/en/verification.md) · [Results](docs/en/results.md) · [Research Snapshot](docs/en/research_branches.md) · [Limitations](docs/en/limitations.md)
 
 **A 512-bit multi-channel DMA for shared high-speed links, covering SHDR64 RX demultiplexing, descriptor-driven TX replay, AXI4-Lite control, AXI4 DDR movement, and CQ/IRQ hardware-software handoff.**
 
@@ -95,11 +95,11 @@ Verified quantitative results are separated into three non-transferable scopes: 
 
 <a id="research-branches"></a>
 
-## Experimental Research Entry
+## Archived Research Snapshot
 
-**ASIC Storage-Bank Clock Gating** is a branch-only Mapped-DC study on the two-channel C2B4 register-expanded RX512 subsystem. It is not a production profile, P&R/CTS result, post-route power result, or formal main claim. Production RTL is unchanged.
+**ASIC Storage-Bank Clock Gating** is an archived, non-main Mapped-DC study for the two-channel C2B4 register-expanded RX512 subsystem. It is preserved by an immutable tag and fixed commit, and is not a production profile, P&R/CTS result, post-route power result, or formal main claim. Production RTL is unchanged.
 
-[Research branch notes](docs/en/research_branches.md) · [Canonical branch](https://github.com/ichigo-6301/slvc-dma-open/tree/research/dma-a3-clock-gating-storage-positive-2026-08)
+[Research snapshot notes](docs/en/research_branches.md) · [Fixed research commit](https://github.com/ichigo-6301/slvc-dma-open/tree/d99234ffb3d7d9a5b068ca4434fcfce8b7fd5c79) · [Archive Tag `archive/slvc-dma-storage-clock-gating-positive-2026-08`](https://github.com/ichigo-6301/slvc-dma-open/tree/archive/slvc-dma-storage-clock-gating-positive-2026-08)
 
 <a id="result-scope-levels"></a>
 
@@ -169,6 +169,6 @@ make asic-evidence-check
 
 ## Documentation And Release Boundary
 
-[Interfaces](docs/en/interfaces.md) · [RTL Reading Guide](docs/en/rtl_reading_guide.md) · [Verification Matrix](docs/en/verification_matrix.md) · [Dual-Clock Backends](docs/en/rx_payload_cdc_backends.md) · [FPGA Implementation](docs/en/fpga_implementation.md) · [ASIC Implementation](docs/en/asic_implementation.md) · [Delivery Status](docs/en/delivery_status.md) · [Research Branches](docs/en/research_branches.md) · [Evidence](provenance/evidence.yaml) · [Claims](provenance/claims.yaml)
+[Interfaces](docs/en/interfaces.md) · [RTL Reading Guide](docs/en/rtl_reading_guide.md) · [Verification Matrix](docs/en/verification_matrix.md) · [Dual-Clock Backends](docs/en/rx_payload_cdc_backends.md) · [FPGA Implementation](docs/en/fpga_implementation.md) · [ASIC Implementation](docs/en/asic_implementation.md) · [Delivery Status](docs/en/delivery_status.md) · [Research Snapshot](docs/en/research_branches.md) · [Evidence](provenance/evidence.yaml) · [Claims](provenance/claims.yaml)
 
 Current `main` is the showcase and development line after `v0.1.0-rc1`. The immutable annotated `v0.1.0-rc1` tag continues to bind its original release source, Evidence, and checksum manifest. Complete nonclaims are in [Limitations](docs/en/limitations.md) and [Public Scope](PUBLIC_SCOPE.md).

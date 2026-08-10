@@ -236,6 +236,27 @@ class ShowcaseAssetsTest(unittest.TestCase):
         with self.assertRaisesRegex(generator.ShowcaseAssetError, "fixed-commit identity"):
             generator.check(self.root)
 
+    def test_research_archive_tag_drift_fails(self):
+        self.replace_text(
+            generator.RESEARCH_EN_PATH,
+            generator.RESEARCH_ARCHIVE_TAG,
+            "archive/wrong-storage-clock-gating-snapshot",
+        )
+        with self.assertRaisesRegex(generator.ShowcaseAssetError, "archive tag"):
+            generator.check(self.root)
+
+    def test_deleted_research_branch_link_fails(self):
+        path = self.root / generator.README_EN_PATH
+        path.write_text(
+            path.read_text(encoding="utf-8")
+            + "\nhttps://github.com/ichigo-6301/slvc-dma-open/tree/"
+            + generator.LEGACY_RESEARCH_BRANCH
+            + "\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(generator.ShowcaseAssetError, "deleted research branch"):
+            generator.check(self.root)
+
     def test_research_power_metric_injection_fails(self):
         path = self.root / generator.RESEARCH_EN_PATH
         path.write_text(path.read_text(encoding="utf-8") + "\nBursty: -87.91%\n", encoding="utf-8")

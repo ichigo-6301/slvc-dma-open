@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc" data-theme-contract="mrtc-engineering-report">
   <title id="title">SHDR64 frame lifecycle and ownership boundaries</title>
-  <desc id="desc">Header control and payload data converge at a fail-closed admission gate before whole-frame commit; completion publishes the CQ body before owner and releases storage last.</desc>
+  <desc id="desc">Header control and payload data converge at a fail-closed admission gate before whole-frame commit; completion publishes the CQ body before owner, releases source capacity, then raises registered IRQ.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker>
     <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1456a0"/></marker>
@@ -99,23 +99,27 @@
     <path d="M1205 653 H1250" class="flow-blue"/>
   </g>
   <g data-layout-region="lifecycle-completion">
-    <rect data-layout-box="true" x="350" y="790" width="1200" height="120" fill="none" stroke="none"/>
-    <rect id="cqe-body" data-completion-order="1" x="390" y="805" width="250" height="82" class="box"/>
-    <text x="515" y="842" text-anchor="middle" class="body-bold">CQE body</text>
-    <text x="515" y="872" text-anchor="middle" class="small">written first</text>
-    <rect id="owner-valid" data-completion-order="2" x="700" y="805" width="270" height="82" class="box-blue"/>
-    <text x="835" y="842" text-anchor="middle" class="body-bold">owner / valid + IRQ</text>
-    <text x="835" y="872" text-anchor="middle" class="small">published after body</text>
-    <line id="release-boundary" data-boundary-order="2" x1="1015" y1="780" x2="1015" y2="915" class="boundary"/>
-    <rect id="release-frame-ownership" data-completion-order="3" x="1060" y="805" width="360" height="82" class="box"/>
-    <text x="1240" y="842" text-anchor="middle" class="body-bold">release frame ownership</text>
-    <text x="1240" y="872" text-anchor="middle" class="small">return source capacity</text>
-    <path d="M1400 696 V755 H515 V805" class="flow-blue"/>
-    <path d="M640 846 H700" class="flow-blue"/>
-    <path d="M970 846 H1060" class="flow-blue"/>
+    <rect data-layout-box="true" x="330" y="790" width="1220" height="120" fill="none" stroke="none"/>
+    <rect id="cqe-body" data-completion-order="1" x="350" y="805" width="250" height="82" class="box"/>
+    <text x="475" y="842" text-anchor="middle" class="body-bold">CQE body</text>
+    <text x="475" y="872" text-anchor="middle" class="small">written first</text>
+    <rect id="owner-valid" data-completion-order="2" x="640" y="805" width="250" height="82" class="box-blue"/>
+    <text x="765" y="842" text-anchor="middle" class="body-bold">owner / valid</text>
+    <text x="765" y="872" text-anchor="middle" class="small">published after body</text>
+    <line id="release-boundary" data-boundary-order="2" x1="910" y1="780" x2="910" y2="915" class="boundary"/>
+    <rect id="release-frame-ownership" data-completion-order="3" x="930" y="805" width="270" height="82" class="box"/>
+    <text x="1065" y="842" text-anchor="middle" class="body-bold">release frame ownership</text>
+    <text x="1065" y="872" text-anchor="middle" class="small">return source capacity</text>
+    <rect id="registered-irq" data-completion-order="4" x="1240" y="805" width="270" height="82" class="box"/>
+    <text x="1375" y="842" text-anchor="middle" class="body-bold">registered IRQ</text>
+    <text x="1375" y="872" text-anchor="middle" class="small">later event pipeline</text>
+    <path d="M1400 696 V755 H475 V805" class="flow-blue"/>
+    <path d="M600 846 H640" class="flow-blue"/>
+    <path d="M890 846 H930" class="flow-blue"/>
+    <path d="M1200 846 H1240" class="flow-blue"/>
   </g>
   <g data-layout-region="lifecycle-footnote">
     <rect data-layout-box="true" x="40" y="940" width="1520" height="45" fill="none" stroke="none"/>
-    <text x="40" y="970" class="foot">Commit Boundary: incomplete frames are invisible. Release Boundary: storage remains owned through AXI completion and CQ owner-last publication.</text>
+    <text x="40" y="970" class="foot">Commit Boundary: incomplete frames are invisible. Release Boundary: source capacity returns after CQ owner-last publication; registered IRQ follows.</text>
   </g>
 </svg>

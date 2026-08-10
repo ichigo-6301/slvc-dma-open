@@ -37,7 +37,7 @@
 
 ## 架构与帧生命周期
 
-RX 从 64-byte SHDR64 header 解析 `flow_id` 与长度，只有 ingress、目标 DDR Ring 和 CQ credit 同时可预留时才接收整帧。Payload 进入 per-channel Fixed ingress 或 block free-list 管理的 Shared Frame Pool；整帧 commit 后，source selector 才会锁定一个 source 直到 frame end。AXI response 完成后先写 CQE body，再发布 owner/valid 与 IRQ，最后释放 frame ownership。
+RX 从 64-byte SHDR64 header 解析 `flow_id` 与长度，只有 ingress、目标 DDR Ring 和 CQ credit 同时可预留时才接收整帧。Payload 进入 per-channel Fixed ingress 或 block free-list 管理的 Shared Frame Pool；整帧 commit 后，source selector 才会锁定一个 source 直到 frame end。AXI response 完成后先写 CQE body，再发布 owner/valid；下一 writer state 释放 source frame ownership，IRQ status 随后经寄存器化 event path 置位。
 
 [详细帧生命周期图](docs/assets/slvc_dma_frame_lifecycle.svg) · [Fixed/Shared 虚拟通道图](docs/assets/slvc_dma_virtual_channel_buffering.svg) · [完整数据路径、资源边界和阻塞条件](docs/zh-CN/architecture.md)
 

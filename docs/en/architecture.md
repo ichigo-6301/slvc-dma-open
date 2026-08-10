@@ -40,7 +40,7 @@ RX parses the fixed 64-byte SHDR64 header, admits the segment using channel meta
 4. **Reserve**: a frame receives capacity only when every required resource is available; later requests cannot steal that reservation.
 5. **Commit and collect**: payload enters fixed ingress or the shared pool. An incompletely committed shared frame cannot be drained.
 6. **Drain**: the source selector locks one committed frame through its end, then the legacy 64-bit writer or optional 512-bit backend generates AXI bursts.
-7. **Complete**: after AXI responses complete, hardware writes the CQ body and then publishes owner/valid and IRQ. Software must advance ring/CQ ownership before reuse.
+7. **Complete**: after AXI responses complete, hardware writes the CQ body and then publishes owner/valid. The following `WR_POP` state releases source-frame capacity, while IRQ status is set later through a registered event path. Software CQ consumption and ring/CQ ownership advancement form a separate handoff boundary.
 
 ## Hybrid Buffering And Actual Isolation Boundaries
 

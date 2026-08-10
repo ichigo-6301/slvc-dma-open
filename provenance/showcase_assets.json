@@ -4,11 +4,11 @@
   "assets": [
     {
       "path": "docs/assets/slvc_dma_overview.svg",
-      "sha256": "62cba54d496a93cb625520a4ebaaef31bef31658f838ab3b2a21e52df544e28a",
+      "sha256": "3f255f5b435abac46d98d90283a8f9e1c9bc25e90a67ef0020ee4e31202efb9d",
       "format": "svg",
       "source": "deterministically generated from tracked public integration RTL and architecture contracts",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "ea27204ab0bde96556f5b856a0ab17a35407473421527b9c27f7238cf4346fcc",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -32,11 +32,11 @@
     },
     {
       "path": "docs/assets/slvc_dma_virtual_channel_buffering.svg",
-      "sha256": "b704ebe05590055df9975df4e5daaaade408cd190d6ebfd36602738ac0ec77dc",
+      "sha256": "b08e210d0d63dd06d0d882f0d68a9e5b5f808f220696fd263a8780ad2338dda3",
       "format": "svg",
       "source": "deterministically generated from tracked buffering RTL identity and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "ea27204ab0bde96556f5b856a0ab17a35407473421527b9c27f7238cf4346fcc",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -62,11 +62,11 @@
     },
     {
       "path": "docs/assets/slvc_dma_frame_lifecycle.svg",
-      "sha256": "ad2361a72a0f1b9ae40c05bee4d4c3bdbf2b2f8a0061d33b3cbd2a9addc107a5",
+      "sha256": "2c0865a39aa12d600a6cadba2bd5ed93774803378e388c89b7aa2d23add04401",
       "format": "svg",
       "source": "deterministically generated from tracked RTL architecture and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "ea27204ab0bde96556f5b856a0ab17a35407473421527b9c27f7238cf4346fcc",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -96,7 +96,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked RTL, regression evidence, and CDC claims",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "ea27204ab0bde96556f5b856a0ab17a35407473421527b9c27f7238cf4346fcc",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -135,7 +135,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked public claims and sanitized implementation evidence",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "ea27204ab0bde96556f5b856a0ab17a35407473421527b9c27f7238cf4346fcc",
+      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -167,15 +167,15 @@
     },
     {
       "path": "docs/assets/showcase/slvc_dma_system_overview.png",
-      "sha256": "05bc9f882666dec639682a119741c6aefd2711ec751399dc7cee4e6c6131bffa",
+      "sha256": "2806fe6d6826b3fcd513e6c353ecfd5d119463da0ca419c68ac05054a5a0c77f",
       "format": "png",
-      "size_bytes": 1129541,
+      "size_bytes": 1122850,
       "width": 1586,
       "height": 992,
       "role": "system_overview",
       "source_type": "authored_binary_showcase",
       "numeric_authority": false,
-      "source": "pixel-preserving metadata-free authored showcase; tracked public Evidence remains the numeric authority",
+      "source": "metadata-free authored showcase; tracked public Evidence remains the numeric authority",
       "claim_ids": []
     },
     {
@@ -188,7 +188,7 @@
       "role": "writer_transaction_cdc",
       "source_type": "authored_binary_showcase",
       "numeric_authority": false,
-      "source": "pixel-preserving metadata-free authored showcase; tracked public Evidence remains the numeric authority",
+      "source": "metadata-free authored showcase; tracked public Evidence remains the numeric authority",
       "claim_ids": []
     }
   ]

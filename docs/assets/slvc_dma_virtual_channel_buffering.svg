@@ -82,7 +82,7 @@
     <text x="1120" y="485" class="panel-title">AXI / CQ</text>
     <text x="1120" y="530" class="body">frame remains owned through B</text>
     <text x="1120" y="570" class="body">CQE body before owner / valid</text>
-    <text x="1120" y="610" class="body">IRQ then frame release</text>
+    <text x="1120" y="610" class="body">frame release before registered IRQ</text>
     <line x1="1120" y1="650" x2="1520" y2="650" class="thin"/>
     <text x="1120" y="700" class="small">per-channel DDR Ring destination</text>
     <text x="1120" y="735" class="small">software-visible completion ownership</text>

@@ -84,8 +84,8 @@ ARCHITECTURE_ASSETS = (
 BINARY_ASSETS = {
     SYSTEM_OVERVIEW_PNG: {
         "role": "system_overview",
-        "sha256": "05bc9f882666dec639682a119741c6aefd2711ec751399dc7cee4e6c6131bffa",
-        "size_bytes": 1129541,
+        "sha256": "2806fe6d6826b3fcd513e6c353ecfd5d119463da0ca419c68ac05054a5a0c77f",
+        "size_bytes": 1122850,
         "width": 1586,
         "height": 992,
     },
@@ -344,6 +344,8 @@ GENERATED_RULES = {
         "AXI4-Lite",
         "PAUSE / RESUME",
         "CQ owner-last",
+        "release frame ownership",
+        "registered IRQ publication",
     ),
     "slvc_dma_virtual_channel_buffering.svg": (
         "Virtual-channel buffering and frame isolation",
@@ -357,6 +359,7 @@ GENERATED_RULES = {
         "no source interleave",
         "channel 0 full",
         "channel 1 progresses",
+        "frame release before registered IRQ",
     ),
     "slvc_dma_frame_lifecycle.svg": (
         "SHDR64 frame lifecycle and ownership boundaries",
@@ -375,6 +378,7 @@ GENERATED_RULES = {
         "CQE body",
         "owner / valid",
         "release frame ownership",
+        "registered IRQ",
         'data-requires="header-control,payload"',
     ),
     "slvc_dma_memory_profiles.svg": (
@@ -906,8 +910,8 @@ def _overview_svg(_metrics):
     <line x1="1292" y1="372" x2="1528" y2="372" class="thin"/>
     <text x="1292" y="415" class="body-bold">CQE body first</text>
     <text x="1292" y="455" class="body">CQ owner-last</text>
-    <text x="1292" y="495" class="body">IRQ publication</text>
-    <text x="1292" y="535" class="small">release frame ownership</text>
+    <text x="1292" y="495" class="body">release frame ownership</text>
+    <text x="1292" y="535" class="small">registered IRQ publication</text>
   </g>
   <path d="M330 370 H355" class="flow"/>
   <path d="M635 370 H660" class="flow"/>
@@ -926,7 +930,7 @@ def _overview_svg(_metrics):
     <text x="578" y="732" class="panel-title">Software ownership</text>
     <text x="578" y="772" class="body">DDR response precedes CQ publish</text>
     <text x="578" y="812" class="body">CQ body precedes owner / valid</text>
-    <text x="578" y="852" class="body">IRQ precedes frame release</text>
+    <text x="578" y="852" class="body">frame release precedes registered IRQ</text>
     <text x="1078" y="732" class="panel-title">Verification boundary</text>
     <text x="1078" y="772" class="body">directed architecture regressions</text>
     <text x="1078" y="812" class="body">profile-specific PPA evidence</text>
@@ -990,7 +994,7 @@ def _virtual_channel_svg(_metrics):
     <text x="1120" y="485" class="panel-title">AXI / CQ</text>
     <text x="1120" y="530" class="body">frame remains owned through B</text>
     <text x="1120" y="570" class="body">CQE body before owner / valid</text>
-    <text x="1120" y="610" class="body">IRQ then frame release</text>
+    <text x="1120" y="610" class="body">frame release before registered IRQ</text>
     <line x1="1120" y1="650" x2="1520" y2="650" class="thin"/>
     <text x="1120" y="700" class="small">per-channel DDR Ring destination</text>
     <text x="1120" y="735" class="small">software-visible completion ownership</text>
@@ -1079,29 +1083,33 @@ def _frame_lifecycle_svg(_metrics):
     <path d="M1205 653 H1250" class="flow-blue"/>
   </g>
   <g data-layout-region="lifecycle-completion">
-    <rect data-layout-box="true" x="350" y="790" width="1200" height="120" fill="none" stroke="none"/>
-    <rect id="cqe-body" data-completion-order="1" x="390" y="805" width="250" height="82" class="box"/>
-    <text x="515" y="842" text-anchor="middle" class="body-bold">CQE body</text>
-    <text x="515" y="872" text-anchor="middle" class="small">written first</text>
-    <rect id="owner-valid" data-completion-order="2" x="700" y="805" width="270" height="82" class="box-blue"/>
-    <text x="835" y="842" text-anchor="middle" class="body-bold">owner / valid + IRQ</text>
-    <text x="835" y="872" text-anchor="middle" class="small">published after body</text>
-    <line id="release-boundary" data-boundary-order="2" x1="1015" y1="780" x2="1015" y2="915" class="boundary"/>
-    <rect id="release-frame-ownership" data-completion-order="3" x="1060" y="805" width="360" height="82" class="box"/>
-    <text x="1240" y="842" text-anchor="middle" class="body-bold">release frame ownership</text>
-    <text x="1240" y="872" text-anchor="middle" class="small">return source capacity</text>
-    <path d="M1400 696 V755 H515 V805" class="flow-blue"/>
-    <path d="M640 846 H700" class="flow-blue"/>
-    <path d="M970 846 H1060" class="flow-blue"/>
+    <rect data-layout-box="true" x="330" y="790" width="1220" height="120" fill="none" stroke="none"/>
+    <rect id="cqe-body" data-completion-order="1" x="350" y="805" width="250" height="82" class="box"/>
+    <text x="475" y="842" text-anchor="middle" class="body-bold">CQE body</text>
+    <text x="475" y="872" text-anchor="middle" class="small">written first</text>
+    <rect id="owner-valid" data-completion-order="2" x="640" y="805" width="250" height="82" class="box-blue"/>
+    <text x="765" y="842" text-anchor="middle" class="body-bold">owner / valid</text>
+    <text x="765" y="872" text-anchor="middle" class="small">published after body</text>
+    <line id="release-boundary" data-boundary-order="2" x1="910" y1="780" x2="910" y2="915" class="boundary"/>
+    <rect id="release-frame-ownership" data-completion-order="3" x="930" y="805" width="270" height="82" class="box"/>
+    <text x="1065" y="842" text-anchor="middle" class="body-bold">release frame ownership</text>
+    <text x="1065" y="872" text-anchor="middle" class="small">return source capacity</text>
+    <rect id="registered-irq" data-completion-order="4" x="1240" y="805" width="270" height="82" class="box"/>
+    <text x="1375" y="842" text-anchor="middle" class="body-bold">registered IRQ</text>
+    <text x="1375" y="872" text-anchor="middle" class="small">later event pipeline</text>
+    <path d="M1400 696 V755 H475 V805" class="flow-blue"/>
+    <path d="M600 846 H640" class="flow-blue"/>
+    <path d="M890 846 H930" class="flow-blue"/>
+    <path d="M1200 846 H1240" class="flow-blue"/>
   </g>
   <g data-layout-region="lifecycle-footnote">
     <rect data-layout-box="true" x="40" y="940" width="1520" height="45" fill="none" stroke="none"/>
-    <text x="40" y="970" class="foot">Commit Boundary: incomplete frames are invisible. Release Boundary: storage remains owned through AXI completion and CQ owner-last publication.</text>
+    <text x="40" y="970" class="foot">Commit Boundary: incomplete frames are invisible. Release Boundary: source capacity returns after CQ owner-last publication; registered IRQ follows.</text>
   </g>
 """
     return _svg_document(
         "SHDR64 frame lifecycle and ownership boundaries",
-        "Header control and payload data converge at a fail-closed admission gate before whole-frame commit; completion publishes the CQ body before owner and releases storage last.",
+        "Header control and payload data converge at a fail-closed admission gate before whole-frame commit; completion publishes the CQ body before owner, releases source capacity, then raises registered IRQ.",
         body,
     )
 
@@ -1357,7 +1365,7 @@ def _binary_asset_entry(path, identity):
         "source_type": "authored_binary_showcase",
         "numeric_authority": False,
         "source": (
-            "pixel-preserving metadata-free authored showcase; tracked public "
+            "metadata-free authored showcase; tracked public "
             "Evidence remains the numeric authority"
         ),
         "claim_ids": [],
@@ -1481,6 +1489,20 @@ def _validate_navigation(root):
     )
     if expected_english not in readmes[README_EN_PATH]:
         _fail("README.en.md is missing the unambiguous quantitative-scope wording")
+    completion_contracts = {
+        README_PATH: (
+            "下一 writer state 释放 source frame ownership",
+            "IRQ status 随后经寄存器化 event path 置位",
+        ),
+        README_EN_PATH: (
+            "the next writer state releases source-frame ownership",
+            "IRQ status is set later through a registered event path",
+        ),
+    }
+    for path, required in completion_contracts.items():
+        for token in required:
+            if token not in readmes[path]:
+                _fail("{} completion-order contract mismatch".format(path))
     if marker_lists[0] != marker_lists[1] or len(marker_lists[0]) != len(set(marker_lists[0])):
         _fail("README claim marker parity mismatch")
 
@@ -1488,12 +1510,31 @@ def _validate_navigation(root):
         ARCHITECTURE_PATH: (root / ARCHITECTURE_PATH).read_text(encoding="utf-8"),
         ARCHITECTURE_EN_PATH: (root / ARCHITECTURE_EN_PATH).read_text(encoding="utf-8"),
     }
+    architecture_contracts = {
+        ARCHITECTURE_PATH: ("WR_POP", "寄存器化 event path"),
+        ARCHITECTURE_EN_PATH: ("WR_POP", "registered event path"),
+    }
     for path, text in architecture_texts.items():
         for asset in ARCHITECTURE_ASSETS:
             if text.count(asset.name) != 1:
                 _fail("{} must embed detailed asset {} exactly once".format(
                     path, asset
                 ))
+        for token in architecture_contracts[path]:
+            if token not in text:
+                _fail("{} completion-order contract mismatch".format(path))
+
+    completion_text = "\n".join(readmes.values()) + "\n" + "\n".join(
+        architecture_texts.values()
+    )
+    for forbidden in (
+            "IRQ precedes frame release", "IRQ then frame release",
+            "publishes owner/valid and IRQ", "发布 owner/valid 和 IRQ",
+            "发布 owner/valid 与 IRQ"):
+        if forbidden in completion_text:
+            _fail("public navigation contains stale completion order: {}".format(
+                forbidden
+            ))
 
     claims_text = (root / CLAIMS_PATH).read_text(encoding="utf-8")
     if "authored_binary_showcase" in claims_text:

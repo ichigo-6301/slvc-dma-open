@@ -99,8 +99,8 @@
     <line x1="1292" y1="372" x2="1528" y2="372" class="thin"/>
     <text x="1292" y="415" class="body-bold">CQE body first</text>
     <text x="1292" y="455" class="body">CQ owner-last</text>
-    <text x="1292" y="495" class="body">IRQ publication</text>
-    <text x="1292" y="535" class="small">release frame ownership</text>
+    <text x="1292" y="495" class="body">release frame ownership</text>
+    <text x="1292" y="535" class="small">registered IRQ publication</text>
   </g>
   <path d="M330 370 H355" class="flow"/>
   <path d="M635 370 H660" class="flow"/>
@@ -119,7 +119,7 @@
     <text x="578" y="732" class="panel-title">Software ownership</text>
     <text x="578" y="772" class="body">DDR response precedes CQ publish</text>
     <text x="578" y="812" class="body">CQ body precedes owner / valid</text>
-    <text x="578" y="852" class="body">IRQ precedes frame release</text>
+    <text x="578" y="852" class="body">frame release precedes registered IRQ</text>
     <text x="1078" y="732" class="panel-title">Verification boundary</text>
     <text x="1078" y="772" class="body">directed architecture regressions</text>
     <text x="1078" y="812" class="body">profile-specific PPA evidence</text>

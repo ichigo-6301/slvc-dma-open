@@ -411,6 +411,17 @@ class ShowcaseAssetsTest(unittest.TestCase):
         with self.assertRaisesRegex(generator.ShowcaseAssetError, "branch-only power metric"):
             generator.check(self.root)
 
+    def test_homepage_04b_completion_order_drift_fails(self):
+        self.replace_text(
+            generator.README_EN_PATH,
+            "the next writer state releases source-frame ownership, and IRQ "
+            "status is set later through a registered event path",
+            "IRQ precedes frame release",
+        )
+        with self.assertRaisesRegex(
+                generator.ShowcaseAssetError, "completion-order|stale completion"):
+            generator.check(self.root)
+
     def test_homepage_05_real_browser_desktop_mobile_light_dark(self):
         browser, reports = render_check.check_homepage_render(self.root)
         self.assertTrue(browser.is_file())
@@ -519,9 +530,12 @@ class ShowcaseAssetsTest(unittest.TestCase):
         self.assertEqual(by_id["release-boundary"].attrib["data-boundary-order"], "2")
         completion = [
             int(by_id[name].attrib["data-completion-order"])
-            for name in ("cqe-body", "owner-valid", "release-frame-ownership")
+            for name in (
+                "cqe-body", "owner-valid", "release-frame-ownership",
+                "registered-irq",
+            )
         ]
-        self.assertEqual(completion, [1, 2, 3])
+        self.assertEqual(completion, [1, 2, 3, 4])
         control = [
             int(by_id[name].attrib["data-control-order"])
             for name in (
@@ -584,8 +598,31 @@ class ShowcaseAssetsTest(unittest.TestCase):
                 "dedicated capacity", "free-list capacity",
                 "Only committed frames are visible", "Selector locks one frame",
                 "no source interleave", "channel 0 full",
-                "channel 1 progresses"):
+                "channel 1 progresses", "frame release before registered IRQ"):
             self.assertIn(token, text)
+
+    def test_visual_09b_completion_release_precedes_registered_irq(self):
+        generated = {
+            path: (self.root / path).read_text(encoding="ascii")
+            for path in (
+                generator.OVERVIEW_ASSET,
+                generator.VIRTUAL_CHANNEL_ASSET,
+                generator.FRAME_LIFECYCLE_ASSET,
+            )
+        }
+        self.assertIn(
+            "frame release precedes registered IRQ",
+            generated[generator.OVERVIEW_ASSET],
+        )
+        self.assertIn(
+            "frame release before registered IRQ",
+            generated[generator.VIRTUAL_CHANNEL_ASSET],
+        )
+        self.assertIn("registered IRQ", generated[generator.FRAME_LIFECYCLE_ASSET])
+        for text in generated.values():
+            self.assertNotIn("IRQ precedes frame release", text)
+            self.assertNotIn("IRQ then frame release", text)
+            self.assertNotIn("owner / valid + IRQ", text)
 
     def test_visual_10_ppa_values_remain_evidence_bound(self):
         metrics = generator._extract_metrics(self.root)

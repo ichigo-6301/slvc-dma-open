@@ -37,7 +37,7 @@ This view places shared-link RX, descriptor-driven TX, joint admission, hybrid b
 
 ## Architecture And Frame Lifecycle
 
-RX parses `flow_id` and length from the 64-byte SHDR64 header and admits a frame only when ingress, target DDR Ring, and CQ credits can all be reserved. Payload enters either per-channel Fixed ingress or the block-free-list-managed Shared Frame Pool. Only a whole-frame commit makes it visible to the source selector, which remains locked through frame end. After AXI responses complete, hardware writes the CQE body, publishes owner/valid and IRQ, and finally releases frame ownership.
+RX parses `flow_id` and length from the 64-byte SHDR64 header and admits a frame only when ingress, target DDR Ring, and CQ credits can all be reserved. Payload enters either per-channel Fixed ingress or the block-free-list-managed Shared Frame Pool. Only a whole-frame commit makes it visible to the source selector, which remains locked through frame end. After AXI responses complete, hardware writes the CQE body and publishes owner/valid; the next writer state releases source-frame ownership, and IRQ status is set later through a registered event path.
 
 [Detailed frame lifecycle](docs/assets/slvc_dma_frame_lifecycle.svg) · [Fixed/Shared virtual-channel view](docs/assets/slvc_dma_virtual_channel_buffering.svg) · [Complete data path, resource boundaries, and blocking conditions](docs/en/architecture.md)
 

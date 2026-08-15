@@ -1,0 +1,3 @@
+point_id,rx_input_stall,cdc_payload_stall,aw_stall,w_stall,b_stall,ar_stall,r_stall
+win_rx4_shared,1383,1776,0,0,0,0,0
+win_loop1_shared,0,444,0,0,0,0,0

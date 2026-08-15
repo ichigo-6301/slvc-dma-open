@@ -105,6 +105,10 @@ def sha256_file(path):
     return sha256_bytes(path.read_bytes())
 
 
+def canonical_source_bytes(path):
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def parse_marker(line, marker):
     if marker not in line:
         return None
@@ -344,8 +348,9 @@ def collect(root, smoke_dir):
     sources = []
     for rel in SOURCE_PATHS:
         path = root / rel
-        sources.append({"path": rel, "sha256": sha256_file(path),
-                        "size_bytes": path.stat().st_size})
+        source_bytes = canonical_source_bytes(path)
+        sources.append({"path": rel, "sha256": sha256_bytes(source_bytes),
+                        "size_bytes": len(source_bytes)})
     manifest = {
         "schema_version": 1,
         "experiment_id": "slvc_dma_u5_async64_end_to_end_throughput",
@@ -409,8 +414,8 @@ def collect(root, smoke_dir):
             "frames_per_s_at_100mhz": "100000000 * frames / cycles",
         },
     }
-    (root / MANIFEST_REL).write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (root / MANIFEST_REL).write_bytes(
+        (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8"))
 
 
 def validate(root):
@@ -462,9 +467,10 @@ def validate(root):
         path = root / source.get("path", "")
         require(path.is_file(), "missing source {}".format(source.get("path")))
         if path.is_file():
-            require(source.get("sha256") == sha256_file(path),
+            source_bytes = canonical_source_bytes(path)
+            require(source.get("sha256") == sha256_bytes(source_bytes),
                     "source hash mismatch: {}".format(source.get("path")))
-            require(source.get("size_bytes") == path.stat().st_size,
+            require(source.get("size_bytes") == len(source_bytes),
                     "source size mismatch: {}".format(source.get("path")))
 
     points = read_csv(root / POINTS_REL, POINT_HEADER)

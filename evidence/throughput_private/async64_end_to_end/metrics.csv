@@ -1,0 +1,5 @@
+point_id,window,payload_bytes,cycles,bytes_per_cycle,gb_per_s_at_100mhz,gbits_per_s_at_100mhz,frames_per_s_at_100mhz,claim_eligible
+win_rx4_shared,hardware_end_to_end,16384,2536,6.460568,0.646057,5.168454,157728.706625,false
+win_rx4_shared,datapath_steady_state,16384,2450,6.687347,0.668735,5.349878,163265.306122,false
+win_loop1_shared,hardware_end_to_end,4096,1195,3.427615,0.342762,2.742092,83682.008368,false
+win_loop1_shared,datapath_steady_state,4096,1039,3.942252,0.394225,3.153802,96246.390760,false

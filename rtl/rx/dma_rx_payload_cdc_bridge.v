@@ -132,8 +132,12 @@ wire s_cpl_fire = s_cpl_valid && s_cpl_ready;
 wire m_cmd_fire = m_cmd_valid && m_cmd_ready;
 wire m_cpl_fire = m_cpl_valid && m_cpl_ready;
 wire completion_tag_mismatch = (cpl_tag_raw != active_tag_q);
+// A producer may assert payload valid with the command and hold it while
+// ready is low. The command handshake opens the payload window on that edge;
+// the payload FIFO still accepts data only from the following cycle.
 wire source_payload_outside_frame = s_payload_tvalid &&
-                                    (!source_active_q || source_payload_done_q);
+                                    ((!source_active_q && !s_cmd_fire) ||
+                                     source_payload_done_q);
 wire mem_completion_outside_frame = m_cpl_valid && !mem_active_q;
 
 assign cmd_s_data = {next_tag_q, s_cmd_channel, s_cmd_aligned_len,

@@ -82,6 +82,8 @@ reg [31:0]          burst_out_beats_c;
 wire                out_pop = out_valid && out_ready;
 wire                fifo_has_data = (fifo_count != 0);
 wire                can_load_output = !out_valid || out_ready;
+wire                fifo_output_load = !flush_outputs &&
+                                           can_load_output && fifo_has_data;
 wire                ar_handshake = m_axi_arvalid && m_axi_arready;
 wire                r_handshake = m_axi_rvalid && m_axi_rready;
 wire                fifo_write_commit = r_handshake && (m_axi_rresp == 2'b00) && !error_seen &&
@@ -267,16 +269,14 @@ always @(posedge clk or negedge rstn) begin
         if (flush_outputs) begin
             out_valid <= 1'b0;
             out_last <= 1'b0;
-            fifo_count <= {(FIFO_DEPTH_LOG2+1){1'b0}};
             fifo_wr_ptr <= {FIFO_AW{1'b0}};
             fifo_rd_ptr <= {FIFO_AW{1'b0}};
             ar_plan_valid_q <= 1'b0;
-        end else if (can_load_output && fifo_has_data) begin
+        end else if (fifo_output_load) begin
             out_data <= fifo_rd_data;
             out_last <= fifo_last[fifo_rd_ptr];
             out_valid <= 1'b1;
             fifo_rd_ptr <= fifo_rd_ptr + 1'b1;
-            fifo_count <= fifo_count - 1'b1;
         end
 
         if (can_make_ar_plan) begin
@@ -309,7 +309,6 @@ always @(posedge clk or negedge rstn) begin
             if (m_axi_rresp != 2'b00) begin
                 error_seen <= 1'b1;
                 flush_outputs <= 1'b1;
-                fifo_count <= {(FIFO_DEPTH_LOG2+1){1'b0}};
                 reserved_beats <= {(FIFO_DEPTH_LOG2+1){1'b0}};
                 m_axi_arvalid <= 1'b0;
                 ar_plan_valid_q <= 1'b0;
@@ -330,7 +329,6 @@ always @(posedge clk or negedge rstn) begin
                 if ((pack_lane == (WORDS_PER_OUT-1)) || (words_remaining <= 1)) begin
                     fifo_last[fifo_wr_ptr] <= fifo_write_last;
                     fifo_wr_ptr <= fifo_wr_ptr + 1'b1;
-                    fifo_count <= fifo_count + 1'b1;
                     pack_lane <= 3'h0;
                     pack_data <= {OUT_WIDTH{1'b0}};
                 end else begin
@@ -338,6 +336,19 @@ always @(posedge clk or negedge rstn) begin
                 end
             end
 
+        end
+
+        // Occupancy has one owner. In particular, a completed packed beat and
+        // an output-register load in the same cycle leave the FIFO count
+        // unchanged instead of dropping one of two nonblocking assignments.
+        if (flush_outputs || (r_handshake && (m_axi_rresp != 2'b00))) begin
+            fifo_count <= {(FIFO_DEPTH_LOG2+1){1'b0}};
+        end else begin
+            case ({fifo_write_commit, fifo_output_load})
+            2'b10: fifo_count <= fifo_count + 1'b1;
+            2'b01: fifo_count <= fifo_count - 1'b1;
+            default: ;
+            endcase
         end
 
         if (ar_handshake && !r_last_handshake) begin

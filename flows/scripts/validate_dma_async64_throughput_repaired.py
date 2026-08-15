@@ -752,8 +752,13 @@ def validate(root):
     comparable_fields = [field for field in POINT_HEADER
                          if field not in ("point_key", "platform", "simulator")]
     for point_id in contract_by_id:
-        win = by_id_platform[(point_id, "windows")]
-        linux = by_id_platform[(point_id, "linux")]
+        windows_key = (point_id, "windows")
+        linux_key = (point_id, "linux")
+        win = by_id_platform.get(windows_key)
+        linux = by_id_platform.get(linux_key)
+        if win is None or linux is None:
+            require(False, "missing dual-platform point: {}".format(point_id))
+            continue
         require(all(win[field] == linux[field] for field in comparable_fields),
                 "cross-platform counter mismatch: {}".format(point_id))
     for row in matrix:

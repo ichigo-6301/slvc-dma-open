@@ -16,6 +16,7 @@ from pathlib import Path
 
 
 BASELINE_COMMIT = "c20681fad0eaa6ad55dbb919149765b175b29117"
+BLOCKED_EVIDENCE_COMMIT = "e6a6696603b10c4475fca468e9c40c727197ac9c"
 PACKAGE_REL = Path("evidence/throughput_private/async64_end_to_end")
 MANIFEST_REL = PACKAGE_REL / "manifest.json"
 POINTS_REL = PACKAGE_REL / "points.csv"
@@ -107,6 +108,19 @@ def sha256_file(path):
 
 def canonical_source_bytes(path):
     return path.read_bytes().replace(b"\r\n", b"\n")
+
+
+def source_bytes(root, rel):
+    try:
+        blob = subprocess.check_output(
+            ["git", "-c", "safe.directory={}".format(root.as_posix()),
+             "show", "{}:{}".format(BLOCKED_EVIDENCE_COMMIT, rel)],
+            cwd=str(root), stderr=subprocess.DEVNULL)
+        if not isinstance(blob, bytes) or not blob:
+            raise ValueError("git blob unavailable")
+        return blob
+    except (OSError, subprocess.CalledProcessError, ValueError):
+        return canonical_source_bytes(root / rel)
 
 
 def parse_marker(line, marker):
@@ -347,10 +361,9 @@ def collect(root, smoke_dir):
 
     sources = []
     for rel in SOURCE_PATHS:
-        path = root / rel
-        source_bytes = canonical_source_bytes(path)
-        sources.append({"path": rel, "sha256": sha256_bytes(source_bytes),
-                        "size_bytes": len(source_bytes)})
+        blob = source_bytes(root, rel)
+        sources.append({"path": rel, "sha256": sha256_bytes(blob),
+                        "size_bytes": len(blob)})
     manifest = {
         "schema_version": 1,
         "experiment_id": "slvc_dma_u5_async64_end_to_end_throughput",
@@ -467,10 +480,10 @@ def validate(root):
         path = root / source.get("path", "")
         require(path.is_file(), "missing source {}".format(source.get("path")))
         if path.is_file():
-            source_bytes = canonical_source_bytes(path)
-            require(source.get("sha256") == sha256_bytes(source_bytes),
+            blob = source_bytes(root, source.get("path"))
+            require(source.get("sha256") == sha256_bytes(blob),
                     "source hash mismatch: {}".format(source.get("path")))
-            require(source.get("size_bytes") == len(source_bytes),
+            require(source.get("size_bytes") == len(blob),
                     "source size mismatch: {}".format(source.get("path")))
 
     points = read_csv(root / POINTS_REL, POINT_HEADER)
@@ -551,7 +564,8 @@ def validate(root):
         changed = subprocess.check_output(
             ["git", "-c", "safe.directory={}".format(root.as_posix()),
              "-c", "core.excludesfile=NUL",
-             "diff", "--name-only", BASELINE_COMMIT, "--", "rtl", "configs",
+             "diff", "--name-only", BASELINE_COMMIT,
+             BLOCKED_EVIDENCE_COMMIT, "--", "rtl", "configs",
              "filelists", "constraints", "Kconfig"],
             cwd=str(root), universal_newlines=True, stderr=subprocess.DEVNULL)
         protected = [line for line in changed.splitlines()

@@ -19,7 +19,7 @@ class Async64ThroughputEvidenceTests(unittest.TestCase):
         for rel in validator.SOURCE_PATHS:
             target = self.root / rel
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(str(self.source_root / rel), str(target))
+            target.write_bytes(validator.source_bytes(self.source_root, rel))
         for rel in (validator.PACKAGE_REL,
                     Path("docs/throughput_private/async64_end_to_end_throughput.md")):
             source = self.source_root / rel

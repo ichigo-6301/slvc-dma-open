@@ -71,7 +71,7 @@ help:
 >   '  make showcase-check               Run public integrity and interface contracts' \
 >   '  make showcase-assets-check        Verify deterministic architecture/result SVGs' \
 >   '  make asic-evidence-check          Validate sanitized ASIC paired-DC evidence' \
->   '  make dma-async64-throughput-check Validate the private blocked throughput experiment' \
+>   '  make dma-async64-throughput-check Validate blocked and repaired private throughput evidence' \
 >   '  make results-asset-check          Compatibility alias for showcase-assets-check' \
 >   '  make verify-current-checksums      Verify the tracked checksum manifest' \
 >   '' \
@@ -94,6 +94,8 @@ asic-evidence-check:
 dma-async64-throughput-check:
 > @$(PYTHON) "$(ROOT)/flows/scripts/validate_dma_async64_throughput.py" --root "$(ROOT)"
 > @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_validate_dma_async64_throughput
+> @$(PYTHON) "$(ROOT)/flows/scripts/validate_dma_async64_throughput_repaired.py" --root "$(ROOT)"
+> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_validate_dma_async64_throughput_repaired
 
 showcase-assets-check:
 > @$(SHOWCASE_ASSET_GENERATOR) --check

@@ -51,7 +51,7 @@ DEFCONFIG_TARGETS := slvc_dma_512_core_only_defconfig \
 
 .RECIPEPREFIX := >
 .DEFAULT_GOAL := help
-.PHONY: help showcase-check showcase-assets-check refresh-showcase-assets public-hygiene asic-evidence-check results-asset-check refresh-results-asset refresh-checksums verify-current-checksums \
+.PHONY: help showcase-check showcase-assets-check refresh-showcase-assets public-hygiene asic-evidence-check dma-async64-throughput-check results-asset-check refresh-results-asset refresh-checksums verify-current-checksums \
         defconfig $(DEFCONFIG_TARGETS) menuconfig showconfig validate-profile \
         list-stages selected selected-dry-run $(FLOW_STAGES) $(DRY_RUN_TARGETS)
 
@@ -71,6 +71,7 @@ help:
 >   '  make showcase-check               Run public integrity and interface contracts' \
 >   '  make showcase-assets-check        Verify deterministic architecture/result SVGs' \
 >   '  make asic-evidence-check          Validate sanitized ASIC paired-DC evidence' \
+>   '  make dma-async64-throughput-check Validate the private blocked throughput experiment' \
 >   '  make results-asset-check          Compatibility alias for showcase-assets-check' \
 >   '  make verify-current-checksums      Verify the tracked checksum manifest' \
 >   '' \
@@ -89,6 +90,10 @@ public-hygiene:
 
 asic-evidence-check:
 > @$(PYTHON) "$(ROOT)/flows/scripts/validate_asic_evidence.py" --root "$(ROOT)"
+
+dma-async64-throughput-check:
+> @$(PYTHON) "$(ROOT)/flows/scripts/validate_dma_async64_throughput.py" --root "$(ROOT)"
+> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_validate_dma_async64_throughput
 
 showcase-assets-check:
 > @$(SHOWCASE_ASSET_GENERATOR) --check

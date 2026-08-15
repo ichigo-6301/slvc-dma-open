@@ -135,9 +135,28 @@ wire completion_tag_mismatch = (cpl_tag_raw != active_tag_q);
 // A producer may assert payload valid with the command and hold it while
 // ready is low. The command handshake opens the payload window on that edge;
 // the payload FIFO still accepts data only from the following cycle.
-wire source_payload_outside_frame = s_payload_tvalid &&
-                                    ((!source_active_q && !s_cmd_fire) ||
-                                     source_payload_done_q);
+//
+// The integrated Async RX source is a decoupled ready/valid producer. It may
+// pre-present the next committed frame while the current frame waits for its
+// completion/CQ ownership sequence. That presentation is legal while ready is
+// low; the bridge must reject only an actual transfer outside the active
+// command-to-TLAST window. Standalone bridge builds retain the stricter
+// valid-attempt checker used by the directed protocol-error regression.
+`ifdef DMA_RX_MEM_ASYNC_PROFILE
+localparam integer SOURCE_PAYLOAD_LOOKAHEAD = 1;
+`else
+localparam integer SOURCE_PAYLOAD_LOOKAHEAD = 0;
+`endif
+wire source_payload_valid_outside_frame = s_payload_tvalid &&
+                                          ((!source_active_q && !s_cmd_fire) ||
+                                           source_payload_done_q);
+wire source_payload_transfer_outside_frame = s_payload_fire &&
+                                             (!source_active_q ||
+                                              source_payload_done_q);
+wire source_payload_outside_frame =
+    (SOURCE_PAYLOAD_LOOKAHEAD != 0) ?
+        source_payload_transfer_outside_frame :
+        source_payload_valid_outside_frame;
 wire mem_completion_outside_frame = m_cpl_valid && !mem_active_q;
 
 assign cmd_s_data = {next_tag_q, s_cmd_channel, s_cmd_aligned_len,
@@ -258,7 +277,7 @@ always @(posedge s_clk or negedge s_rst_n) begin
 
             if (s_cmd_fire) begin
                 if (source_active_q)
-                    source_protocol_error_q <= 1'b1;
+                source_protocol_error_q <= 1'b1;
                 source_active_q <= 1'b1;
                 source_payload_done_q <= 1'b0;
                 active_tag_q <= next_tag_q;
@@ -279,7 +298,7 @@ always @(posedge s_clk or negedge s_rst_n) begin
             if (s_cpl_fire) begin
                 if (!source_active_q || (!source_payload_done_q && !s_cpl_error) ||
                     completion_tag_mismatch)
-                    source_protocol_error_q <= 1'b1;
+                source_protocol_error_q <= 1'b1;
                 source_active_q <= 1'b0;
                 source_payload_done_q <= 1'b0;
             end

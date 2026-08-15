@@ -2010,13 +2010,33 @@ always @(posedge clk or negedge rstn) begin
             end
             if (u_dut.u_rx_payload_cdc_bridge.source_payload_outside_frame &&
                 !tp_bridge_cause_reported_q) begin
-                $display("DMA_TP_BRIDGE_CAUSE cycle=%0d cause=source_payload_outside_frame source_active=%0d payload_done=%0d cmd_fire=%0d payload_valid=%0d payload_ready=%0d",
-                    tp_global_cycle_q + 1'b1,
-                    u_dut.u_rx_payload_cdc_bridge.source_active_q,
-                    u_dut.u_rx_payload_cdc_bridge.source_payload_done_q,
-                    u_dut.u_rx_payload_cdc_bridge.s_cmd_fire,
-                    u_dut.queue_wide_payload_tvalid,
-                    u_dut.queue_wide_payload_tready);
+                $display("DMA_TP_BRIDGE_CAUSE cycle=%0d cause=source_payload_outside_frame source_active=%0d payload_done=%0d lookahead=%0d cmd_fire=%0d cpl_valid=%0d cpl_ready=%0d queue_pop=%0d payload_valid=%0d payload_ready=%0d payload_last=%0d payload_byte0=%02x source_is_frame=%0d selector_active=%0d frame_valid=%0d frame_seq=%0d frame_buf_valid=%0d frame_buf_last=%0d frame_pool_valid=%0d frame_pool_last=%0d frame_pool_ch=%0d stream_fifo_count=%0d stream_fifo_push=%0d stream_fifo_pop=%0d stream_issue=%0d stream_total=%0d",
+                     tp_global_cycle_q + 1'b1,
+                     u_dut.u_rx_payload_cdc_bridge.source_active_q,
+                     u_dut.u_rx_payload_cdc_bridge.source_payload_done_q,
+                     u_dut.u_rx_payload_cdc_bridge.SOURCE_PAYLOAD_LOOKAHEAD,
+                     u_dut.u_rx_payload_cdc_bridge.s_cmd_fire,
+                     u_dut.pay_cpl_valid,
+                     u_dut.pay_cpl_ready,
+                     u_dut.queue_pop,
+                     u_dut.queue_wide_payload_tvalid,
+                     u_dut.queue_wide_payload_tready,
+                     u_dut.queue_wide_payload_tlast,
+                     u_dut.queue_wide_payload_tdata[7:0],
+                     u_dut.queue_active_is_frame,
+                     u_dut.u_ingress_source_selector.active_q,
+                     u_dut.u_frame_shared_adapter.frame_valid_q,
+                     u_dut.u_frame_shared_adapter.frame_frame_seq_q,
+                     u_dut.u_frame_shared_adapter.beat_buf_valid_q,
+                     u_dut.u_frame_shared_adapter.beat_buf_last_q,
+                     u_dut.u_frame_shared_adapter.pool_m_valid,
+                     u_dut.u_frame_shared_adapter.pool_m_last,
+                     u_dut.u_frame_shared_adapter.pool_m_ch_id,
+                     u_dut.u_ingress_queue.wide_fifo_count_q,
+                     u_dut.u_ingress_queue.wide_fifo_push,
+                     u_dut.u_ingress_queue.wide_fifo_pop,
+                     u_dut.u_ingress_queue.wide_issue_index_q,
+                     u_dut.u_ingress_queue.wide_total_beats);
                 tp_bridge_cause_reported_q <= 1'b1;
             end
             tp_prev_bridge_error_q <= u_dut.async_bridge_protocol_error;

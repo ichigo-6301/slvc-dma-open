@@ -148,6 +148,10 @@ def sha256_file(path):
     return sha256_bytes(path.read_bytes())
 
 
+def write_utf8_lf(path, text):
+    path.write_bytes(text.encode("utf-8"))
+
+
 def parse_marker(line, marker):
     if marker not in line:
         return None
@@ -507,7 +511,7 @@ def render_docs(root, main_metrics):
     text += "Writer-interface result and is not reused here. C2B4 physical sources are byte-identical "
     text += "to the fixed 550/450 MHz evidence chain; no DC, P&R, OpenRCX, or PrimeTime rerun was performed.\n"
     (root / README_REL).parent.mkdir(parents=True, exist_ok=True)
-    (root / README_REL).write_text(text, encoding="utf-8")
+    write_utf8_lf(root / README_REL, text)
     doc = """# Async64 自回环修复与每 MHz 吞吐评估\n\n"""
     doc += "状态：`VERIFIED_PRIVATE_SIMULATION`，不构成公开 Claim 或简历板测结论。\n\n"
     doc += text.split("\n", 2)[2]
@@ -515,7 +519,7 @@ def render_docs(root, main_metrics):
     doc += "修复仅涉及 CDC 合法窗口检查与 TX 读预取 FIFO occupancy；接口、容量、流水和 4 KiB 合同不变。"
     doc += "C2B4 source set不包含这两个模块，既有物理证据未重跑也未改写。\n"
     (root / DOC_REL).parent.mkdir(parents=True, exist_ok=True)
-    (root / DOC_REL).write_text(doc, encoding="utf-8")
+    write_utf8_lf(root / DOC_REL, doc)
 
 
 def collect(root, windows_dir, linux_dir, windows_ladder_dir,
@@ -577,8 +581,8 @@ def collect(root, windows_dir, linux_dir, windows_ladder_dir,
     for rel, header, rows in outputs:
         (root / rel).write_bytes(csv_bytes(header, rows))
     identity = c2b4_identity(root, flow_commit)
-    (root / IDENTITY_REL).write_text(
-        json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_utf8_lf(root / IDENTITY_REL,
+                  json.dumps(identity, indent=2, sort_keys=True) + "\n")
     sources = []
     for rel in SOURCE_PATHS:
         blob = source_bytes(root, flow_commit, rel)
@@ -639,8 +643,8 @@ def collect(root, windows_dir, linux_dir, windows_ladder_dir,
                   for rel in package_files},
         "document_sha256": sha256_file(root / DOC_REL),
     }
-    (root / MANIFEST_REL).write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_utf8_lf(root / MANIFEST_REL,
+                  json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 
 
 def validate_git_identity(root, manifest, require):

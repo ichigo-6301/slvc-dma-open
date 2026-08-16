@@ -518,7 +518,7 @@ def _source_blob(root, commit, relative):
         ))
 
 
-def _validate_readme_blocks(root):
+def _validate_readme_blocks(root, fpga_claim_registered):
     required_common = (
         "<!-- claim:{} maturity:verified -->".format(CLAIM_ID),
         "3.831177 MB/s/MHz",
@@ -536,7 +536,7 @@ def _validate_readme_blocks(root):
             text, README_START, README_END, str(relative), True
         )
         protected, _ = _strip_optional_fpga_doc_block(
-            protected, relative
+            protected, relative, fpga_claim_registered
         )
         if _sha256(protected.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected homepage content".format(relative))
@@ -564,33 +564,33 @@ def _validate_readme_blocks(root):
             ))
 
 
-def _validate_unpublished_readmes(root):
+def _validate_unpublished_readmes(root, fpga_claim_registered):
     for relative, expected_hash in PROTECTED_README_SHA256.items():
         text = _read_text(root / relative)
         protected, _ = _bounded_block(
             text, README_START, README_END, str(relative), False
         )
         protected, _ = _strip_optional_fpga_doc_block(
-            protected, relative
+            protected, relative, fpga_claim_registered
         )
         if _sha256(protected.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected homepage content".format(relative))
 
 
-def _validate_unpublished_state(root):
+def _validate_unpublished_state(root, fpga_claim_registered):
     for relative, expected_hash in PROTECTED_MANIFEST_HASHES.items():
         text = _strip_optional_fpga_registry_item(
-            relative, _read_text(root / relative)
+            relative, _read_text(root / relative), fpga_claim_registered
         )
         if _sha256(text.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected pre-publication content".format(
                 relative
             ))
 
-    _validate_unpublished_readmes(root)
+    _validate_unpublished_readmes(root, fpga_claim_registered)
     for relative, expected_hash in PROTECTED_RESULTS_SHA256.items():
         text, _ = _strip_optional_fpga_doc_block(
-            _read_text(root / relative), relative
+            _read_text(root / relative), relative, fpga_claim_registered
         )
         if _sha256(text.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected pre-publication content".format(
@@ -686,7 +686,7 @@ def _item_block(text, item_id):
     return matches[0]
 
 
-def _strip_optional_fpga_registry_item(path, text):
+def _strip_optional_fpga_registry_item(path, text, authorized):
     item_id = {
         CLAIMS_REL: OPTIONAL_FPGA_CLAIM_ID,
         EVIDENCE_REL: OPTIONAL_FPGA_EVIDENCE_ID,
@@ -702,11 +702,13 @@ def _strip_optional_fpga_registry_item(path, text):
         _fail("{} contains duplicate optional FPGA records".format(path))
     if not matches:
         return text
+    if not authorized:
+        _fail("{} contains an FPGA record without its registered claim".format(path))
     match = matches[0]
     return text[:match.start()] + text[match.end():]
 
 
-def _strip_optional_fpga_doc_block(text, relative):
+def _strip_optional_fpga_doc_block(text, relative, authorized):
     if relative in (Path("README.md"), Path("README.en.md")):
         start, end = FPGA_README_START, FPGA_README_END
     elif relative in (Path("docs/en/results.md"), Path("docs/zh-CN/results.md")):
@@ -721,14 +723,20 @@ def _strip_optional_fpga_doc_block(text, relative):
         _fail("{} optional FPGA publication block mismatch".format(relative))
     if not matches:
         return text, ""
+    if not authorized:
+        _fail("{} contains an FPGA block without its registered claim".format(
+            relative
+        ))
     match = matches[0]
     return text[:match.start()] + text[match.end():], match.group(0)
 
 
-def _verify_append_only(path, text, item_id):
+def _verify_append_only(path, text, item_id, fpga_claim_registered):
     match = _item_block(text, item_id)
     protected_text = text[:match.start()] + text[match.end():]
-    protected_text = _strip_optional_fpga_registry_item(path, protected_text)
+    protected_text = _strip_optional_fpga_registry_item(
+        path, protected_text, fpga_claim_registered
+    )
     protected = protected_text.encode("utf-8")
     if _sha256(protected) != PROTECTED_MANIFEST_HASHES[path]:
         _fail("{} modifies a protected pre-publication item".format(path))
@@ -1142,6 +1150,9 @@ def validate(root, execute_validators=True):
     root = Path(root).resolve()
     claims_text = _read_text(root / CLAIMS_REL)
     claim_present = ("  - id: {}\n".format(CLAIM_ID) in claims_text)
+    fpga_claim_registered = (
+        "  - id: {}\n".format(OPTIONAL_FPGA_CLAIM_ID) in claims_text
+    )
     sentinels_present = [path for path in PUBLICATION_SENTINELS if (root / path).exists()]
     if _publication_markers_present(root):
         sentinels_present.append(Path("bounded-publication-marker"))
@@ -1158,7 +1169,7 @@ def validate(root, execute_validators=True):
     if not claim_present:
         if sentinels_present:
             _fail("throughput publication files exist without the registered claim")
-        _validate_unpublished_state(root)
+        _validate_unpublished_state(root, fpga_claim_registered)
         return "NOT_PUBLISHED"
 
     missing = [path for path in sorted(REQUIRED_PATHS, key=lambda item: item.as_posix())
@@ -1166,11 +1177,17 @@ def validate(root, execute_validators=True):
     if missing:
         _fail("throughput publication is missing {}".format(missing[0]))
 
-    claim_block = _verify_append_only(CLAIMS_REL, claims_text, CLAIM_ID)
+    claim_block = _verify_append_only(
+        CLAIMS_REL, claims_text, CLAIM_ID, fpga_claim_registered
+    )
     evidence_text = _read_text(root / EVIDENCE_REL)
-    evidence_block = _verify_append_only(EVIDENCE_REL, evidence_text, EVIDENCE_ID)
+    evidence_block = _verify_append_only(
+        EVIDENCE_REL, evidence_text, EVIDENCE_ID, fpga_claim_registered
+    )
     nonclaims_text = _read_text(root / NONCLAIMS_REL)
-    nonclaim_block = _verify_append_only(NONCLAIMS_REL, nonclaims_text, NONCLAIM_ID)
+    nonclaim_block = _verify_append_only(
+        NONCLAIMS_REL, nonclaims_text, NONCLAIM_ID, fpga_claim_registered
+    )
     claim = _parse_registry_record(claim_block, CLAIM_ID)
     _require_field_set("throughput claim", claim, CLAIM_FIELDS)
     _require_fixed_fields("throughput claim", claim, CLAIM_FIXED)
@@ -1200,7 +1217,7 @@ def validate(root, execute_validators=True):
 
     _validate_summary(root, source_ref)
     _validate_package_manifest(root, source_ref)
-    _validate_readme_blocks(root)
+    _validate_readme_blocks(root, fpga_claim_registered)
     _validate_results_blocks(root)
     _validate_showcase_binding(root)
     _validate_chart(root)

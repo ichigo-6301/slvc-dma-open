@@ -102,12 +102,16 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         self.assertEqual(
             base,
             gate._strip_optional_fpga_registry_item(
-                gate.CLAIMS_REL, base + record
+                gate.CLAIMS_REL, base + record, True
             ),
         )
         with self.assertRaises(gate.PublicationError):
             gate._strip_optional_fpga_registry_item(
-                gate.CLAIMS_REL, base + record + record
+                gate.CLAIMS_REL, base + record + record, True
+            )
+        with self.assertRaises(gate.PublicationError):
+            gate._strip_optional_fpga_registry_item(
+                gate.CLAIMS_REL, base + record, False
             )
 
     def test_optional_fpga_doc_normalization_is_exact(self):
@@ -118,10 +122,14 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             gate.FPGA_README_END + "\n"
         )
         actual, captured = gate._strip_optional_fpga_doc_block(
-            "before\n" + block + "\nafter\n", Path("README.md")
+            "before\n" + block + "\nafter\n", Path("README.md"), True
         )
         self.assertEqual(base, actual)
         self.assertEqual(block, captured)
+        with self.assertRaises(gate.PublicationError):
+            gate._strip_optional_fpga_doc_block(
+                "before\n" + block + "\nafter\n", Path("README.md"), False
+            )
 
     def _copy_provenance(self, published_sources=False):
         self.source_blobs = {}

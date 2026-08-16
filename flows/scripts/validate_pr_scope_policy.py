@@ -49,9 +49,11 @@ POLICY_PATHS = frozenset({
     ".github/workflows/trusted-evidence-scope.yml",
     "Makefile",
     "flows/scripts/test_validate_asic_evidence.py",
+    "flows/scripts/test_validate_fpga_emulation_evidence.py",
     "flows/scripts/test_validate_pr_scope_policy.py",
     "flows/scripts/test_validate_throughput_publication_gate.py",
     "flows/scripts/validate_asic_evidence.py",
+    "flows/scripts/validate_fpga_emulation_evidence.py",
     "flows/scripts/validate_pr_scope_policy.py",
     "flows/scripts/validate_throughput_publication_gate.py",
 })
@@ -62,7 +64,9 @@ FUTURE_PUBLICATION_PATHS = frozenset(
         ".github/workflows/public-integrity.yml",
         "Makefile",
         "flows/scripts/test_validate_asic_evidence.py",
+        "flows/scripts/test_validate_fpga_emulation_evidence.py",
         "flows/scripts/validate_asic_evidence.py",
+        "flows/scripts/validate_fpga_emulation_evidence.py",
     }
 )
 

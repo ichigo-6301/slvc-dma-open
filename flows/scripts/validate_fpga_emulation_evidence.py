@@ -127,6 +127,20 @@ FIXED_FILE_SHA256 = {
     BENCHMARK_REL / "dma_mmio_diag.h": "5520e1f7637aca1bd4a47928be02433413810d0f5a5932785012fa3046cc42f0",
     SUMMARY_REL: SUMMARY_SHA256,
 }
+EXPECTED_DOC_BLOCK_SHA256 = {
+    Path("README.md"): "4d4cdcdc0d7e804efef3ab4d7c104717da667338e888c68d957f6d7458bb9294",
+    Path("README.en.md"): "416f15ff8e4308940127451ebb1a5900fee290310b6b22ca4e960847d3c06c7e",
+    Path("docs/zh-CN/results.md"): "12afebcc376a2883470c3be127be42b1a44632d0ea5b6365579e3b35cae2928c",
+    Path("docs/en/results.md"): "cb301b87ed029684f2ef11370e3328d9bc74d6be10be2d86aeebaa104c10f378",
+}
+EXPECTED_FPGA_IMPLEMENTATION_SHA256 = {
+    Path("docs/zh-CN/fpga_implementation.md"): (
+        "01cae1ad6adb75ecbdbf941315514ac87bd8fd014eda1653129a9306e9162cb7"
+    ),
+    Path("docs/en/fpga_implementation.md"): (
+        "bea9ffbe8821112df75441639f605d5b6e1edf49ed4a4c6eeaddbb66115b7c82"
+    ),
+}
 
 RAW_ROW = {
     "run_id": "u5_sync_hp0_loopback_1024x4k_20260817_062748_cst",
@@ -378,6 +392,14 @@ def _verify_docs(root):
         if (len(matches) != 1 or text.count(start) != 1 or
                 text.count(end) != 1 or marker not in matches[0].group(0)):
             _fail("{} FPGA publication block mismatch".format(relative))
+        digest = hashlib.sha256(matches[0].group(0).encode("utf-8")).hexdigest()
+        if digest != EXPECTED_DOC_BLOCK_SHA256[relative]:
+            _fail("{} FPGA publication payload mismatch".format(relative))
+    for relative, expected in EXPECTED_FPGA_IMPLEMENTATION_SHA256.items():
+        if _sha256(root / relative) != expected:
+            _fail("{} fixed FPGA implementation document mismatch".format(
+                relative
+            ))
 
 
 def validate(root, check_git_identity=True):

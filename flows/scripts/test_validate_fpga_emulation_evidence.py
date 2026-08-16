@@ -117,6 +117,21 @@ class FpgaEvidenceGateTest(unittest.TestCase):
         finally:
             temp.cleanup()
 
+    def test_document_payload_mutation_fails(self):
+        temp, root = self._published_fixture()
+        try:
+            path = root / "docs/en/fpga_implementation.md"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace(
+                    "no Fmax claim", "Fmax was achieved"
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaises(gate.EvidenceError):
+                gate.validate(root, check_git_identity=False)
+        finally:
+            temp.cleanup()
+
 
 if __name__ == "__main__":
     unittest.main()

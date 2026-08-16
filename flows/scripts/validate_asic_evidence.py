@@ -1347,6 +1347,12 @@ def _validate_sanitization(root, extra_paths=None):
 
 
 def _validate_result_tables(root):
+    claims_text = (root / "provenance/claims.yaml").read_text(encoding="utf-8")
+    authorized_claim_count = claims_text.count(
+        "  - id: {}\n".format(AUTHORIZED_THROUGHPUT_CLAIM_ID)
+    )
+    if authorized_claim_count > 1:
+        _fail("duplicate authorized throughput claim")
     for relative, expected_rows in EXPECTED_RESULT_ROWS.items():
         try:
             text = (root / relative).read_text(encoding="utf-8")
@@ -1372,6 +1378,11 @@ def _validate_result_tables(root):
                     text.count(AUTHORIZED_RESULTS_END) != len(matches)):
                 _fail("invalid authorized throughput block in {}".format(relative))
             if matches:
+                if authorized_claim_count != 1:
+                    _fail(
+                        "authorized throughput result block requires the "
+                        "registered claim in {}".format(relative)
+                    )
                 match = matches[0]
                 text = text[:match.start()] + text[match.end():]
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()

@@ -917,6 +917,14 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         validator.validate(self.root)
 
     def test_authorized_result_marker_does_not_hide_unmarked_mutation(self):
+        claims = self.root / "provenance/claims.yaml"
+        claims.write_text(
+            claims.read_text(encoding="utf-8") +
+            "  - id: {}\n    status: verified\n".format(
+                validator.AUTHORIZED_THROUGHPUT_CLAIM_ID
+            ),
+            encoding="utf-8",
+        )
         path = self.root / "docs/en/results.md"
         text = path.read_text(encoding="utf-8").replace(
             "## SRAM A5 Research", "Unmarked mutation.\n\n## SRAM A5 Research", 1
@@ -927,6 +935,17 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         path.write_text(text, encoding="utf-8")
         self.assert_fails("fixed evidence document content mismatch")
+
+    def test_authorized_result_block_without_registered_claim_fails(self):
+        path = self.root / "docs/en/results.md"
+        path.write_text(
+            path.read_text(encoding="utf-8") +
+            validator.AUTHORIZED_RESULTS_START + "\n" +
+            "Unsupported throughput text.\n" +
+            validator.AUTHORIZED_RESULTS_END + "\n",
+            encoding="utf-8",
+        )
+        self.assert_fails("requires the registered claim")
 
     def test_duplicate_authorized_registry_item_fails(self):
         path = self.root / "provenance/claims.yaml"

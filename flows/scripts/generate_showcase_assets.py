@@ -47,6 +47,15 @@ VIRTUAL_CHANNEL_ASSET = Path(
 FRAME_LIFECYCLE_ASSET = Path("docs/assets/slvc_dma_frame_lifecycle.svg")
 MEMORY_PROFILES_ASSET = Path("docs/assets/slvc_dma_memory_profiles.svg")
 PPA_ASSET = Path("docs/assets/slvc_dma_ppa_implementation.svg")
+ASYNC64_THROUGHPUT_ASSET = Path(
+    "docs/assets/slvc_dma_async64_end_to_end_throughput.svg"
+)
+ASYNC64_THROUGHPUT_SUMMARY_PATH = Path(
+    "evidence/slvc_dma_async64_end_to_end_sim_summary.yaml"
+)
+ASYNC64_THROUGHPUT_POINTS_PATH = Path(
+    "evidence/throughput_simulation/async64_end_to_end/points.csv"
+)
 SYSTEM_OVERVIEW_PNG = Path(
     "docs/assets/showcase/slvc_dma_system_overview.png"
 )
@@ -122,6 +131,9 @@ WRITER_CLAIM = "slvc_dma_writer_reservation_component_paired_dc"
 CDC_REGRESSION_CLAIM = "slvc_dma_rx_payload_cdc_regression"
 THROUGHPUT_CLAIM = "slvc_dma_rx_payload_cdc_ideal_throughput"
 C2B4_CLAIM = "slvc_dma_c2b4_n45_register_postroute_450"
+ASYNC64_THROUGHPUT_CLAIM = (
+    "slvc_dma_async64_end_to_end_rtl_sim_throughput"
+)
 
 COMPARISON_HEADER = (
     "evaluation_id", "claim_id", "baseline_point_id", "candidate_point_id",
@@ -428,6 +440,33 @@ GENERATED_RULES = {
         "1.04207 mm2",
         "Route DRC / antenna / electrical = 0",
         "Three independent evidence scopes; not one complete-DMA PPA result.",
+    ),
+    "slvc_dma_async64_end_to_end_throughput.svg": (
+        ASYNC64_THROUGHPUT_CLAIM,
+        "Async64 End-to-End RTL Simulation Throughput",
+        "3.831177 MB/s/MHz",
+        "3.831723 MB/s/MHz",
+        "383.117735 MB/s",
+        "3.064942 Gb/s",
+        "4.000000 MB/s/MHz",
+        "95.779434%",
+        "64 B: 0.453734 MB/s/MHz",
+        "128 B: 0.858762 MB/s/MHz",
+        "256 B: 1.514215 MB/s/MHz",
+        "1024 B: 3.400603 MB/s/MHz",
+        "4096 B: 3.831177 MB/s/MHz",
+        "50%: 1.941126 MB/s/MHz",
+        "75%: 2.892408 MB/s/MHz",
+        "100%: 3.831177 MB/s/MHz",
+        "ModelSim SE-64 2020.4 + Questa Sim-64 10.7c",
+        "Peak outstanding = 4",
+        "16-flow fairness = PASS",
+        "Drop / protocol error / deadlock = 0",
+        "Pending / not measured / not claimed",
+        "not FPGA/HP0 board throughput",
+        "not DDR peak",
+        "not Fmax",
+        "not ASIC evidence",
     ),
 }
 
@@ -810,8 +849,9 @@ def _extract_metrics(root):
     }
 
 
-def _svg_document(title, desc, body):
-    return """<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="{view_box}" preserveAspectRatio="{preserve}" role="img" aria-labelledby="title desc" data-theme-contract="mrtc-engineering-report">
+def _svg_document(title, desc, body, root_attributes=""):
+    attributes = (" " + root_attributes.strip()) if root_attributes.strip() else ""
+    return """<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="{view_box}" preserveAspectRatio="{preserve}" role="img" aria-labelledby="title desc" data-theme-contract="mrtc-engineering-report"{attributes}>
   <title id="title">{title}</title>
   <desc id="desc">{desc}</desc>
   <defs>
@@ -826,6 +866,7 @@ def _svg_document(title, desc, body):
         height=CANVAS_HEIGHT,
         view_box=VIEW_BOX,
         preserve=PRESERVE_ASPECT_RATIO,
+        attributes=attributes,
         title=title,
         desc=desc,
         style=REPORT_STYLE,
@@ -1276,6 +1317,266 @@ def _ppa_svg(metrics):
     )
 
 
+def _decimal_ratio(payload_bytes, cycles):
+    if payload_bytes <= 0 or cycles <= 0:
+        _fail("throughput point contains a non-positive payload or cycle count")
+    return Decimal(payload_bytes) / Decimal(cycles)
+
+
+def _score(payload_bytes, cycles):
+    return _decimal_ratio(payload_bytes, cycles).quantize(
+        Decimal("0.000001"), rounding=ROUND_HALF_UP
+    )
+
+
+def _load_async64_throughput_metrics(root, claim):
+    expected_claim = {
+        "profile": "slvc_dma_v1_512_async64_full_loopback_sim",
+        "metric": "end_to_end_payload_throughput",
+        "value": "3.831177",
+        "unit": "MB/s/MHz",
+        "status": "verified",
+        "resume_eligible": False,
+        "public": True,
+    }
+    if claim is None:
+        _fail("missing registered Async64 throughput claim")
+    for field, expected in expected_claim.items():
+        if claim.get(field) != expected:
+            _fail("Async64 throughput claim {} mismatch".format(field))
+
+    summary_path = root / ASYNC64_THROUGHPUT_SUMMARY_PATH
+    points_path = root / ASYNC64_THROUGHPUT_POINTS_PATH
+    if not summary_path.is_file() or not points_path.is_file():
+        _fail("registered Async64 throughput claim is missing summary or points")
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    except (TypeError, ValueError) as error:
+        _fail("invalid Async64 throughput summary: {}".format(error))
+    if not isinstance(summary, dict):
+        _fail("Async64 throughput summary must be one JSON object")
+    if (summary.get("classification") != "VERIFIED_RTL_SIMULATION" or
+            summary.get("claim_id") != ASYNC64_THROUGHPUT_CLAIM or
+            summary.get("numeric_authority") !=
+            ASYNC64_THROUGHPUT_POINTS_PATH.as_posix() or
+            summary.get("source_ref") != claim.get("source_ref") or
+            summary.get("fpga_emulation") != {
+                "status": "pending_not_measured_not_claimed", "value": None
+            }):
+        _fail("Async64 throughput summary identity mismatch")
+
+    with points_path.open("r", encoding="utf-8", newline="") as stream:
+        reader = csv.DictReader(stream)
+        required = {
+            "platform", "point_id", "frames", "payload_bytes",
+            "shared_service", "response_latency_cycles", "service_percent",
+            "mem_phase_ns", "clock_mhz", "hw_cycles", "steady_cycles",
+            "rx_peak_outstanding", "tx_peak_outstanding", "frame_drop",
+            "deadlock", "protocol_error", "status",
+        }
+        if not required.issubset(set(reader.fieldnames or ())):
+            _fail("Async64 throughput points header mismatch")
+        rows = list(reader)
+
+    def paired(point_id):
+        matches = [row for row in rows if row["point_id"] == point_id]
+        by_platform = {row["platform"]: row for row in matches}
+        if set(by_platform) != {"windows", "linux"} or len(matches) != 2:
+            _fail("Async64 throughput point {} platform identity mismatch".format(
+                point_id
+            ))
+        comparable = required - {"platform"}
+        if any(by_platform["windows"][field] != by_platform["linux"][field]
+               for field in comparable):
+            _fail("Async64 throughput point {} differs by platform".format(
+                point_id
+            ))
+        row = by_platform["windows"]
+        if row["status"] != "PASS" or any(
+                int(row[field]) != 0
+                for field in ("frame_drop", "deadlock", "protocol_error")):
+            _fail("Async64 throughput point {} did not pass".format(point_id))
+        return row
+
+    main = paired("loopback_peak_phase3")
+    main_identity = {
+        "frames": "1024",
+        "payload_bytes": "4194304",
+        "shared_service": "1",
+        "response_latency_cycles": "16",
+        "service_percent": "100",
+        "mem_phase_ns": "3",
+        "clock_mhz": "100",
+        "rx_peak_outstanding": "4",
+        "tx_peak_outstanding": "4",
+    }
+    if any(main.get(field) != value for field, value in main_identity.items()):
+        _fail("Async64 throughput main point identity mismatch")
+
+    main_ratio = _decimal_ratio(
+        int(main["payload_bytes"]), int(main["hw_cycles"])
+    )
+    model_limit = Decimal("4.000000")
+    metrics = {
+        "e2e": main_ratio.quantize(
+            Decimal("0.000001"), rounding=ROUND_HALF_UP
+        ),
+        "steady": _score(
+            int(main["payload_bytes"]), int(main["steady_cycles"])
+        ),
+        "mb_per_s": (main_ratio * Decimal(100)).quantize(
+            Decimal("0.000001"), rounding=ROUND_HALF_UP
+        ),
+        "gbits_per_s": (main_ratio * Decimal("0.8")).quantize(
+            Decimal("0.000001"), rounding=ROUND_HALF_UP
+        ),
+        "model_limit": model_limit,
+        "efficiency": (main_ratio / model_limit * Decimal(100)).quantize(
+            Decimal("0.000001"), rounding=ROUND_HALF_UP
+        ),
+        "sizes": {},
+        "services": {},
+    }
+    for size in (64, 128, 256, 1024, 4096):
+        row = paired("loopback_size_{}".format(size))
+        metrics["sizes"][size] = _score(
+            int(row["payload_bytes"]), int(row["hw_cycles"])
+        )
+    for percent in (50, 75, 100):
+        row = paired("hp0_l16_s{}".format(percent))
+        if (row["response_latency_cycles"] != "16" or
+                row["service_percent"] != str(percent)):
+            _fail("Async64 throughput service point identity mismatch")
+        metrics["services"][percent] = _score(
+            int(row["payload_bytes"]), int(row["hw_cycles"])
+        )
+
+    expected = {
+        "e2e": Decimal("3.831177"),
+        "steady": Decimal("3.831723"),
+        "mb_per_s": Decimal("383.117735"),
+        "gbits_per_s": Decimal("3.064942"),
+        "efficiency": Decimal("95.779434"),
+        "sizes": {
+            64: Decimal("0.453734"), 128: Decimal("0.858762"),
+            256: Decimal("1.514215"), 1024: Decimal("3.400603"),
+            4096: Decimal("3.831177"),
+        },
+        "services": {
+            50: Decimal("1.941126"), 75: Decimal("2.892408"),
+            100: Decimal("3.831177"),
+        },
+    }
+    if any(metrics[field] != expected[field] for field in expected):
+        _fail("Async64 throughput Evidence does not match chart contract")
+
+    main_point = summary.get("main_point")
+    if not isinstance(main_point, dict) or any(
+            str(main_point.get(field)) != str(value)
+            for field, value in (
+                ("e2e_mbps_per_mhz", metrics["e2e"]),
+                ("steady_mbps_per_mhz", metrics["steady"]),
+                ("mb_per_s_at_100mhz", metrics["mb_per_s"]),
+                ("gbits_per_s_at_100mhz", metrics["gbits_per_s"]),
+                ("payload_only_model_limit_mbps_per_mhz", model_limit),
+                ("model_efficiency_percent", metrics["efficiency"]),
+            )):
+        _fail("Async64 throughput summary metrics mismatch")
+    return metrics
+
+
+def _async64_throughput_svg(metrics):
+    body = _report_header(
+        "Async64 End-to-End RTL Simulation Throughput",
+        "Bounded 16 RX / 16 TX full-loopback simulation; raw counters remain the numeric authority.",
+    ) + """  <g data-layout-region="throughput-primary">
+    <rect data-layout-box="true" x="50" y="160" width="1500" height="185" class="box-blue"/>
+    <rect x="50" y="160" width="1500" height="55" class="panel-header"/>
+    <text x="75" y="196" class="table-head">Main point: 1024 x 4 KiB, HP0_SHARED, 100 MHz, phase 3 ns</text>
+    <text x="80" y="258" class="metric">{e2e} MB/s/MHz</text>
+    <text x="80" y="300" class="body">E2E = {mb_per_s} MB/s = {gbits_per_s} Gb/s</text>
+    <text x="470" y="258" class="metric">{steady} MB/s/MHz</text>
+    <text x="470" y="300" class="body">steady-state payload window</text>
+    <text x="865" y="258" class="metric">{model_limit} MB/s/MHz</text>
+    <text x="865" y="300" class="body">payload-only model ceiling</text>
+    <text x="1260" y="258" class="metric">{efficiency}%</text>
+    <text x="1260" y="300" class="body">model efficiency</text>
+  </g>
+  <g data-layout-region="throughput-size-sweep">
+    <rect data-layout-box="true" x="50" y="375" width="730" height="350" class="box"/>
+    <rect x="50" y="375" width="730" height="55" class="panel-header"/>
+    <text x="75" y="411" class="table-head">Frame-length sweep</text>
+    <text x="80" y="475" class="small">64 B: {size_64} MB/s/MHz</text>
+    <text x="80" y="523" class="small">128 B: {size_128} MB/s/MHz</text>
+    <text x="80" y="571" class="small">256 B: {size_256} MB/s/MHz</text>
+    <text x="80" y="619" class="small">1024 B: {size_1024} MB/s/MHz</text>
+    <text x="80" y="667" class="small">4096 B: {size_4096} MB/s/MHz</text>
+    <line x1="385" y1="469" x2="450" y2="469" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="517" x2="500" y2="517" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="565" x2="565" y2="565" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="613" x2="700" y2="613" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="661" x2="745" y2="661" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="695" x2="745" y2="695" class="thin"/>
+  </g>
+  <g data-layout-region="throughput-service-sweep">
+    <rect data-layout-box="true" x="820" y="375" width="730" height="350" class="box"/>
+    <rect x="820" y="375" width="730" height="55" class="panel-header"/>
+    <text x="845" y="411" class="table-head">HP0_SHARED service sensitivity, fixed 16-cycle response</text>
+    <text x="850" y="500" class="body">50%: {service_50} MB/s/MHz</text>
+    <text x="850" y="575" class="body">75%: {service_75} MB/s/MHz</text>
+    <text x="850" y="650" class="body">100%: {service_100} MB/s/MHz</text>
+    <line x1="1170" y1="493" x2="1325" y2="493" stroke="#1456a0" stroke-width="18"/>
+    <line x1="1170" y1="568" x2="1405" y2="568" stroke="#1456a0" stroke-width="18"/>
+    <line x1="1170" y1="643" x2="1480" y2="643" stroke="#1456a0" stroke-width="18"/>
+    <line x1="1170" y1="695" x2="1480" y2="695" class="thin"/>
+  </g>
+  <g data-layout-region="throughput-verification">
+    <rect data-layout-box="true" x="50" y="755" width="950" height="205" class="box-blue"/>
+    <rect x="50" y="755" width="950" height="55" class="panel-header"/>
+    <text x="75" y="791" class="table-head">Verification summary</text>
+    <text x="75" y="845" class="body-bold">ModelSim SE-64 2020.4 + Questa Sim-64 10.7c</text>
+    <text x="75" y="885" class="body">Peak outstanding = 4</text>
+    <text x="340" y="885" class="body">16-flow fairness = PASS</text>
+    <text x="650" y="885" class="body">Drop / protocol error / deadlock = 0</text>
+    <text x="75" y="930" class="foot">Claim: {claim_id}</text>
+  </g>
+  <g data-layout-region="throughput-fpga-boundary">
+    <rect data-layout-box="true" x="1030" y="755" width="520" height="205" class="box"/>
+    <rect x="1030" y="755" width="520" height="55" class="panel-header"/>
+    <text x="1055" y="791" class="table-head">FPGA emulation</text>
+    <text x="1055" y="845" class="metric">Pending / not measured / not claimed</text>
+    <text x="1055" y="885" class="small">not FPGA/HP0 board throughput; not DDR peak</text>
+    <text x="1055" y="920" class="small">not Fmax; not ASIC evidence; not the 64 B/cycle result</text>
+  </g>
+""".format(
+        e2e=metrics["e2e"], steady=metrics["steady"],
+        mb_per_s=metrics["mb_per_s"], gbits_per_s=metrics["gbits_per_s"],
+        model_limit=metrics["model_limit"], efficiency=metrics["efficiency"],
+        size_64=metrics["sizes"][64], size_128=metrics["sizes"][128],
+        size_256=metrics["sizes"][256], size_1024=metrics["sizes"][1024],
+        size_4096=metrics["sizes"][4096],
+        service_50=metrics["services"][50],
+        service_75=metrics["services"][75],
+        service_100=metrics["services"][100],
+        claim_id=ASYNC64_THROUGHPUT_CLAIM,
+    )
+    root_attributes = (
+        'data-claim-id="{claim}" data-classification="VERIFIED_RTL_SIMULATION" '
+        'data-e2e-mbps-per-mhz="{e2e}" data-steady-mbps-per-mhz="{steady}" '
+        'data-model-efficiency-percent="{efficiency}" '
+        'data-fpga-emulation="pending-not-measured-not-claimed"'
+    ).format(
+        claim=ASYNC64_THROUGHPUT_CLAIM, e2e=metrics["e2e"],
+        steady=metrics["steady"], efficiency=metrics["efficiency"],
+    )
+    return _svg_document(
+        "Async64 End-to-End RTL Simulation Throughput",
+        "A deterministic report of the bounded dual-platform Async64 full-loopback RTL simulation.",
+        body,
+        root_attributes,
+    )
+
+
 def _validate_svg(path, payload, required):
     try:
         text = payload.decode("ascii")
@@ -1326,14 +1627,40 @@ def _validate_svg(path, payload, required):
             _fail("{} is missing required text: {}".format(path, fragment))
 
 
-def _render_assets(metrics):
-    return {
+def _throughput_publication_claim(root):
+    claims = _load_claims(root / CLAIMS_PATH)
+    claim = claims.get(ASYNC64_THROUGHPUT_CLAIM)
+    sentinels = (
+        ASYNC64_THROUGHPUT_ASSET,
+        ASYNC64_THROUGHPUT_SUMMARY_PATH,
+        ASYNC64_THROUGHPUT_POINTS_PATH,
+    )
+    if claim is None and any((root / path).exists() for path in sentinels):
+        _fail("Async64 throughput publication files exist without its claim")
+    return claim
+
+
+def generated_asset_paths(root):
+    optional = (
+        (ASYNC64_THROUGHPUT_ASSET,)
+        if _throughput_publication_claim(root) is not None else ()
+    )
+    return GENERATED_ASSETS + optional
+
+
+def _render_assets(root, metrics):
+    rendered = {
         OVERVIEW_ASSET: _overview_svg(metrics),
         VIRTUAL_CHANNEL_ASSET: _virtual_channel_svg(metrics),
         FRAME_LIFECYCLE_ASSET: _frame_lifecycle_svg(metrics),
         MEMORY_PROFILES_ASSET: _memory_profiles_svg(metrics),
         PPA_ASSET: _ppa_svg(metrics),
     }
+    throughput_claim = _throughput_publication_claim(root)
+    if throughput_claim is not None:
+        throughput = _load_async64_throughput_metrics(root, throughput_claim)
+        rendered[ASYNC64_THROUGHPUT_ASSET] = _async64_throughput_svg(throughput)
+    return rendered
 
 
 def _asset_entry(root, path, payload, source, inputs, claim_ids):
@@ -1407,6 +1734,35 @@ def _expected_manifest(root, rendered):
             (WRITER_CLAIM, THROUGHPUT_CLAIM, C2B4_CLAIM),
         ),
     ]
+    if ASYNC64_THROUGHPUT_ASSET in rendered:
+        generated.append({
+            "path": ASYNC64_THROUGHPUT_ASSET.as_posix(),
+            "sha256": hashlib.sha256(
+                rendered[ASYNC64_THROUGHPUT_ASSET]
+            ).hexdigest(),
+            "format": "svg",
+            "source": (
+                "deterministically generated from the bounded Async64 "
+                "RTL-simulation summary and raw counter table"
+            ),
+            "source_type": "deterministic_generated_showcase",
+            "numeric_authority": False,
+            "generator": GENERATOR_PATH.as_posix(),
+            "generator_sha256": _sha256(root / GENERATOR_PATH),
+            "command": (
+                "python flows/scripts/generate_showcase_assets.py "
+                "--root . --write"
+            ),
+            "inputs": [
+                {"path": item.as_posix(), "sha256": _sha256(root / item)}
+                for item in (
+                    ASYNC64_THROUGHPUT_SUMMARY_PATH,
+                    ASYNC64_THROUGHPUT_POINTS_PATH,
+                    CLAIMS_PATH,
+                )
+            ],
+            "claim_ids": [ASYNC64_THROUGHPUT_CLAIM],
+        })
     generated.extend(
         _binary_asset_entry(path, identity)
         for path, identity in BINARY_ASSETS.items()
@@ -1566,7 +1922,7 @@ def _validate_navigation(root):
 def write(root):
     _validate_binary_assets(root)
     metrics = _extract_metrics(root)
-    rendered = _render_assets(metrics)
+    rendered = _render_assets(root, metrics)
     _validate_all(root, rendered)
     _validate_navigation(root)
     ASSET_DIR_ABS = root / ASSET_DIR
@@ -1585,7 +1941,7 @@ def write(root):
 def check(root):
     _validate_binary_assets(root)
     metrics = _extract_metrics(root)
-    rendered = _render_assets(metrics)
+    rendered = _render_assets(root, metrics)
     _validate_all(root, rendered)
     _validate_navigation(root)
     stale = [path.as_posix() for path, payload in rendered.items()
@@ -1617,7 +1973,7 @@ def main(argv=None):
     print(
         "SHOWCASE_ASSETS_{} generated={} writer_total={} throughput={} "
         "c2b4={}->{}".format(
-            action, len(GENERATED_ASSETS), metrics["writer_total"],
+            action, len(generated_asset_paths(root)), metrics["writer_total"],
             metrics["wide_bytes"], metrics["dc_mhz"], metrics["route_mhz"]
         )
     )

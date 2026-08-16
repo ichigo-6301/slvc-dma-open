@@ -64,6 +64,71 @@ class TrustedScopePolicyTest(unittest.TestCase):
         with self.assertRaisesRegex(policy.PolicyError, "forbidden path"):
             policy.validate_event(event(9, "3" * 40), changed, BOOTSTRAP_HEAD)
 
+    def test_throughput_publication_exact_scope_passes(self):
+        self.assertEqual(
+            policy.validate_event(
+                event(11, "3" * 40),
+                policy.THROUGHPUT_REQUIRED_PATHS,
+                BOOTSTRAP_HEAD,
+            ),
+            "THROUGHPUT_EVIDENCE_SCOPE_PASS",
+        )
+
+    def test_throughput_scope_matches_as_run_changed_sources(self):
+        required = policy.THROUGHPUT_REQUIRED_PATHS
+        for path in (
+                "flows/scripts/validate_dma_async64_throughput_repaired.py",
+                "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
+                "pattern/tb_rtl_rx_mem_async_backend.v"):
+            self.assertIn(path, required)
+        self.assertNotIn("rtl/integration/frame_dma_rx_top.v", required)
+
+    def test_throughput_publication_requires_complete_contract(self):
+        changed = set(policy.THROUGHPUT_REQUIRED_PATHS)
+        changed.remove("pattern/tb_rtl_dma_axi_read_prefetch.v")
+        with self.assertRaisesRegex(policy.PolicyError, "missing required path"):
+            policy.validate_event(event(11, "3" * 40), changed, BOOTSTRAP_HEAD)
+
+    def test_throughput_publication_cannot_modify_policy(self):
+        changed = set(policy.THROUGHPUT_REQUIRED_PATHS)
+        changed.add("Makefile")
+        with self.assertRaisesRegex(policy.PolicyError, "must not modify trusted policy"):
+            policy.validate_event(event(11, "3" * 40), changed, BOOTSTRAP_HEAD)
+
+    def test_throughput_publication_cannot_replace_showcase_generator(self):
+        for path in (
+                "flows/scripts/generate_showcase_assets.py",
+                "flows/scripts/test_generate_showcase_assets.py",
+                "flows/scripts/check_showcase_render.py"):
+            changed = set(policy.THROUGHPUT_REQUIRED_PATHS)
+            changed.add(path)
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(policy.PolicyError, "forbidden path"):
+                    policy.validate_event(
+                        event(11, "3" * 40), changed, BOOTSTRAP_HEAD
+                    )
+
+    def test_throughput_publication_rejects_protected_design_paths(self):
+        forbidden = (
+            "evidence/asic_paired_dc/points.csv",
+            "flows/asic/c2b4/c2b4_register.f",
+            "configs/slvc_dma_512_defconfig",
+            "constraints/slvc_dma.xdc",
+            "rtl/rx/dma_rx512_memory_subsystem_top.v",
+        )
+        for path in forbidden:
+            changed = set(policy.THROUGHPUT_REQUIRED_PATHS)
+            changed.add(path)
+            with self.subTest(path=path):
+                with self.assertRaises(policy.PolicyError):
+                    policy.validate_event(event(11, "3" * 40), changed, BOOTSTRAP_HEAD)
+
+    def test_asic_and_throughput_publication_cannot_be_mixed(self):
+        changed = set(policy.THROUGHPUT_REQUIRED_PATHS)
+        changed.add("evidence/asic_paired_dc/points.csv")
+        with self.assertRaisesRegex(policy.PolicyError, "separate pull requests"):
+            policy.validate_event(event(11, "3" * 40), changed, BOOTSTRAP_HEAD)
+
     def test_metadata_and_policy_combination_fails(self):
         changed = {
             "provenance/evidence.yaml",

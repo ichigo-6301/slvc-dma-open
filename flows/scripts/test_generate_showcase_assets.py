@@ -18,6 +18,23 @@ from flows.scripts import generate_showcase_assets as generator
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _remove_optional_throughput_claim(path):
+    text = path.read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"(?ms)^  - id: " +
+        re.escape(generator.ASYNC64_THROUGHPUT_CLAIM) +
+        r"\n.*?(?=^  - id: |\Z)"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        raise AssertionError("duplicate optional throughput claim in fixture")
+    if matches:
+        match = matches[0]
+        path.write_text(
+            text[:match.start()] + text[match.end():], encoding="utf-8"
+        )
+
+
 class ShowcaseAssetsTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -43,6 +60,7 @@ class ShowcaseAssetsTest(unittest.TestCase):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPOSITORY_ROOT / relative, destination)
+        _remove_optional_throughput_claim(self.root / generator.CLAIMS_PATH)
         generator.write(self.root)
 
     def tearDown(self):
@@ -56,6 +74,8 @@ class ShowcaseAssetsTest(unittest.TestCase):
 
     def reset_file(self, relative):
         shutil.copyfile(REPOSITORY_ROOT / relative, self.root / relative)
+        if relative == generator.CLAIMS_PATH:
+            _remove_optional_throughput_claim(self.root / relative)
 
     def insert_png_chunk(self, relative, kind, data):
         path = self.root / relative
@@ -70,6 +90,82 @@ class ShowcaseAssetsTest(unittest.TestCase):
             struct.pack(">I", crc)
         )
         path.write_bytes(payload[:iend] + chunk + payload[iend:])
+
+    def publish_throughput_fixture(self):
+        source_ref = "a" * 40
+        claims = self.root / generator.CLAIMS_PATH
+        claims.write_text(
+            claims.read_text(encoding="utf-8") + """
+  - id: {claim_id}
+    profile: slvc_dma_v1_512_async64_full_loopback_sim
+    metric: end_to_end_payload_throughput
+    value: 3.831177
+    unit: MB/s/MHz
+    source_ref: {source_ref}
+    status: verified
+    resume_eligible: false
+    public: true
+""".format(
+                claim_id=generator.ASYNC64_THROUGHPUT_CLAIM,
+                source_ref=source_ref,
+            ),
+            encoding="utf-8",
+        )
+        summary = {
+            "classification": "VERIFIED_RTL_SIMULATION",
+            "claim_id": generator.ASYNC64_THROUGHPUT_CLAIM,
+            "numeric_authority": (
+                generator.ASYNC64_THROUGHPUT_POINTS_PATH.as_posix()
+            ),
+            "source_ref": source_ref,
+            "main_point": {
+                "e2e_mbps_per_mhz": "3.831177",
+                "steady_mbps_per_mhz": "3.831723",
+                "mb_per_s_at_100mhz": "383.117735",
+                "gbits_per_s_at_100mhz": "3.064942",
+                "payload_only_model_limit_mbps_per_mhz": "4.000000",
+                "model_efficiency_percent": "95.779434",
+            },
+            "fpga_emulation": {
+                "status": "pending_not_measured_not_claimed",
+                "value": None,
+            },
+        }
+        summary_path = self.root / generator.ASYNC64_THROUGHPUT_SUMMARY_PATH
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+        )
+
+        header = (
+            "platform,point_id,frames,payload_bytes,shared_service,"
+            "response_latency_cycles,service_percent,mem_phase_ns,clock_mhz,"
+            "hw_cycles,steady_cycles,rx_peak_outstanding,"
+            "tx_peak_outstanding,frame_drop,deadlock,protocol_error,status"
+        )
+        identities = (
+            ("loopback_peak_phase3", 4194304, 1094782, 1094626, 100, 4),
+            ("loopback_size_64", 65536, 144437, 144274, 100, 1),
+            ("loopback_size_128", 131072, 152629, 152474, 100, 1),
+            ("loopback_size_256", 262144, 173122, 172966, 100, 2),
+            ("loopback_size_1024", 1048576, 308350, 308194, 100, 4),
+            ("loopback_size_4096", 4194304, 1094782, 1094626, 100, 4),
+            ("hp0_l16_s50", 4194304, 2160758, 2160497, 50, 4),
+            ("hp0_l16_s75", 4194304, 1450108, 1449900, 75, 4),
+            ("hp0_l16_s100", 4194304, 1094782, 1094626, 100, 4),
+        )
+        rows = [header]
+        for platform in ("windows", "linux"):
+            for point_id, payload, hw_cycles, steady_cycles, service, peak in identities:
+                rows.append(
+                    "{},{},1024,{},1,16,{},3,100,{},{},{},{},0,0,0,PASS".format(
+                        platform, point_id, payload, service, hw_cycles,
+                        steady_cycles, peak, peak,
+                    )
+                )
+        points_path = self.root / generator.ASYNC64_THROUGHPUT_POINTS_PATH
+        points_path.parent.mkdir(parents=True, exist_ok=True)
+        points_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
 
     def test_tracked_assets_and_navigation_are_fresh(self):
         generator.check(REPOSITORY_ROOT)
@@ -92,6 +188,57 @@ class ShowcaseAssetsTest(unittest.TestCase):
         generator.write(self.root)
         after = {path: (self.root / path).read_bytes() for path in tracked}
         self.assertEqual(before, after)
+
+    def test_optional_throughput_chart_is_evidence_bound_and_deterministic(self):
+        self.publish_throughput_fixture()
+        generator.write(self.root)
+        chart = self.root / generator.ASYNC64_THROUGHPUT_ASSET
+        first = chart.read_bytes()
+        root = ET.fromstring(first)
+        self.assertEqual(
+            root.attrib["data-claim-id"], generator.ASYNC64_THROUGHPUT_CLAIM
+        )
+        self.assertEqual(root.attrib["data-e2e-mbps-per-mhz"], "3.831177")
+        manifest = json.loads(
+            (self.root / generator.ASSET_MANIFEST_PATH).read_text(
+                encoding="ascii"
+            )
+        )
+        entries = {
+            item["path"]: item for item in manifest["assets"]
+        }
+        binding = entries[generator.ASYNC64_THROUGHPUT_ASSET.as_posix()]
+        self.assertIs(binding["numeric_authority"], False)
+        self.assertEqual(
+            binding["claim_ids"], [generator.ASYNC64_THROUGHPUT_CLAIM]
+        )
+        self.assertEqual(
+            [item["path"] for item in binding["inputs"]],
+            [
+                generator.ASYNC64_THROUGHPUT_SUMMARY_PATH.as_posix(),
+                generator.ASYNC64_THROUGHPUT_POINTS_PATH.as_posix(),
+                generator.CLAIMS_PATH.as_posix(),
+            ],
+        )
+        generator.write(self.root)
+        self.assertEqual(chart.read_bytes(), first)
+        generator.check(self.root)
+        browser, reports = render_check.check_render(
+            self.root, assets=(generator.ASYNC64_THROUGHPUT_ASSET,)
+        )
+        self.assertTrue(browser.is_file())
+        self.assertEqual(
+            reports[generator.ASYNC64_THROUGHPUT_ASSET.as_posix()]["failures"],
+            [],
+        )
+
+    def test_optional_throughput_files_without_claim_fail_closed(self):
+        path = self.root / generator.ASYNC64_THROUGHPUT_SUMMARY_PATH
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n", encoding="utf-8")
+        with self.assertRaisesRegex(
+                generator.ShowcaseAssetError, "without its claim"):
+            generator.write(self.root)
 
     def test_writer_csv_delta_drift_fails(self):
         self.replace_text(generator.COMPARISONS_PATH, "-7.966353", "-7.900000")

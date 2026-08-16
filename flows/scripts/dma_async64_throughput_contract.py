@@ -8,6 +8,7 @@ FRAME_COUNT = 1024
 SEED = 71
 CLOCK_MHZ = 100
 MAIN_POINT_ID = "loopback_peak_phase3"
+MIXED_FRAME_BYTES = (64, 128, 256, 1024, 4096)
 
 
 def matrix_points():
@@ -64,6 +65,15 @@ def correctness_ladder_points():
 def point_map():
     points = matrix_points() + correctness_ladder_points()
     return {row["point_id"]: row for row in points}
+
+
+def expected_payload_bytes(point):
+    frames = point["frames"]
+    if point["scenario"] == "mixed16":
+        complete, remainder = divmod(frames, len(MIXED_FRAME_BYTES))
+        return (complete * sum(MIXED_FRAME_BYTES) +
+                sum(MIXED_FRAME_BYTES[:remainder]))
+    return frames * point["payload_arg_bytes"]
 
 
 def payload_model_limit(point):

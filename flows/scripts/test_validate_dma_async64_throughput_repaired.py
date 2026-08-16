@@ -7,7 +7,9 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from flows.scripts import run_dma_async64_throughput_matrix as runner
 from flows.scripts import validate_dma_async64_throughput_repaired as validator
 
 
@@ -18,9 +20,98 @@ HISTORICAL_EVIDENCE_COMMIT = (
     "9059e33184ed0f5d8cd8c0e49fdcf005f43e7fad"
 )
 HISTORICAL_FLOW_COMMIT = "5d696137f799319f63b04d93164da6ff1f9c2001"
-ADAPTED_TEST_REL = Path(
-    "flows/scripts/test_validate_dma_async64_throughput_repaired.py"
-)
+ADAPTED_SOURCE_RELS = {
+    Path("flows/scripts/dma_async64_throughput_contract.py"),
+    Path("flows/scripts/run_dma_async64_throughput_matrix.py"),
+    Path("flows/scripts/validate_dma_async64_throughput_repaired.py"),
+    Path("flows/scripts/test_validate_dma_async64_throughput_repaired.py"),
+}
+
+
+class Async64MatrixRunnerSourceIdentityTests(unittest.TestCase):
+    HEAD = "1" * 40
+    OTHER = "2" * 40
+
+    @mock.patch.object(runner, "git_status", return_value="")
+    @mock.patch.object(runner, "git_commit", return_value=HEAD)
+    @mock.patch.object(runner, "git_head", return_value=HEAD)
+    def test_accepts_clean_matching_checkout(self, _head, _commit, _status):
+        self.assertEqual(
+            runner.validate_source_checkout(Path("."), self.HEAD), self.HEAD
+        )
+
+    @mock.patch.object(runner, "git_status", return_value=" M rtl/source.v")
+    @mock.patch.object(runner, "git_commit", return_value=HEAD)
+    @mock.patch.object(runner, "git_head", return_value=HEAD)
+    def test_rejects_dirty_checkout(self, _head, _commit, _status):
+        with self.assertRaises(runner.RunError):
+            runner.validate_source_checkout(Path("."), self.HEAD)
+
+    @mock.patch.object(runner, "git_status", return_value="")
+    @mock.patch.object(runner, "git_commit", return_value=OTHER)
+    @mock.patch.object(runner, "git_head", return_value=HEAD)
+    def test_rejects_mismatched_source_commit(self, _head, _commit, _status):
+        with self.assertRaises(runner.RunError):
+            runner.validate_source_checkout(Path("."), self.OTHER)
+
+    def test_rejects_noncanonical_source_commit(self):
+        with mock.patch.object(runner, "git_head", return_value=self.HEAD):
+            with self.assertRaises(runner.RunError):
+                runner.validate_source_checkout(Path("."), "HEAD")
+
+
+class Async64RunIndexContractTests(unittest.TestCase):
+    FLOW_COMMIT = "3" * 40
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.run_dir = Path(self.temp.name)
+        self.contract = runner.matrix_points()[0]
+        self.record = dict(self.contract)
+        self.record.update({
+            "platform": "windows",
+            "simulator": "ModelSim test",
+            "source_commit": self.FLOW_COMMIT,
+            "returncode": 0,
+            "status": "PASS",
+            "log_file": self.contract["point_id"] + ".log",
+            "log_sha256": "4" * 64,
+            "log_size_bytes": 1,
+        })
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def write_index(self):
+        (self.run_dir / "run_index.json").write_text(
+            json.dumps({
+                "schema_version": 1,
+                "suite": "matrix",
+                "platform": "windows",
+                "simulator": "ModelSim test",
+                "source_commit": self.FLOW_COMMIT,
+                "seed": 71,
+                "records": [self.record],
+            }),
+            encoding="utf-8",
+        )
+
+    def test_accepts_exact_run_index_contract(self):
+        self.write_index()
+        validator.load_run_index(
+            self.run_dir, "windows", self.FLOW_COMMIT,
+            [self.contract], "matrix",
+        )
+
+    def test_rejects_run_index_payload_argument_drift(self):
+        self.record["payload_arg_bytes"] += 64
+        self.write_index()
+        with self.assertRaisesRegex(
+                validator.ValidationError, "payload_arg_bytes mismatch"):
+            validator.load_run_index(
+                self.run_dir, "windows", self.FLOW_COMMIT,
+                [self.contract], "matrix",
+            )
 
 
 def historical_blob(root, relative, commit=HISTORICAL_EVIDENCE_COMMIT):
@@ -39,7 +130,7 @@ class Async64RepairedThroughputEvidenceTests(unittest.TestCase):
         for rel in validator.SOURCE_PATHS:
             target = self.root / rel
             target.parent.mkdir(parents=True, exist_ok=True)
-            if Path(rel) == ADAPTED_TEST_REL:
+            if Path(rel) in ADAPTED_SOURCE_RELS:
                 target.write_bytes(historical_blob(
                     self.source_root, Path(rel).as_posix(),
                     HISTORICAL_FLOW_COMMIT,
@@ -141,6 +232,15 @@ class Async64RepairedThroughputEvidenceTests(unittest.TestCase):
         self.mutate_csv(validator.POINTS_REL, lambda rows: rows[0].__setitem__(
             "protocol_error", "1"))
         self.assert_rejected()
+
+    def test_rejects_payload_bytes_contract_mismatch(self):
+        def mutate(rows):
+            rows[0]["payload_bytes"] = str(int(rows[0]["payload_bytes"]) + 64)
+
+        self.mutate_csv(validator.POINTS_REL, mutate)
+        with self.assertRaises(validator.ValidationError) as context:
+            self.validate()
+        self.assertIn("point contract mismatch", str(context.exception))
 
     def test_rejects_missing_platform_point(self):
         self.mutate_csv(validator.POINTS_REL, lambda rows: rows.pop())

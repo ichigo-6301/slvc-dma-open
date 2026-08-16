@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 
-module tb_rtl_rx_payload_cdc_bridge;
+module tb_rtl_rx_payload_cdc_bridge #(
+    parameter integer ALLOW_SOURCE_PAYLOAD_LOOKAHEAD = 0
+);
 
 reg s_clk = 1'b0;
 reg m_clk = 1'b0;
@@ -78,6 +80,7 @@ integer random_seed = 32'h4c44_4321;
 integer ratio_case;
 integer random_frame;
 integer protocol_error_case_count = 0;
+integer same_cycle_command_payload_count = 0;
 reg mem_frame_active = 1'b0;
 reg [7:0] expected_source_tag = 8'h0;
 reg [7:0] expected_mem_tag = 8'h0;
@@ -111,7 +114,8 @@ dma_rx_payload_cdc_bridge #(
     .TAG_WIDTH(8),
     .CMD_FIFO_LOG2(2),
     .PAYLOAD_FIFO_LOG2(5),
-    .CPL_FIFO_LOG2(2)
+    .CPL_FIFO_LOG2(2),
+    .ALLOW_SOURCE_PAYLOAD_LOOKAHEAD(ALLOW_SOURCE_PAYLOAD_LOOKAHEAD)
 ) u_dut (
     .s_clk(s_clk),
     .s_rst_n(s_rst_n),
@@ -327,6 +331,75 @@ task send_frame_with_payload_after_tlast;
     end
 endtask
 
+task exercise_lookahead_backpressure;
+    input integer id;
+    integer lane;
+    integer held_level;
+    reg [511:0] data_value;
+    begin
+        @(negedge s_clk);
+        s_cmd_addr = 32'h0010_0000 + id * 32'h2000;
+        s_cmd_len = 32'd64;
+        s_cmd_aligned_len = 32'd64;
+        s_cmd_channel = id[3:0];
+        s_cmd_valid = 1'b1;
+        while (!s_cmd_ready)
+            @(negedge s_clk);
+        @(negedge s_clk);
+        s_cmd_valid = 1'b0;
+        command_count = command_count + 1;
+
+        data_value = 512'h0;
+        for (lane = 0; lane < 64; lane = lane + 1)
+            data_value[lane*8 +: 8] = pattern_byte(id, lane);
+        s_payload_tdata = data_value;
+        s_payload_tkeep = 64'hffff_ffff_ffff_ffff;
+        s_payload_tlast = 1'b1;
+        s_payload_tvalid = 1'b1;
+        while (!s_payload_tready)
+            @(negedge s_clk);
+        @(negedge s_clk);
+        source_payload_bytes = source_payload_bytes + 64;
+        payload_frame_count = payload_frame_count + 1;
+
+        // The integrated selector may already present the next committed
+        // frame while completion keeps this command active. Lookahead mode
+        // must hold ready low and must not enqueue that next beat.
+        s_payload_tdata = ~data_value;
+        s_payload_tkeep = 64'hffff_ffff_ffff_ffff;
+        s_payload_tlast = 1'b0;
+        held_level = u_dut.payload_fifo_s_level;
+        repeat (4) begin
+            @(posedge s_clk);
+            #1;
+            if (s_payload_tready)
+                fail("lookahead payload crossed the command boundary");
+            if (u_dut.payload_fifo_s_level != held_level)
+                fail("lookahead payload changed FIFO occupancy");
+            if (s_protocol_error)
+                fail("legal backpressured lookahead raised protocol error");
+        end
+        @(negedge s_clk);
+        s_payload_tvalid = 1'b0;
+        s_payload_tlast = 1'b0;
+        s_payload_tkeep = 64'h0;
+
+        s_cpl_ready = 1'b1;
+        while (!s_cpl_valid)
+            @(posedge s_clk);
+        if (s_cpl_error || (s_cpl_error_code != 0))
+            fail("lookahead case returned completion error");
+        if (s_cpl_tag != expected_source_tag)
+            fail("lookahead case completion tag mismatch");
+        expected_source_tag = expected_source_tag + 1'b1;
+        @(negedge s_clk);
+        s_cpl_ready = 1'b0;
+        completion_count = completion_count + 1;
+        while (s_busy)
+            @(posedge s_clk);
+    end
+endtask
+
 task inject_completion_without_command;
     input [8*80-1:0] case_name;
     begin
@@ -400,6 +473,66 @@ task send_frame;
             fail("unexpected completion error");
         if (s_cpl_tag != expected_source_tag)
             fail("completion tag sequence mismatch");
+        expected_source_tag = expected_source_tag + 1'b1;
+        @(negedge s_clk);
+        s_cpl_ready = 1'b0;
+        completion_count = completion_count + 1;
+        while (s_busy)
+            @(posedge s_clk);
+    end
+endtask
+
+task send_same_cycle_command_payload_frame;
+    input integer id;
+    integer lane;
+    reg [511:0] data_value;
+    begin
+        data_value = 512'h0;
+        for (lane = 0; lane < 64; lane = lane + 1)
+            data_value[lane*8 +: 8] = pattern_byte(id, lane);
+
+        // Valid may be asserted before ready. Present the command and first
+        // payload together, then hold payload unchanged until the bridge opens
+        // its command-to-TLAST window on the following cycle.
+        @(negedge s_clk);
+        s_cmd_addr = 32'h0010_0000 + id * 32'h2000;
+        s_cmd_len = 32'd64;
+        s_cmd_aligned_len = 32'd64;
+        s_cmd_channel = id[3:0];
+        s_cmd_valid = 1'b1;
+        s_payload_tdata = data_value;
+        s_payload_tkeep = 64'hffff_ffff_ffff_ffff;
+        s_payload_tlast = 1'b1;
+        s_payload_tvalid = 1'b1;
+        while (!s_cmd_ready)
+            @(negedge s_clk);
+        if (s_payload_tready)
+            fail("same-cycle payload was ready before command handshake");
+
+        @(negedge s_clk);
+        if (s_protocol_error)
+            fail("same-cycle command/payload valid raised protocol error");
+        s_cmd_valid = 1'b0;
+        command_count = command_count + 1;
+
+        while (!s_payload_tready)
+            @(negedge s_clk);
+        @(negedge s_clk);
+        s_payload_tvalid = 1'b0;
+        s_payload_tlast = 1'b0;
+        s_payload_tkeep = 64'h0;
+        source_payload_bytes = source_payload_bytes + 64;
+        payload_frame_count = payload_frame_count + 1;
+        same_cycle_command_payload_count =
+            same_cycle_command_payload_count + 1;
+
+        s_cpl_ready = 1'b1;
+        while (!s_cpl_valid)
+            @(posedge s_clk);
+        if (s_cpl_error || (s_cpl_error_code != 0))
+            fail("same-cycle case returned completion error");
+        if (s_cpl_tag != expected_source_tag)
+            fail("same-cycle case completion tag mismatch");
         expected_source_tag = expected_source_tag + 1'b1;
         @(negedge s_clk);
         s_cpl_ready = 1'b0;
@@ -569,15 +702,23 @@ initial begin
     for (random_frame = 0; random_frame < 400; random_frame = random_frame + 1)
         send_frame(50 + random_frame, (($random(random_seed) & 32'h7fff_ffff) % 4096) + 1);
 
+    $display("CDC_BRIDGE_PHASE command_and_payload_valid_same_cycle");
+    send_same_cycle_command_payload_frame(command_count);
+
     while (s_busy || m_cpl_valid)
         @(posedge s_clk);
 
     $display("CDC_BRIDGE_PHASE protocol_error_reachability");
-    apply_hard_reset();
-    inject_payload_without_command();
+    if (ALLOW_SOURCE_PAYLOAD_LOOKAHEAD == 0) begin
+        apply_hard_reset();
+        inject_payload_without_command();
 
-    apply_hard_reset();
-    send_frame_with_payload_after_tlast(command_count);
+        apply_hard_reset();
+        send_frame_with_payload_after_tlast(command_count);
+    end else begin
+        apply_hard_reset();
+        exercise_lookahead_backpressure(command_count);
+    end
 
     apply_hard_reset();
     inject_completion_without_command("completion_without_command");
@@ -622,16 +763,21 @@ initial begin
         fail("payload FIFO full backpressure was not exercised");
     if (peak_payload_level < 24)
         fail("payload FIFO near-full level was not exercised");
-    if (protocol_error_case_count != 5)
+    if (protocol_error_case_count !=
+        ((ALLOW_SOURCE_PAYLOAD_LOOKAHEAD == 0) ? 5 : 3))
         fail("directed protocol-error case count mismatch");
+    if (same_cycle_command_payload_count != 1)
+        fail("same-cycle command/payload case count mismatch");
     if (s_protocol_error)
         fail("bridge protocol error asserted");
 
     if (errors != 0)
         $fatal(1, "tb_rtl_rx_payload_cdc_bridge failed errors=%0d", errors);
-    $display("PASS tb_rtl_rx_payload_cdc_bridge frames=%0d bytes=%0d source_stalls=%0d fifo_empty=%0d peak_payload_level=%0d clock_profiles=6 clock_stops=2 protocol_error_cases=%0d",
+    $display("PASS tb_rtl_rx_payload_cdc_bridge mode=%0d frames=%0d bytes=%0d source_stalls=%0d fifo_empty=%0d peak_payload_level=%0d clock_profiles=6 clock_stops=2 same_cycle_command_payload=%0d protocol_error_cases=%0d",
+             ALLOW_SOURCE_PAYLOAD_LOOKAHEAD,
              command_count, source_payload_bytes, source_stall_cycles,
-             fifo_empty_cycles, peak_payload_level, protocol_error_case_count);
+             fifo_empty_cycles, peak_payload_level,
+             same_cycle_command_payload_count, protocol_error_case_count);
     $finish;
 end
 

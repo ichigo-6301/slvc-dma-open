@@ -25,7 +25,7 @@
         },
         {
           "path": "provenance/claims.yaml",
-          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+          "sha256": "f6c776409de5e81821de429d05697ba0c3f7310d7b8e4f25a1d6072b925c359a"
         }
       ],
       "claim_ids": []
@@ -53,7 +53,7 @@
         },
         {
           "path": "provenance/claims.yaml",
-          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+          "sha256": "f6c776409de5e81821de429d05697ba0c3f7310d7b8e4f25a1d6072b925c359a"
         }
       ],
       "claim_ids": [
@@ -83,7 +83,7 @@
         },
         {
           "path": "provenance/claims.yaml",
-          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+          "sha256": "f6c776409de5e81821de429d05697ba0c3f7310d7b8e4f25a1d6072b925c359a"
         }
       ],
       "claim_ids": [
@@ -121,7 +121,7 @@
         },
         {
           "path": "provenance/claims.yaml",
-          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+          "sha256": "f6c776409de5e81821de429d05697ba0c3f7310d7b8e4f25a1d6072b925c359a"
         }
       ],
       "claim_ids": [
@@ -156,13 +156,41 @@
         },
         {
           "path": "provenance/claims.yaml",
-          "sha256": "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76"
+          "sha256": "f6c776409de5e81821de429d05697ba0c3f7310d7b8e4f25a1d6072b925c359a"
         }
       ],
       "claim_ids": [
         "slvc_dma_writer_reservation_component_paired_dc",
         "slvc_dma_rx_payload_cdc_ideal_throughput",
         "slvc_dma_c2b4_n45_register_postroute_450"
+      ]
+    },
+    {
+      "path": "docs/assets/slvc_dma_async64_end_to_end_throughput.svg",
+      "sha256": "4394c8f77ff4b001ddbae472810d31c8938211793eb84dc182982aab80e0fed5",
+      "format": "svg",
+      "source": "deterministically generated from the bounded Async64 RTL-simulation summary and raw counter table",
+      "source_type": "deterministic_generated_showcase",
+      "numeric_authority": false,
+      "generator": "flows/scripts/generate_showcase_assets.py",
+      "generator_sha256": "7e83fdcc4e81d7ab393d0e6153e7721e80cd053da65d2327ccc19e3b0c74ab53",
+      "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
+      "inputs": [
+        {
+          "path": "evidence/slvc_dma_async64_end_to_end_sim_summary.yaml",
+          "sha256": "c09d34e36b09d5ecf75c615ec747bcce6773793a671d44b457ab0a31cf9aea54"
+        },
+        {
+          "path": "evidence/throughput_simulation/async64_end_to_end/points.csv",
+          "sha256": "ebc1eb35c92d2ca58e97ee0c751c9dd354e131cacbdafbd1d691c79d2186da4c"
+        },
+        {
+          "path": "provenance/claims.yaml",
+          "sha256": "f6c776409de5e81821de429d05697ba0c3f7310d7b8e4f25a1d6072b925c359a"
+        }
+      ],
+      "claim_ids": [
+        "slvc_dma_async64_end_to_end_rtl_sim_throughput"
       ]
     },
     {

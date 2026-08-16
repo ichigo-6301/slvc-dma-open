@@ -9,7 +9,11 @@ vlog +incdir+../rtl/include +incdir+../rtl +incdir+../pattern \
     ../rtl/common/dma_async_fifo_tech.v \
     ../rtl/rx/dma_rx_payload_cdc_bridge.v \
     ../pattern/tb_rtl_rx_payload_cdc_bridge.v
-vsim -c work.tb_rtl_rx_payload_cdc_bridge
-onfinish stop
-run -all
+foreach lookahead_mode {0 1} {
+    vsim -c work.tb_rtl_rx_payload_cdc_bridge \
+        -gALLOW_SOURCE_PAYLOAD_LOOKAHEAD=$lookahead_mode
+    onfinish stop
+    run -all
+    quit -sim
+}
 quit -f

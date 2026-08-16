@@ -33,6 +33,10 @@ This view places shared-link RX, descriptor-driven TX, joint admission, hybrid b
 | RX Memory Profiles / CDC | Same-clock512, Async64, and Async512; Command, ordered 512-bit Payload, and Tagged Completion crossing; the 512-bit profiles sustain `64 B/cycle`, `100%` W utilization, and four peak outstanding | Ready ideal-memory RTL/interface result; Async64 is `8 B/cycle`; not measured board DDR or 10G throughput | [Architecture](docs/en/architecture.md#rx-memory-development-profiles) · [Verification](docs/en/verification.md#rx-writer-and-cdc) · [Results](docs/en/results.md#rtl-function-and-interface-throughput) · [Evidence](evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml) |
 | C2B4 ASIC implementation | Two channels, 4 KiB/channel, register-expanded; 550 MHz DC handoff and 450 MHz route/OpenRCX/PT; setup/hold WNS `+0.041322/+0.000341 ns`; standard-cell area `1.04207 mm²`; DRC/antenna/electrical `0` | Fixed two-channel RX512 memory-subsystem implementation point; not complete DMA, SRAM, Fmax, or foundry signoff | [Architecture](docs/en/architecture.md#asic-memory-binding) · [ASIC](docs/en/asic_implementation.md#c2b4-register-expanded-profile) · [Results](docs/en/results.md#asic-c2b4-register-expanded) · [Evidence](evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml) |
 
+<!-- throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:start -->
+<!-- claim:slvc_dma_async64_end_to_end_rtl_sim_throughput maturity:verified -->
+Dual-platform RTL simulation: 3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; 95.779434%. See [Results](docs/en/results.md).
+<!-- throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:end -->
 <a id="frame-lifecycle"></a>
 
 ## Architecture And Frame Lifecycle

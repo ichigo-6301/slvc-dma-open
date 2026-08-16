@@ -1,0 +1,107 @@
+{
+  "baseline_commit": "c20681fad0eaa6ad55dbb919149765b175b29117",
+  "baseline_tag": "resume-2026-08-r3",
+  "benchmark_branch": "perf/dma-u5-async64-throughput-sim",
+  "blockers": [
+    {
+      "condition": "s_cmd_fire=1 while s_payload_tvalid=1 and source_active_q=0",
+      "effect": "source_payload_outside_frame sets sticky s_protocol_error",
+      "id": "ASYNC64_SOURCE_PAYLOAD_WINDOW_CONTRACT",
+      "status": "REPRODUCED_WINDOWS_MODELSIM"
+    },
+    {
+      "condition": "two-frame loopback did not reach all expected TX/RX CQEs",
+      "effect": "formal loopback and 16-flow matrices were not started",
+      "id": "MULTI_FRAME_LOOPBACK_INCOMPLETE",
+      "status": "INCONCLUSIVE_TEST_INFRASTRUCTURE_OR_RTL"
+    }
+  ],
+  "board_bridge_ready": false,
+  "boundaries": {
+    "async64_interface_limit_bytes_per_cycle": "8",
+    "async64_interface_limit_gb_per_s_at_100mhz": "0.8",
+    "hp0_model_is_board_measurement": false,
+    "legacy_9p5_gbps_used_in_comparison": false,
+    "sameclock512_64_bytes_per_cycle_claim_reused": false
+  },
+  "claim_id": null,
+  "classification": "BLOCKED_PROTOCOL_CONTRACT",
+  "experiment_id": "slvc_dma_u5_async64_end_to_end_throughput",
+  "files": {
+    "artifacts.csv": "836547f38bf435f5c693412a799c4d339bdadd39dee62f4c0cc10d87ade1b218",
+    "latency.csv": "f469961aa662cc7e45f0e7fcf32ceae08aabdc2d19b75a860b0a01e8f17b6c7d",
+    "matrix.csv": "02cfad983f30636fcfe1d40472615f8329618b1bbc9e222946b611d8cdb116e5",
+    "metrics.csv": "ae11c798e6c90457bb82ad278058a4a6cca7ef463c546ddfc1ee8b645424de19",
+    "points.csv": "157b1f90f2b5f54110d837484af145abfc7eb95b94649a9f36ce8ae6d68daf78",
+    "stall_breakdown.csv": "0f9755c7aa057d65e6f49afa677c71578a0d60766cbb1f4681134d4b00c772dc",
+    "verification.csv": "f1f97d1b909e21befe0dd90fb1b94a7cc9d99abe2461301dc5eec4144c0f4161"
+  },
+  "formal_matrix_completed": false,
+  "formulas": {
+    "bytes_per_cycle": "payload_bytes / cycles",
+    "frames_per_s_at_100mhz": "100000000 * frames / cycles",
+    "gb_per_s_at_100mhz": "bytes_per_cycle * 0.1",
+    "gbits_per_s_at_100mhz": "bytes_per_cycle * 0.8"
+  },
+  "production_rtl_changed": false,
+  "profile": {
+    "aclk_mhz": 100,
+    "cq_entries": 4096,
+    "descriptor_ring_capacity_entries": 2048,
+    "descriptor_workload_entries": 1024,
+    "max_burst_beats": 16,
+    "max_outstanding": 4,
+    "mem_clk_mhz": 100,
+    "rx_contexts": 16,
+    "rx_frontend_bits": 512,
+    "rx_memory_bits": 64,
+    "seed": 71,
+    "top": "frame_dma_rx_top",
+    "tx_contexts": 16
+  },
+  "promotion_eligible": false,
+  "public_claim_eligible": false,
+  "schema_version": 1,
+  "sources": [
+    {
+      "path": "rtl/integration/frame_dma_rx_top.v",
+      "sha256": "f7de4e5c02b6e9608f606e0915514c11fc4f7f580981be0b5c4aee0314036062",
+      "size_bytes": 137510
+    },
+    {
+      "path": "rtl/rx/dma_rx_payload_cdc_bridge.v",
+      "sha256": "eb25f3d49ba8ea62746a15f98753ff23dd6714bd0572892a72c57b4eb1181451",
+      "size_bytes": 13442
+    },
+    {
+      "path": "rtl/tx/dma_axi_read_prefetch.v",
+      "sha256": "839c47caeaedf9916de0cdc10a3086391b5efa9e0db5fafb0134ed0bdcc8153b",
+      "size_bytes": 14922
+    },
+    {
+      "path": "filelists/dma_rtl.f",
+      "sha256": "433f442036d9dfce3c5f150fa53594cfcd0b608f5e44423fe38a1e65d0e3448a",
+      "size_bytes": 1563
+    },
+    {
+      "path": "pattern/dma_sim_def.vh",
+      "sha256": "c9d49117de9762e3f8b0d7f5750fafb8205945f8ced7997fd90042141106c972",
+      "size_bytes": 369
+    },
+    {
+      "path": "pattern/axi_hp0_dual_master_64_model.v",
+      "sha256": "655dcbea75cb191bd0a6705f3c57922777d51a0dab29ccd494e3e51eb11bbea7",
+      "size_bytes": 16458
+    },
+    {
+      "path": "pattern/tb_rtl_dma_async64_end_to_end_throughput.v",
+      "sha256": "48730dc1f71ff9113e6494e11457a5bfc249789b259eb2f3b23990be9ba987f6",
+      "size_bytes": 87235
+    },
+    {
+      "path": "modelsim/run_rtl_dma_async64_end_to_end_throughput.do",
+      "sha256": "57e0d70646ade5fe1d6b8bc43a9feddec627daa1f50369fbd375f5a3b3cfe2a5",
+      "size_bytes": 2732
+    }
+  ]
+}

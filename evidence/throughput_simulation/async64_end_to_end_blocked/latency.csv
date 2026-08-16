@@ -1,0 +1,9 @@
+point_id,sample,sequence,channel,cycles
+win_rx4_shared,1,1,0,702
+win_rx4_shared,2,2,0,1228
+win_rx4_shared,3,3,0,1499
+win_rx4_shared,4,4,0,1498
+win_loop1_shared,1,1,0,1156
+win_loop2_shared,1,1,0,1412
+win_loop2_split,1,1,0,1155
+win_loop2_split,2,2,0,1148

@@ -170,3 +170,8 @@ The writer-only OOC sweep uses DC O-2018.06-SP1, Nangate45 typical, 0.200 ns set
 | 1.250 ns | -0.033 ns | +0.046 ns | 7,195.57 | 3,622 |
 
 Each target recompiles the design, so non-monotonic area/slack is expected. 1.500 ns is the last setup-closed tested point and 1.250 ns is the first failure. This is not routed Fmax or a complete-DMA result.
+<!-- throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:start -->
+<!-- claim:slvc_dma_async64_end_to_end_rtl_sim_throughput maturity:verified -->
+<p align="center"><a href="../assets/slvc_dma_async64_end_to_end_throughput.svg"><img src="../assets/slvc_dma_async64_end_to_end_throughput.svg" width="1000" alt="Async64 throughput"></a></p>
+3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; 95.779434%. Pending / not measured / not claimed.
+<!-- throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:end -->

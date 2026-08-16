@@ -467,6 +467,21 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         self.assertEqual(self._validate(),
                          "NOT_PUBLISHED")
 
+    def test_unpublished_tree_still_protects_homepages(self):
+        self._copy_provenance()
+        path = self.root / "README.en.md"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "# SLVC DMA\n",
+                "# Rewritten homepage\n",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+                gate.PublicationError, "modifies protected homepage content"):
+            self._validate()
+
     def test_complete_publication_contract_passes(self):
         self._published_fixture()
         self.assertEqual(

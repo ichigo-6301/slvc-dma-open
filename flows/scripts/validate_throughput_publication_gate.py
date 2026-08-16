@@ -511,6 +511,16 @@ def _validate_readme_blocks(root):
             ))
 
 
+def _validate_unpublished_readmes(root):
+    for relative, expected_hash in PROTECTED_README_SHA256.items():
+        text = _read_text(root / relative)
+        protected, _ = _bounded_block(
+            text, README_START, README_END, str(relative), False
+        )
+        if _sha256(protected.encode("utf-8")) != expected_hash:
+            _fail("{} modifies protected homepage content".format(relative))
+
+
 def _validate_results_blocks(root):
     required_common = (
         "<!-- claim:{} maturity:verified -->".format(CLAIM_ID),
@@ -994,6 +1004,7 @@ def validate(root, execute_validators=True):
     if not claim_present:
         if sentinels_present:
             _fail("throughput publication files exist without the registered claim")
+        _validate_unpublished_readmes(root)
         return "NOT_PUBLISHED"
 
     missing = [path for path in sorted(REQUIRED_PATHS, key=lambda item: item.as_posix())

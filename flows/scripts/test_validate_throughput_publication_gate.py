@@ -15,6 +15,13 @@ from flows.scripts import validate_throughput_publication_gate as gate
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_REF = gate.TRUSTED_FLOW_AS_RUN_COMMIT
+REVIEWED_SOURCE_REF = "328d5b8dea06582b5b20cd21373dbc2a97aa4a95"
+REVIEWED_ARTIFACTS_SHA256 = (
+    "a6e3db31179f0db47867e5e7a79aff34e2f7ebd54dd8f4ca5c4dde49ec9a9fda"
+)
+REVIEWED_C2B4_IDENTITY_SHA256 = (
+    "25bc50bd40e28458bba79809212b5499be59fa49964bf2d7438ffcbcb9f8cd12"
+)
 
 
 def _yaml_record(item_id, fields):
@@ -556,6 +563,20 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         self.assertEqual(
             self._validate(),
             "VERIFIED_RTL_SIMULATION_PUBLISHED",
+        )
+
+    def test_reviewed_rerun_identity_is_fixed(self):
+        self.assertEqual(gate.TRUSTED_FLOW_AS_RUN_COMMIT,
+                         REVIEWED_SOURCE_REF)
+        self.assertEqual(
+            gate.TRUSTED_EVIDENCE_FILE_SHA256["artifacts.csv"],
+            REVIEWED_ARTIFACTS_SHA256,
+        )
+        self.assertEqual(
+            gate.TRUSTED_EVIDENCE_FILE_SHA256[
+                "c2b4_physical_identity.json"
+            ],
+            REVIEWED_C2B4_IDENTITY_SHA256,
         )
 
     def test_complete_publication_contract_matches_showcase_generator(self):

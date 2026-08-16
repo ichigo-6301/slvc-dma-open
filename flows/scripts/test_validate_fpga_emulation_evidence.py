@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Unit and mutation tests for the U5 FPGA evidence gate."""
+
+import shutil
+import tempfile
+import unittest
+from pathlib import Path
+
+from flows.scripts import validate_fpga_emulation_evidence as gate
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+class FpgaEvidenceGateTest(unittest.TestCase):
+    def test_decimal_derivation_matches_observation(self):
+        actual = gate.derive_metrics(gate.RAW_ROW)
+        self.assertEqual("1.558722", actual["mb_per_s_per_mhz"])
+        self.assertEqual("155.872225", actual["mb_per_s_at_100mhz"])
+        self.assertEqual("1.246978", actual["gbits_per_s_at_100mhz"])
+        self.assertEqual("38.968062", actual["hp0_shared_model_efficiency"])
+
+    def test_zero_ticks_fail_closed(self):
+        row = dict(gate.RAW_ROW)
+        row["xtime_ticks"] = "0"
+        with self.assertRaises(gate.EvidenceError):
+            gate.derive_metrics(row)
+
+    def test_equivalent_cycles_are_recomputed(self):
+        row = dict(gate.RAW_ROW)
+        row["equivalent_pl_cycles"] = "2690861"
+        with self.assertRaises(gate.EvidenceError):
+            gate.derive_metrics(row)
+
+    def test_sensitive_windows_path_is_rejected(self):
+        with self.assertRaises(gate.EvidenceError):
+            gate._verify_sensitive_text(Path("log.txt"), "D:/private/top.bit")
+
+    def test_jtag_serial_is_rejected(self):
+        with self.assertRaises(gate.EvidenceError):
+            gate._verify_sensitive_text(
+                Path("log.txt"), "Platform Cable USB II 136202079204c3"
+            )
+
+    def test_source_control_flow_rejects_report_before_checks(self):
+        source = (ROOT / gate.BENCHMARK_REL / "helloworld.c")
+        if not source.is_file():
+            self.skipTest("publication benchmark is not present on policy-only ref")
+        text = source.read_text(encoding="utf-8")
+        broken = text.replace(
+            'report_throughput_window("hardware_end_to_end"',
+            'report_throughput_window_removed("hardware_end_to_end"',
+        )
+        with self.assertRaises(gate.EvidenceError):
+            gate._verify_source_control_flow(broken)
+
+    def _published_fixture(self):
+        claims = ROOT / gate.CLAIMS_REL
+        if not claims.is_file() or "  - id: {}\n".format(
+                gate.CLAIM_ID) not in claims.read_text(encoding="utf-8"):
+            self.skipTest("publication fixture is not present on policy-only ref")
+        temp = tempfile.TemporaryDirectory()
+        root = Path(temp.name) / "repo"
+        shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".git"))
+        return temp, root
+
+    def test_published_fixture_passes_without_git_identity(self):
+        temp, root = self._published_fixture()
+        try:
+            self.assertEqual(
+                "FPGA_EMULATION_EVIDENCE_PASS",
+                gate.validate(root, check_git_identity=False),
+            )
+        finally:
+            temp.cleanup()
+
+    def test_counter_mutation_fails(self):
+        temp, root = self._published_fixture()
+        try:
+            path = root / gate.PACKAGE_REL / "raw_counters.csv"
+            path.write_text(
+                path.read_text(encoding="utf-8").replace("8969535", "8969534"),
+                encoding="utf-8",
+            )
+            with self.assertRaises(gate.EvidenceError):
+                gate.validate(root, check_git_identity=False)
+        finally:
+            temp.cleanup()
+
+    def test_source_mutation_fails(self):
+        temp, root = self._published_fixture()
+        try:
+            path = root / gate.BENCHMARK_REL / "helloworld.c"
+            path.write_text(
+                path.read_text(encoding="utf-8") + "\n/* mutation */\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(gate.EvidenceError):
+                gate.validate(root, check_git_identity=False)
+        finally:
+            temp.cleanup()
+
+    def test_resume_promotion_fails(self):
+        temp, root = self._published_fixture()
+        try:
+            path = root / gate.CLAIMS_REL
+            text = path.read_text(encoding="utf-8")
+            block = gate._item_block(text, gate.CLAIM_ID)
+            path.write_text(
+                text.replace(block, block.replace(
+                    "    resume_eligible: false", "    resume_eligible: true"
+                )),
+                encoding="utf-8",
+            )
+            with self.assertRaises(gate.EvidenceError):
+                gate.validate(root, check_git_identity=False)
+        finally:
+            temp.cleanup()
+
+
+if __name__ == "__main__":
+    unittest.main()

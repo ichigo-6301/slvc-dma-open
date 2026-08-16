@@ -129,6 +129,38 @@ class TrustedScopePolicyTest(unittest.TestCase):
         with self.assertRaisesRegex(policy.PolicyError, "separate pull requests"):
             policy.validate_event(event(11, "3" * 40), changed, BOOTSTRAP_HEAD)
 
+    def test_fpga_emulation_publication_exact_scope_passes(self):
+        self.assertEqual(
+            policy.validate_event(
+                event(12, "3" * 40),
+                policy.FPGA_EMULATION_REQUIRED_PATHS,
+                BOOTSTRAP_HEAD,
+            ),
+            "FPGA_EMULATION_EVIDENCE_SCOPE_PASS",
+        )
+
+    def test_fpga_emulation_publication_requires_complete_contract(self):
+        changed = set(policy.FPGA_EMULATION_REQUIRED_PATHS)
+        changed.remove("fpga/u5/benchmark/helloworld.c")
+        with self.assertRaisesRegex(policy.PolicyError, "missing required path"):
+            policy.validate_event(event(12, "3" * 40), changed, BOOTSTRAP_HEAD)
+
+    def test_fpga_emulation_publication_rejects_rtl_and_policy(self):
+        for path in ("rtl/tx/dma_axi_read_prefetch.v", "Makefile"):
+            changed = set(policy.FPGA_EMULATION_REQUIRED_PATHS)
+            changed.add(path)
+            with self.subTest(path=path):
+                with self.assertRaises(policy.PolicyError):
+                    policy.validate_event(
+                        event(12, "3" * 40), changed, BOOTSTRAP_HEAD
+                    )
+
+    def test_fpga_and_rtl_simulation_publications_cannot_be_mixed(self):
+        changed = set(policy.FPGA_EMULATION_REQUIRED_PATHS)
+        changed.add("evidence/throughput_simulation/async64_end_to_end/manifest.json")
+        with self.assertRaisesRegex(policy.PolicyError, "separate pull requests"):
+            policy.validate_event(event(12, "3" * 40), changed, BOOTSTRAP_HEAD)
+
     def test_metadata_and_policy_combination_fails(self):
         changed = {
             "provenance/evidence.yaml",

@@ -16,6 +16,9 @@ from pathlib import Path
 CLAIM_ID = "slvc_dma_async64_end_to_end_rtl_sim_throughput"
 EVIDENCE_ID = "slvc_dma_async64_end_to_end_sim_summary"
 NONCLAIM_ID = "slvc_dma_async64_end_to_end_not_hardware"
+OPTIONAL_FPGA_CLAIM_ID = "slvc_dma_u5_sync_hp0_loopback_board_throughput"
+OPTIONAL_FPGA_EVIDENCE_ID = "slvc_dma_u5_sync_hp0_loopback_summary"
+OPTIONAL_FPGA_NONCLAIM_ID = "slvc_dma_u5_sync_hp0_loopback_not_transferable"
 CHART_REL = Path("docs/assets/slvc_dma_async64_end_to_end_throughput.svg")
 RESULTS_ASSET_LINK = "../assets/slvc_dma_async64_end_to_end_throughput.svg"
 PACKAGE_REL = Path("evidence/throughput_simulation/async64_end_to_end")
@@ -201,6 +204,22 @@ RESULTS_START = (
 RESULTS_END = (
     "<!-- throughput-publication:"
     "slvc_dma_async64_end_to_end_rtl_sim_throughput:end -->"
+)
+FPGA_README_START = (
+    "<!-- fpga-emulation-publication:"
+    "slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:start -->"
+)
+FPGA_README_END = (
+    "<!-- fpga-emulation-publication:"
+    "slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:end -->"
+)
+FPGA_RESULTS_START = (
+    "<!-- fpga-emulation-publication:"
+    "slvc_dma_u5_sync_hp0_loopback_board_throughput:start -->"
+)
+FPGA_RESULTS_END = (
+    "<!-- fpga-emulation-publication:"
+    "slvc_dma_u5_sync_hp0_loopback_board_throughput:end -->"
 )
 EXPECTED_README_BLOCK_SHA256 = {
     Path("README.md"): (
@@ -516,6 +535,9 @@ def _validate_readme_blocks(root):
         protected, block = _bounded_block(
             text, README_START, README_END, str(relative), True
         )
+        protected, _ = _strip_optional_fpga_doc_block(
+            protected, relative
+        )
         if _sha256(protected.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected homepage content".format(relative))
         visible = re.sub(r"<!--.*?-->", "", block, flags=re.S)
@@ -548,21 +570,29 @@ def _validate_unpublished_readmes(root):
         protected, _ = _bounded_block(
             text, README_START, README_END, str(relative), False
         )
+        protected, _ = _strip_optional_fpga_doc_block(
+            protected, relative
+        )
         if _sha256(protected.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected homepage content".format(relative))
 
 
 def _validate_unpublished_state(root):
     for relative, expected_hash in PROTECTED_MANIFEST_HASHES.items():
-        if _sha256(_read_text(root / relative).encode("utf-8")) != expected_hash:
+        text = _strip_optional_fpga_registry_item(
+            relative, _read_text(root / relative)
+        )
+        if _sha256(text.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected pre-publication content".format(
                 relative
             ))
 
     _validate_unpublished_readmes(root)
     for relative, expected_hash in PROTECTED_RESULTS_SHA256.items():
-        if (_sha256(_read_text(root / relative).encode("utf-8")) !=
-                expected_hash):
+        text, _ = _strip_optional_fpga_doc_block(
+            _read_text(root / relative), relative
+        )
+        if _sha256(text.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected pre-publication content".format(
                 relative
             ))
@@ -656,9 +686,50 @@ def _item_block(text, item_id):
     return matches[0]
 
 
+def _strip_optional_fpga_registry_item(path, text):
+    item_id = {
+        CLAIMS_REL: OPTIONAL_FPGA_CLAIM_ID,
+        EVIDENCE_REL: OPTIONAL_FPGA_EVIDENCE_ID,
+        NONCLAIMS_REL: OPTIONAL_FPGA_NONCLAIM_ID,
+    }.get(path)
+    if not item_id:
+        return text
+    pattern = re.compile(
+        r"(?ms)^  - id: " + re.escape(item_id) + r"\n.*?(?=^  - id: |\Z)"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        _fail("{} contains duplicate optional FPGA records".format(path))
+    if not matches:
+        return text
+    match = matches[0]
+    return text[:match.start()] + text[match.end():]
+
+
+def _strip_optional_fpga_doc_block(text, relative):
+    if relative in (Path("README.md"), Path("README.en.md")):
+        start, end = FPGA_README_START, FPGA_README_END
+    elif relative in (Path("docs/en/results.md"), Path("docs/zh-CN/results.md")):
+        start, end = FPGA_RESULTS_START, FPGA_RESULTS_END
+    else:
+        return text, ""
+    pattern = re.compile(
+        r"(?ms)^" + re.escape(start) + r"\n.*?^" + re.escape(end) + r"\n?"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1 or text.count(start) != len(matches) or text.count(end) != len(matches):
+        _fail("{} optional FPGA publication block mismatch".format(relative))
+    if not matches:
+        return text, ""
+    match = matches[0]
+    return text[:match.start()] + text[match.end():], match.group(0)
+
+
 def _verify_append_only(path, text, item_id):
     match = _item_block(text, item_id)
-    protected = (text[:match.start()] + text[match.end():]).encode("utf-8")
+    protected_text = text[:match.start()] + text[match.end():]
+    protected_text = _strip_optional_fpga_registry_item(path, protected_text)
+    protected = protected_text.encode("utf-8")
     if _sha256(protected) != PROTECTED_MANIFEST_HASHES[path]:
         _fail("{} modifies a protected pre-publication item".format(path))
     return match.group(0)

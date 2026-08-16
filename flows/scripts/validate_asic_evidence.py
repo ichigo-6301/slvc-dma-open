@@ -62,6 +62,15 @@ AUTHORIZED_THROUGHPUT_EVIDENCE_ID = (
 AUTHORIZED_THROUGHPUT_NONCLAIM_ID = (
     "slvc_dma_async64_end_to_end_not_hardware"
 )
+AUTHORIZED_FPGA_CLAIM_ID = (
+    "slvc_dma_u5_sync_hp0_loopback_board_throughput"
+)
+AUTHORIZED_FPGA_EVIDENCE_ID = (
+    "slvc_dma_u5_sync_hp0_loopback_summary"
+)
+AUTHORIZED_FPGA_NONCLAIM_ID = (
+    "slvc_dma_u5_sync_hp0_loopback_not_transferable"
+)
 AUTHORIZED_RESULTS_START = (
     "<!-- throughput-publication:"
     "slvc_dma_async64_end_to_end_rtl_sim_throughput:start -->"
@@ -69,6 +78,14 @@ AUTHORIZED_RESULTS_START = (
 AUTHORIZED_RESULTS_END = (
     "<!-- throughput-publication:"
     "slvc_dma_async64_end_to_end_rtl_sim_throughput:end -->"
+)
+AUTHORIZED_FPGA_RESULTS_START = (
+    "<!-- fpga-emulation-publication:"
+    "slvc_dma_u5_sync_hp0_loopback_board_throughput:start -->"
+)
+AUTHORIZED_FPGA_RESULTS_END = (
+    "<!-- fpga-emulation-publication:"
+    "slvc_dma_u5_sync_hp0_loopback_board_throughput:end -->"
 )
 
 CSV_HEADERS = {
@@ -916,6 +933,15 @@ def _registry_sha256_without_authorized_item(path, item_id, authorized):
     text = path.read_text(encoding="utf-8")
     normalized = (_strip_authorized_registry_item(text, item_id, str(path))
                   if authorized else text)
+    fpga_item = {
+        "claims.yaml": AUTHORIZED_FPGA_CLAIM_ID,
+        "evidence.yaml": AUTHORIZED_FPGA_EVIDENCE_ID,
+        "nonclaims.yaml": AUTHORIZED_FPGA_NONCLAIM_ID,
+    }.get(path.name)
+    if fpga_item:
+        normalized = _strip_authorized_registry_item(
+            normalized, fpga_item, str(path)
+        )
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
@@ -925,6 +951,9 @@ def _normalized_evidence_registry_sha256(path, authorized):
         text = _strip_authorized_registry_item(
             text, AUTHORIZED_THROUGHPUT_EVIDENCE_ID, str(path)
         )
+    text = _strip_authorized_registry_item(
+        text, AUTHORIZED_FPGA_EVIDENCE_ID, str(path)
+    )
     pattern = (
         r"(?ms)(^  - id: slvc_dma_asic_paired_dc_publication\n"
         r".*?^    sha256: )[0-9a-f]{64}(?=\n)"
@@ -1004,12 +1033,14 @@ def _validate_record_fields(body, expected, context):
 
 def _validate_nonclaims(root):
     records = _registered_records(root / "provenance/nonclaims.yaml")
-    claim_registered = AUTHORIZED_THROUGHPUT_CLAIM_ID in _registered_records(
-        root / "provenance/claims.yaml"
-    )
+    claim_records = _registered_records(root / "provenance/claims.yaml")
+    claim_registered = AUTHORIZED_THROUGHPUT_CLAIM_ID in claim_records
     if (AUTHORIZED_THROUGHPUT_NONCLAIM_ID in records and
             not claim_registered):
         _fail("authorized throughput nonclaim requires the registered claim")
+    if (AUTHORIZED_FPGA_NONCLAIM_ID in records and
+            AUTHORIZED_FPGA_CLAIM_ID not in claim_records):
+        _fail("authorized FPGA nonclaim requires the registered claim")
     if not set(EXPECTED_NONCLAIMS).issubset(records):
         _fail("paired-DC nonclaim registry record is missing")
     for nonclaim_id, expected in EXPECTED_NONCLAIMS.items():
@@ -1105,9 +1136,13 @@ def _validate_publication(root, evaluations):
     throughput_claim_registered = (
         AUTHORIZED_THROUGHPUT_CLAIM_ID in claim_records
     )
+    fpga_claim_registered = AUTHORIZED_FPGA_CLAIM_ID in claim_records
     if (AUTHORIZED_THROUGHPUT_EVIDENCE_ID in evidence_records and
             not throughput_claim_registered):
         _fail("authorized throughput evidence requires the registered claim")
+    if (AUTHORIZED_FPGA_EVIDENCE_ID in evidence_records and
+            not fpga_claim_registered):
+        _fail("authorized FPGA evidence requires the registered claim")
     if not expected_claims.issubset(claim_records):
         _fail("paired-DC claim is missing from provenance/claims.yaml")
     publication_id = "slvc_dma_asic_paired_dc_publication"
@@ -1367,8 +1402,13 @@ def _validate_result_tables(root):
     authorized_claim_count = claims_text.count(
         "  - id: {}\n".format(AUTHORIZED_THROUGHPUT_CLAIM_ID)
     )
+    authorized_fpga_claim_count = claims_text.count(
+        "  - id: {}\n".format(AUTHORIZED_FPGA_CLAIM_ID)
+    )
     if authorized_claim_count > 1:
         _fail("duplicate authorized throughput claim")
+    if authorized_fpga_claim_count > 1:
+        _fail("duplicate authorized FPGA claim")
     for relative, expected_rows in EXPECTED_RESULT_ROWS.items():
         try:
             text = (root / relative).read_text(encoding="utf-8")
@@ -1400,6 +1440,23 @@ def _validate_result_tables(root):
                         "registered claim in {}".format(relative)
                     )
                 match = matches[0]
+                text = text[:match.start()] + text[match.end():]
+            fpga_marker_pattern = re.compile(
+                r"(?ms)^" + re.escape(AUTHORIZED_FPGA_RESULTS_START) +
+                r"\n.*?^" + re.escape(AUTHORIZED_FPGA_RESULTS_END) + r"\n?"
+            )
+            fpga_matches = list(fpga_marker_pattern.finditer(text))
+            if len(fpga_matches) > 1 or (
+                    text.count(AUTHORIZED_FPGA_RESULTS_START) != len(fpga_matches) or
+                    text.count(AUTHORIZED_FPGA_RESULTS_END) != len(fpga_matches)):
+                _fail("invalid authorized FPGA block in {}".format(relative))
+            if fpga_matches:
+                if authorized_fpga_claim_count != 1:
+                    _fail(
+                        "authorized FPGA result block requires the registered "
+                        "claim in {}".format(relative)
+                    )
+                match = fpga_matches[0]
                 text = text[:match.start()] + text[match.end():]
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
         if digest != expected_hash:

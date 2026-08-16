@@ -32,13 +32,16 @@ BOOTSTRAP_PATHS = frozenset({
     "evidence/asic_paired_dc/sources.csv",
     "evidence/asic_paired_dc/verification.csv",
     "flows/scripts/test_validate_asic_evidence.py",
+    "flows/scripts/test_validate_fpga_emulation_evidence.py",
     "flows/scripts/validate_asic_evidence.py",
+    "flows/scripts/validate_fpga_emulation_evidence.py",
     "provenance/README.md",
     "provenance/asic_paired_dc_publication.yaml",
     "provenance/checksums.sha256",
     "provenance/claims.yaml",
     "provenance/evidence.yaml",
     "provenance/nonclaims.yaml",
+    "provenance/showcase_assets.json",
 })
 
 POLICY_PATHS = frozenset({
@@ -167,6 +170,60 @@ THROUGHPUT_TRIGGER_PATHS = frozenset({
 })
 THROUGHPUT_TRIGGER_PREFIX = "evidence/throughput_simulation/"
 
+FPGA_EMULATION_PUBLICATION_PATHS = frozenset({
+    "README.en.md",
+    "README.md",
+    "docs/en/fpga_implementation.md",
+    "docs/en/results.md",
+    "docs/zh-CN/fpga_implementation.md",
+    "docs/zh-CN/results.md",
+    "evidence/slvc_dma_u5_sync_hp0_loopback_summary.yaml",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/README.md",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/artifacts.csv",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/derived_metrics.csv",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/manifest.json",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/raw_counters.csv",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/sanitized_sdk_log.txt",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/source_delta.diff",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/source_identity.json",
+    "fpga/u5/benchmark/README.md",
+    "fpga/u5/benchmark/dma_loopback_regs.h",
+    "fpga/u5/benchmark/dma_mmio_diag.c",
+    "fpga/u5/benchmark/dma_mmio_diag.h",
+    "fpga/u5/benchmark/helloworld.c",
+    "provenance/checksums.sha256",
+    "provenance/claims.yaml",
+    "provenance/evidence.yaml",
+    "provenance/nonclaims.yaml",
+    "provenance/showcase_assets.json",
+})
+
+FPGA_EMULATION_REQUIRED_PATHS = frozenset({
+    "README.en.md",
+    "README.md",
+    "docs/en/fpga_implementation.md",
+    "docs/en/results.md",
+    "docs/zh-CN/fpga_implementation.md",
+    "docs/zh-CN/results.md",
+    "evidence/slvc_dma_u5_sync_hp0_loopback_summary.yaml",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/artifacts.csv",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/derived_metrics.csv",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/manifest.json",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/raw_counters.csv",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/source_identity.json",
+    "fpga/u5/benchmark/helloworld.c",
+    "provenance/checksums.sha256",
+    "provenance/claims.yaml",
+    "provenance/evidence.yaml",
+    "provenance/nonclaims.yaml",
+})
+
+FPGA_EMULATION_TRIGGER_PATHS = frozenset({
+    "evidence/slvc_dma_u5_sync_hp0_loopback_summary.yaml",
+    "evidence/fpga_emulation/u5_sync_hp0_loopback/manifest.json",
+})
+FPGA_EMULATION_TRIGGER_PREFIX = "evidence/fpga_emulation/"
+
 
 class PolicyError(RuntimeError):
     pass
@@ -218,21 +275,33 @@ def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY):
     throughput_publication_touched = bool(changed & THROUGHPUT_TRIGGER_PATHS) or any(
         path.startswith(THROUGHPUT_TRIGGER_PREFIX) for path in changed
     )
+    fpga_emulation_publication_touched = bool(
+        changed & FPGA_EMULATION_TRIGGER_PATHS
+    ) or any(path.startswith(FPGA_EMULATION_TRIGGER_PREFIX) for path in changed)
     asic_specific_touched = (
         "provenance/asic_paired_dc_publication.yaml" in changed or any(
             path.startswith("evidence/asic_paired_dc/") for path in changed
         )
     )
     # Claims, result pages, and nonclaims are shared publication surfaces. If
-    # a throughput-specific sentinel is present, those paths belong to that
+    # a profile-specific sentinel is present, shared paths belong to that
     # bounded publication; otherwise retain the existing ASIC policy behavior.
     asic_publication_touched = asic_specific_touched or (
         bool(changed & EVIDENCE_TRIGGER_PATHS) and
-        not throughput_publication_touched
+        not throughput_publication_touched and
+        not fpga_emulation_publication_touched
     )
-    if asic_publication_touched and throughput_publication_touched:
-        _fail("ASIC and throughput publications must use separate pull requests")
-    publication_touched = asic_publication_touched or throughput_publication_touched
+    publication_kinds = sum(bool(item) for item in (
+        asic_publication_touched,
+        throughput_publication_touched,
+        fpga_emulation_publication_touched,
+    ))
+    if publication_kinds > 1:
+        _fail("ASIC, RTL throughput, and FPGA publications must use separate pull requests")
+    publication_touched = (
+        asic_publication_touched or throughput_publication_touched or
+        fpga_emulation_publication_touched
+    )
     if publication_touched and changed & POLICY_PATHS:
         _fail("evidence PR must not modify trusted policy")
     if not publication_touched:
@@ -249,6 +318,18 @@ def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY):
                 sorted(missing)[0]
             ))
         return "THROUGHPUT_EVIDENCE_SCOPE_PASS"
+    if fpga_emulation_publication_touched:
+        unexpected = changed - FPGA_EMULATION_PUBLICATION_PATHS
+        if unexpected:
+            _fail("FPGA evidence PR contains forbidden path: {}".format(
+                sorted(unexpected)[0]
+            ))
+        missing = FPGA_EMULATION_REQUIRED_PATHS - changed
+        if missing:
+            _fail("FPGA evidence PR is missing required path: {}".format(
+                sorted(missing)[0]
+            ))
+        return "FPGA_EMULATION_EVIDENCE_SCOPE_PASS"
     unexpected = changed - FUTURE_PUBLICATION_PATHS
     if unexpected:
         _fail("evidence PR contains forbidden path: {}".format(sorted(unexpected)[0]))

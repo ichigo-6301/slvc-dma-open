@@ -454,7 +454,7 @@ def check_homepage_render(root, browser=None):
 def check_render(root, assets=None, browser=None):
     root = Path(root).resolve()
     browser = Path(browser).resolve() if browser else discover_browser()
-    selected = tuple(assets or generator.GENERATED_ASSETS)
+    selected = tuple(assets or generator.generated_asset_paths(root))
     reports = {}
     temporary_parent = None
     if _uses_wsl_windows_browser(browser):

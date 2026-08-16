@@ -8,7 +8,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked public integration RTL and architecture contracts",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "generator_sha256": "7e83fdcc4e81d7ab393d0e6153e7721e80cd053da65d2327ccc19e3b0c74ab53",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -36,7 +36,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked buffering RTL identity and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "generator_sha256": "7e83fdcc4e81d7ab393d0e6153e7721e80cd053da65d2327ccc19e3b0c74ab53",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -66,7 +66,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked RTL architecture and the bounded admission claim",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "generator_sha256": "7e83fdcc4e81d7ab393d0e6153e7721e80cd053da65d2327ccc19e3b0c74ab53",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -96,7 +96,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked RTL, regression evidence, and CDC claims",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "generator_sha256": "7e83fdcc4e81d7ab393d0e6153e7721e80cd053da65d2327ccc19e3b0c74ab53",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {
@@ -135,7 +135,7 @@
       "format": "svg",
       "source": "deterministically generated from tracked public claims and sanitized implementation evidence",
       "generator": "flows/scripts/generate_showcase_assets.py",
-      "generator_sha256": "5057c129d0684d54f28521e31da12a0e226b33047a9a951b237578ac7c262256",
+      "generator_sha256": "7e83fdcc4e81d7ab393d0e6153e7721e80cd053da65d2327ccc19e3b0c74ab53",
       "command": "python flows/scripts/generate_showcase_assets.py --root . --write",
       "inputs": [
         {

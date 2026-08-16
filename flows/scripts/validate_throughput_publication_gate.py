@@ -33,7 +33,7 @@ BLOCKED_VALIDATOR_REL = Path(
 )
 MAIN_POINT_ID = "loopback_peak_phase3"
 TRUSTED_FLOW_AS_RUN_COMMIT = (
-    "328d5b8dea06582b5b20cd21373dbc2a97aa4a95"
+    "c82118cfbf28633d82a315925a390143c91ea117"
 )
 TRUSTED_RTL_FIX_COMMIT = (
     "ad1ea4a927425773d772f6438c06c332e0b87830"
@@ -204,11 +204,15 @@ RESULTS_END = (
 )
 EXPECTED_README_BLOCK_SHA256 = {
     Path("README.md"): (
-        "8fd151d0f4da9fda908014def07885e5810f8f338db8419be86e2d426fe446f3"
+        "6a3b81e2775fa6c25aa5a55359fc0f4e006581428ea2ca305bd28f509e8cbd54"
     ),
     Path("README.en.md"): (
-        "79b50995c150b80a0d26fc0b95009563b53f4b896e83c770c7061871f70c987b"
+        "9087d8f21ca1c1d41bee78dd4bf00263cf1ed374a46b25425921caba8e0cebaf"
     ),
+}
+README_VISIBLE_BOUNDARY = {
+    Path("README.md"): "双平台 RTL 仿真",
+    Path("README.en.md"): "Dual-platform RTL simulation",
 }
 README_BLOCK_FOLLOWER = {
     Path("README.md"): '<a id="frame-lifecycle"></a>',
@@ -229,10 +233,10 @@ EXPECTED_RESULTS_BLOCK_SHA256 = {
 # reproducibility validators.
 TRUSTED_EVIDENCE_FILE_SHA256 = {
     "artifacts.csv": (
-        "a6e3db31179f0db47867e5e7a79aff34e2f7ebd54dd8f4ca5c4dde49ec9a9fda"
+        "4d010378812ee203584f42066930349684c9e0e13c2a9c650abf21d0775cded5"
     ),
     "c2b4_physical_identity.json": (
-        "25bc50bd40e28458bba79809212b5499be59fa49964bf2d7438ffcbcb9f8cd12"
+        "da7473a1879c61c68ec38832fd30b523146dc25920cdff8d89e0c8f93a970d3c"
     ),
     "correctness_ladder.csv": (
         "d543dd0d5f011c132bad104114a0e7236648070b002eeb0312e3647e0440d1c5"
@@ -514,6 +518,9 @@ def _validate_readme_blocks(root):
         )
         if _sha256(protected.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected homepage content".format(relative))
+        visible = re.sub(r"<!--.*?-->", "", block, flags=re.S)
+        if README_VISIBLE_BOUNDARY[relative] not in visible:
+            _fail("{} lacks a visible RTL-simulation boundary".format(relative))
         if (_sha256(block.encode("utf-8")) !=
                 EXPECTED_README_BLOCK_SHA256[relative]):
             _fail("{} throughput block payload mismatch".format(relative))

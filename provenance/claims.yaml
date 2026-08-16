@@ -341,7 +341,7 @@ claims:
     unit: MB/s/MHz
     benchmark: 1024 x 4096-byte full TX-to-RX loopback
     configuration: 16 RX/16 TX contexts; Async64 64-bit memory backend; aclk=mem_clk=100 MHz; phase 3 ns; seed 71; HP0_SHARED latency 16 cycles and service 100%
-    source_ref: 328d5b8dea06582b5b20cd21373dbc2a97aa4a95
+    source_ref: c82118cfbf28633d82a315925a390143c91ea117
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     evidence:
       - slvc_dma_async64_end_to_end_sim_summary

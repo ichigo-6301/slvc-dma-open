@@ -2,11 +2,13 @@ from __future__ import print_function
 
 import csv
 import json
+import re
 import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from flows.scripts import run_dma_async64_throughput_matrix as runner
@@ -17,9 +19,9 @@ PUBLIC_PACKAGE_REL = Path(
     "evidence/throughput_simulation/async64_end_to_end"
 )
 HISTORICAL_EVIDENCE_COMMIT = (
-    "5f4b3edf6014024dbfccfe0c24034325b342349c"
+    "5ca6911cbe0c24ec4d283cfcc909b76fe29df0a3"
 )
-HISTORICAL_FLOW_COMMIT = "328d5b8dea06582b5b20cd21373dbc2a97aa4a95"
+HISTORICAL_FLOW_COMMIT = "c82118cfbf28633d82a315925a390143c91ea117"
 ADAPTED_SOURCE_RELS = {
     Path("flows/scripts/test_validate_dma_async64_throughput_repaired.py"),
 }
@@ -56,6 +58,78 @@ class Async64MatrixRunnerSourceIdentityTests(unittest.TestCase):
             with self.assertRaises(runner.RunError):
                 runner.validate_source_checkout(Path("."), "HEAD")
 
+    def test_revalidates_source_around_each_simulation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "source"
+            output = Path(directory) / "output"
+            (root / "modelsim").mkdir(parents=True)
+            point = runner.matrix_points()[0]
+            args = SimpleNamespace(
+                root=str(root), output_dir=str(output),
+                source_commit=self.HEAD, points=point["point_id"],
+                suite="matrix", platform="windows", vsim="vsim",
+                force=False, keep_going=True,
+            )
+
+            class FakeProcess(object):
+                def __init__(self, handle):
+                    self.handle = handle
+
+                def wait(self):
+                    self.handle.write((
+                        runner.POINT_MARKER + " case=test\n" +
+                        runner.PASS_MARKER + "\n"
+                    ).encode("utf-8"))
+                    self.handle.flush()
+                    return 0
+
+            def fake_popen(*_args, **kwargs):
+                return FakeProcess(kwargs["stdout"])
+
+            with mock.patch.object(
+                    runner, "validate_source_checkout",
+                    return_value=self.HEAD) as source_check, mock.patch.object(
+                    runner, "command_output",
+                    return_value=runner.EXPECTED_SIMULATORS["windows"]), \
+                    mock.patch.object(runner, "matrix_points",
+                                      return_value=[point]), \
+                    mock.patch.object(runner.subprocess, "Popen",
+                                      side_effect=fake_popen):
+                self.assertEqual(runner.run(args), 0)
+            self.assertEqual(source_check.call_count, 4)
+
+    def test_rejects_source_change_after_simulation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "source"
+            output = Path(directory) / "output"
+            (root / "modelsim").mkdir(parents=True)
+            point = runner.matrix_points()[0]
+            args = SimpleNamespace(
+                root=str(root), output_dir=str(output),
+                source_commit=self.HEAD, points=point["point_id"],
+                suite="matrix", platform="windows", vsim="vsim",
+                force=False, keep_going=True,
+            )
+
+            class FakeProcess(object):
+                def wait(self):
+                    return 0
+
+            with mock.patch.object(
+                    runner, "validate_source_checkout",
+                    side_effect=(self.HEAD, self.HEAD,
+                                 runner.RunError("source changed"))), \
+                    mock.patch.object(
+                        runner, "command_output",
+                        return_value=runner.EXPECTED_SIMULATORS["windows"]), \
+                    mock.patch.object(runner, "matrix_points",
+                                      return_value=[point]), \
+                    mock.patch.object(runner.subprocess, "Popen",
+                                      return_value=FakeProcess()):
+                with self.assertRaisesRegex(runner.RunError, "source changed"):
+                    runner.run(args)
+            self.assertFalse((output / "run_index.json").exists())
+
 
 class Async64RunIndexContractTests(unittest.TestCase):
     FLOW_COMMIT = "3" * 40
@@ -64,10 +138,11 @@ class Async64RunIndexContractTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.run_dir = Path(self.temp.name)
         self.contract = runner.matrix_points()[0]
+        self.simulator = validator.EXPECTED_SIMULATORS["windows"]
         self.record = dict(self.contract)
         self.record.update({
             "platform": "windows",
-            "simulator": "ModelSim test",
+            "simulator": self.simulator,
             "source_commit": self.FLOW_COMMIT,
             "returncode": 0,
             "status": "PASS",
@@ -85,7 +160,7 @@ class Async64RunIndexContractTests(unittest.TestCase):
                 "schema_version": 1,
                 "suite": "matrix",
                 "platform": "windows",
-                "simulator": "ModelSim test",
+                "simulator": self.simulator,
                 "source_commit": self.FLOW_COMMIT,
                 "seed": 71,
                 "records": [self.record],
@@ -109,6 +184,33 @@ class Async64RunIndexContractTests(unittest.TestCase):
                 self.run_dir, "windows", self.FLOW_COMMIT,
                 [self.contract], "matrix",
             )
+
+    def test_rejects_platform_simulator_masquerade(self):
+        self.simulator = validator.EXPECTED_SIMULATORS["linux"]
+        self.record["simulator"] = self.simulator
+        self.write_index()
+        with self.assertRaisesRegex(
+                validator.ValidationError, "simulator mismatch"):
+            validator.load_run_index(
+                self.run_dir, "windows", self.FLOW_COMMIT,
+                [self.contract], "matrix",
+            )
+
+
+class Async64HomepageBoundaryTests(unittest.TestCase):
+    def test_throughput_label_is_visible_in_both_readmes(self):
+        root = Path(__file__).resolve().parents[2]
+        expected = {
+            "README.md": "双平台 RTL 仿真",
+            "README.en.md": "Dual-platform RTL simulation",
+        }
+        start = "throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:start"
+        end = "throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:end"
+        for name, label in expected.items():
+            text = (root / name).read_text(encoding="utf-8")
+            block = text.split(start, 1)[1].split(end, 1)[0]
+            visible = re.sub(r"<!--.*?-->", "", block, flags=re.S)
+            self.assertIn(label, visible)
 
 
 def historical_blob(root, relative, commit=HISTORICAL_EVIDENCE_COMMIT):
@@ -272,6 +374,17 @@ class Async64RepairedThroughputEvidenceTests(unittest.TestCase):
         self.mutate_json_file(validator.IDENTITY_REL, lambda data:
                               data.__setitem__("identity_equal", False))
         self.assert_rejected()
+
+    def test_rejects_unhashed_c2b4_filelist_member(self):
+        def mutate(data):
+            member = data["c2b4_source_members"][0]
+            data["files"] = [record for record in data["files"]
+                             if record["path"] != member]
+
+        self.mutate_json_file(validator.IDENTITY_REL, mutate)
+        with self.assertRaisesRegex(
+                validator.ValidationError, "not all hash-bound"):
+            self.validate()
 
     def test_rejects_c2b4_rerun_claim(self):
         self.mutate_manifest(lambda data: data.__setitem__(

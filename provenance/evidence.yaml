@@ -130,7 +130,7 @@ evidence:
   - id: slvc_dma_async64_end_to_end_sim_summary
     path: evidence/slvc_dma_async64_end_to_end_sim_summary.yaml
     type: bounded_dual_platform_rtl_simulation
-    source_ref: 328d5b8dea06582b5b20cd21373dbc2a97aa4a95
+    source_ref: c82118cfbf28633d82a315925a390143c91ea117
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     claims:
       - slvc_dma_async64_end_to_end_rtl_sim_throughput

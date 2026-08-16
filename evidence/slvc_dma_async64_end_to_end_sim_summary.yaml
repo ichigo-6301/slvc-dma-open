@@ -42,7 +42,7 @@
     "tx_contexts": 16
   },
   "schema": "slvc_dma_async64_end_to_end_rtl_simulation_v1",
-  "source_ref": "328d5b8dea06582b5b20cd21373dbc2a97aa4a95",
+  "source_ref": "c82118cfbf28633d82a315925a390143c91ea117",
   "validation": {
     "deadlock": 0,
     "dual_platform_trace_match": true,

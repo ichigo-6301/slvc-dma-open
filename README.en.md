@@ -35,7 +35,7 @@ This view places shared-link RX, descriptor-driven TX, joint admission, hybrid b
 
 <!-- throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:start -->
 <!-- claim:slvc_dma_async64_end_to_end_rtl_sim_throughput maturity:verified -->
-3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; 95.779434%. See [Results](docs/en/results.md).
+Dual-platform RTL simulation: 3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; 95.779434%. See [Results](docs/en/results.md).
 <!-- throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:end -->
 <a id="frame-lifecycle"></a>
 

@@ -228,6 +228,26 @@ class ThroughputPublicationGateTest(unittest.TestCase):
                          Path("docs/zh-CN/results.md")):
             self._append(self.root / relative, result_block)
 
+        self.readme_block_hashes = {}
+        for relative in (Path("README.md"), Path("README.en.md")):
+            _, block = gate._bounded_block(
+                (self.root / relative).read_text(encoding="utf-8"),
+                gate.README_START, gate.README_END, str(relative), True,
+            )
+            self.readme_block_hashes[relative] = gate._sha256(
+                block.encode("utf-8")
+            )
+        self.results_block_hashes = {}
+        for relative in (Path("docs/en/results.md"),
+                         Path("docs/zh-CN/results.md")):
+            _, block = gate._bounded_block(
+                (self.root / relative).read_text(encoding="utf-8"),
+                gate.RESULTS_START, gate.RESULTS_END, str(relative), True,
+            )
+            self.results_block_hashes[relative] = gate._sha256(
+                block.encode("utf-8")
+            )
+
         (self.root / gate.CHART_REL).write_text(
             '<svg xmlns="http://www.w3.org/2000/svg" width="1600" '
             'height="1000" viewBox="0 0 1600 1000" '
@@ -305,6 +325,16 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         )
         with mock.patch.object(gate, "TRUSTED_EVIDENCE_FILE_SHA256", trusted), \
                 mock.patch.object(gate, "TRUSTED_BLOCKED_FILE_SHA256", blocked), \
+                mock.patch.object(
+                    gate, "EXPECTED_README_BLOCK_SHA256",
+                    getattr(self, "readme_block_hashes",
+                            gate.EXPECTED_README_BLOCK_SHA256),
+                ), \
+                mock.patch.object(
+                    gate, "EXPECTED_RESULTS_BLOCK_SHA256",
+                    getattr(self, "results_block_hashes",
+                            gate.EXPECTED_RESULTS_BLOCK_SHA256),
+                ), \
                 mock.patch.object(
                     gate, "_source_blob",
                     side_effect=lambda root, commit, relative:
@@ -440,6 +470,46 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(gate.PublicationError, "protected homepage"):
+            self._validate()
+
+    def test_markdown_image_inside_readme_block_fails(self):
+        self._published_fixture()
+        path = self.root / "README.en.md"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                gate.README_END,
+                "![extra chart]({})\n{}".format(
+                    gate.CHART_REL.as_posix(), gate.README_END
+                ),
+                1,
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(gate.PublicationError, "payload mismatch"):
+            self._validate()
+
+    def test_result_block_rejects_extra_measurement(self):
+        self._published_fixture()
+        path = self.root / "docs/en/results.md"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                gate.RESULTS_END,
+                "Measured board throughput: 9999 GB/s.\n{}".format(
+                    gate.RESULTS_END
+                ),
+                1,
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(gate.PublicationError, "payload mismatch"):
+            self._validate()
+
+    def test_showcase_generator_replacement_fails(self):
+        self._published_fixture()
+        path = self.root / "flows/scripts/generate_showcase_assets.py"
+        path.write_text("raise SystemExit(0)\n", encoding="utf-8")
+        with self.assertRaisesRegex(
+                gate.PublicationError, "base-owned showcase generator"):
             self._validate()
 
     def test_result_marker_without_claim_is_publication_sentinel(self):

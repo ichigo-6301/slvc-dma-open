@@ -86,6 +86,19 @@ class TrustedScopePolicyTest(unittest.TestCase):
         with self.assertRaisesRegex(policy.PolicyError, "must not modify trusted policy"):
             policy.validate_event(event(11, "3" * 40), changed, BOOTSTRAP_HEAD)
 
+    def test_throughput_publication_cannot_replace_showcase_generator(self):
+        for path in (
+                "flows/scripts/generate_showcase_assets.py",
+                "flows/scripts/test_generate_showcase_assets.py",
+                "flows/scripts/check_showcase_render.py"):
+            changed = set(policy.THROUGHPUT_REQUIRED_PATHS)
+            changed.add(path)
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(policy.PolicyError, "forbidden path"):
+                    policy.validate_event(
+                        event(11, "3" * 40), changed, BOOTSTRAP_HEAD
+                    )
+
     def test_throughput_publication_rejects_protected_design_paths(self):
         forbidden = (
             "evidence/asic_paired_dc/points.csv",

@@ -83,7 +83,7 @@ help:
 >   'Local tools, PDKs, and libraries belong in flows/local/ (ignored).'
 
 showcase-check: showcase-assets-check public-hygiene asic-evidence-check throughput-publication-check
-> @cd "$(ROOT)" && $(PYTHON) -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy flows.scripts.test_validate_throughput_publication_gate flows.scripts.test_generate_showcase_assets
+> @cd "$(ROOT)" && $(PYTHON) -m unittest discover -s flows/scripts -p 'test_*.py'
 > @printf '%s\n' 'SHOWCASE_CHECK_PASS'
 
 public-hygiene:

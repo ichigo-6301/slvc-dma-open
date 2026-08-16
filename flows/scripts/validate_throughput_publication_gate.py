@@ -132,6 +132,25 @@ SUMMARY_BOUNDARIES = {
     "asic_result": False,
     "resume_eligible": False,
 }
+EXPECTED_PACKAGE_README = """# Async64 End-to-End RTL Simulation Throughput Evidence
+
+Status: `VERIFIED_RTL_SIMULATION`. This package is a public RTL-simulation claim and is not resume eligible.
+
+Profile: 16 RX/16 TX contexts, Async64 64-bit memory backend, `aclk=mem_clk=100 MHz` with 3 ns phase, seed 71.
+
+Main point: 1024 x 4 KiB complete TX-to-RX loopback with the HP0_SHARED model, 16-cycle response latency, and 100% service.
+
+| Window | MB/s/MHz | MB/s at 100 MHz | Gb/s at 100 MHz | Model efficiency |
+| --- | ---: | ---: | ---: | ---: |
+| Hardware end-to-end | 3.831177 | 383.117735 | 3.064942 | 95.779434% |
+| Datapath steady-state | 3.831723 | 383.172335 | 3.065379 | 95.793084% |
+
+Windows ModelSim SE-64 2020.4 and Linux Questa Sim-64 10.7c matched across the 28-point matrix. Peak outstanding reached 4, all 16 flows completed fairly, and drop, protocol error, and deadlock counts were zero.
+
+FPGA emulation: **Pending / not measured / not claimed**.
+
+The 4 MB/s/MHz HP0_SHARED value is a payload-only model ceiling. This result is not FPGA/HP0 board throughput, DDR peak, Fmax, the Same-clock512/Async512 64 B/cycle interface result, or ASIC evidence. C2B4 physical sources remained unchanged and no DC, P&R, OpenRCX, or PrimeTime rerun was performed.
+"""
 
 PROTECTED_MANIFEST_HASHES = {
     CLAIMS_REL: "b066370c84de86c0647705df19d919735bb6a7c7f10c6392a33be6a1de3f9a76",
@@ -699,6 +718,11 @@ def _validate_package_manifest(root, source_ref):
         "baseline_commit": "c20681fad0eaa6ad55dbb919149765b175b29117",
         "blocked_evidence_commit": "e6a6696603b10c4475fca468e9c40c727197ac9c",
     }
+    expected_fields = set(fixed) | {
+        "profile", "main_point", "boundaries", "document_sha256",
+        "files", "sources",
+    }
+    _require_field_set("throughput package manifest", manifest, expected_fields)
     _require_fixed_fields("throughput package manifest", manifest, fixed)
     if manifest.get("profile") != dict(
             SUMMARY_PROFILE,
@@ -743,11 +767,8 @@ def _validate_package_manifest(root, source_ref):
     if document_hash != _sha256_file(root / PACKAGE_REL / "README.md"):
         _fail("throughput package document hash mismatch")
     package_readme = _read_text(root / PACKAGE_REL / "README.md")
-    for token in (
-            "VERIFIED_RTL_SIMULATION", "3.831177 MB/s/MHz",
-            "Pending / not measured / not claimed", "not FPGA"):
-        if token not in package_readme:
-            _fail("throughput package README boundary missing: {}".format(token))
+    if package_readme != EXPECTED_PACKAGE_README:
+        _fail("throughput package README payload mismatch")
 
     sources = manifest.get("sources")
     if not isinstance(sources, list):
@@ -768,6 +789,16 @@ def _validate_package_manifest(root, source_ref):
         item = source_map[relative]
         if item["sha256"] != _sha256(blob) or item["size_bytes"] != len(blob):
             _fail("throughput package source identity mismatch: {}".format(
+                relative
+            ))
+        try:
+            current = (root / relative).read_bytes()
+        except OSError as error:
+            _fail("cannot read current publication source {}: {}".format(
+                relative, error
+            ))
+        if current != blob:
+            _fail("checked-out source differs from source_ref: {}".format(
                 relative
             ))
 

@@ -128,9 +128,7 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         )
         package_readme = self.root / gate.PACKAGE_REL / "README.md"
         package_readme.write_text(
-            "# VERIFIED_RTL_SIMULATION\n\n"
-            "3.831177 MB/s/MHz. FPGA: Pending / not measured / not claimed. "
-            "This is not FPGA or board throughput.\n",
+            gate.EXPECTED_PACKAGE_README,
             encoding="utf-8",
         )
         package_files = {
@@ -138,8 +136,10 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             if path.parent == gate.PACKAGE_REL and path.name != "manifest.json"
         }
         source_records = []
+        self.source_blobs = {}
         for relative in gate.REQUIRED_SOURCE_PATHS:
             data = (self.root / relative).read_bytes()
+            self.source_blobs[relative] = data
             source_records.append({
                 "path": relative,
                 "sha256": gate._sha256(data),
@@ -338,7 +338,10 @@ class ThroughputPublicationGateTest(unittest.TestCase):
                 mock.patch.object(
                     gate, "_source_blob",
                     side_effect=lambda root, commit, relative:
-                    (Path(root) / relative).read_bytes(),
+                    self.source_blobs.get(relative)
+                    if hasattr(self, "source_blobs") and
+                    relative in self.source_blobs
+                    else (Path(root) / relative).read_bytes(),
                 ):
             return gate.validate(
                 self.root, execute_validators=execute_validators
@@ -409,6 +412,17 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         self._published_fixture()
         (self.root / "rtl/tx/dma_axi_read_prefetch.v").unlink()
         with self.assertRaisesRegex(gate.PublicationError, "is missing"):
+            self._validate()
+
+    def test_checked_out_source_must_match_source_ref(self):
+        self._published_fixture()
+        path = self.root / "rtl/tx/dma_axi_read_prefetch.v"
+        path.write_text(
+            path.read_text(encoding="utf-8") + "\n// post-run mutation\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+                gate.PublicationError, "differs from source_ref"):
             self._validate()
 
     def test_existing_showcase_binding_mutation_fails(self):
@@ -502,6 +516,34 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(gate.PublicationError, "payload mismatch"):
+            self._validate()
+
+    def test_package_readme_rejects_extra_claim(self):
+        self._published_fixture()
+        path = self.root / gate.PACKAGE_REL / "README.md"
+        path.write_text(
+            path.read_text(encoding="utf-8") +
+            "\nMeasured FPGA throughput: 9999 GB/s.\n",
+            encoding="utf-8",
+        )
+        manifest_path = self.root / gate.PACKAGE_REL / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        digest = gate._sha256(path.read_bytes())
+        manifest["document_sha256"] = digest
+        manifest["files"]["README.md"] = digest
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        with self.assertRaisesRegex(
+                gate.PublicationError, "README payload mismatch"):
+            self._validate()
+
+    def test_package_manifest_rejects_extra_claim_field(self):
+        self._published_fixture()
+        path = self.root / gate.PACKAGE_REL / "manifest.json"
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        manifest["measured_fpga_gbps"] = "9999"
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+        with self.assertRaisesRegex(
+                gate.PublicationError, "manifest field set mismatch"):
             self._validate()
 
     def test_showcase_generator_replacement_fails(self):

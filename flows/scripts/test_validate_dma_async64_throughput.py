@@ -16,7 +16,7 @@ class PublishedAsync64ThroughputValidatorTest(unittest.TestCase):
             self.assertEqual(
                 validator.validate("."), validator.PUBLISHED_STATUS
             )
-        self.assertFalse(validate.call_args.kwargs["execute_validators"])
+        self.assertFalse(validate.call_args[1]["execute_validators"])
 
     def test_rejects_unpublished_state(self):
         with mock.patch.object(

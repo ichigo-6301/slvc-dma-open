@@ -82,10 +82,15 @@ reg [31:0]          burst_out_beats_c;
 wire                out_pop = out_valid && out_ready;
 wire                fifo_has_data = (fifo_count != 0);
 wire                can_load_output = !out_valid || out_ready;
-wire                fifo_output_load = !flush_outputs &&
-                                           can_load_output && fifo_has_data;
 wire                ar_handshake = m_axi_arvalid && m_axi_arready;
 wire                r_handshake = m_axi_rvalid && m_axi_rready;
+wire                r_error_handshake = r_handshake &&
+                                        (m_axi_rresp != 2'b00);
+wire                fifo_output_load_candidate = can_load_output &&
+                                                  fifo_has_data;
+wire                fifo_output_load = !flush_outputs &&
+                                       !r_error_handshake &&
+                                       fifo_output_load_candidate;
 wire                fifo_write_commit = r_handshake && (m_axi_rresp == 2'b00) && !error_seen &&
                                         ((pack_lane == (WORDS_PER_OUT-1)) || (words_remaining <= 1));
 wire                fifo_write_last = (words_remaining <= 1);
@@ -312,6 +317,10 @@ always @(posedge clk or negedge rstn) begin
                 reserved_beats <= {(FIFO_DEPTH_LOG2+1){1'b0}};
                 m_axi_arvalid <= 1'b0;
                 ar_plan_valid_q <= 1'b0;
+                out_valid <= 1'b0;
+                out_last <= 1'b0;
+                fifo_wr_ptr <= {FIFO_AW{1'b0}};
+                fifo_rd_ptr <= {FIFO_AW{1'b0}};
             end else if (!error_seen) begin
                 case (pack_lane)
                 3'd0: pack_data[  0 +: DATA_WIDTH] <= m_axi_rdata;

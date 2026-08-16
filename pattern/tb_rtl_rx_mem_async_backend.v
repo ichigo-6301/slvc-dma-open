@@ -200,7 +200,8 @@ dma_rx_payload_cdc_bridge #(
     .TAG_WIDTH(8),
     .CMD_FIFO_LOG2(2),
     .PAYLOAD_FIFO_LOG2(5),
-    .CPL_FIFO_LOG2(2)
+    .CPL_FIFO_LOG2(2),
+    .ALLOW_SOURCE_PAYLOAD_LOOKAHEAD(0)
 ) u_bridge (
     .s_clk(s_clk), .s_rst_n(s_rstn),
     .s_reset_request(s_reset_request), .s_soft_reset(s_soft_reset),

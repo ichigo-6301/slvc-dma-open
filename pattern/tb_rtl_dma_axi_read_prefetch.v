@@ -54,14 +54,26 @@ integer total_output_beats = 0;
 integer simultaneous_push_pop = 0;
 integer fifo_write_wraps = 0;
 integer fifo_read_wraps = 0;
+integer slverr_output_candidate_count = 0;
 integer lane;
 reg [31:0] expected_address;
+reg inject_slverr = 1'b0;
+reg slverr_seen = 1'b0;
+reg check_error_output_q = 1'b0;
 
 wire ar_fire = m_axi_arvalid && m_axi_arready;
 wire r_fire = m_axi_rvalid && m_axi_rready;
 wire r_burst_pop = r_fire && m_axi_rlast;
 
 always #5 clk = ~clk;
+
+always @(*) begin
+    if (inject_slverr && !slverr_seen && m_axi_rvalid && m_axi_rready &&
+        u_dut.fifo_output_load_candidate)
+        m_axi_rresp = 2'b10;
+    else
+        m_axi_rresp = 2'b00;
+end
 
 function [63:0] memory_word;
     input [31:0] address;
@@ -141,7 +153,6 @@ always @(posedge clk or negedge rstn) begin
         active_r_addr_q <= 32'h0;
         active_r_beats_q <= 9'h0;
         m_axi_rdata <= 64'h0;
-        m_axi_rresp <= 2'b00;
         m_axi_rlast <= 1'b0;
         m_axi_rvalid <= 1'b0;
     end else begin
@@ -195,8 +206,24 @@ always @(posedge clk or negedge rstn) begin
         simultaneous_push_pop <= 0;
         fifo_write_wraps <= 0;
         fifo_read_wraps <= 0;
+        slverr_output_candidate_count <= 0;
+        slverr_seen <= 1'b0;
+        check_error_output_q <= 1'b0;
     end else begin
         cycle_count <= cycle_count + 1;
+        check_error_output_q <= 1'b0;
+        if (check_error_output_q && out_valid)
+            fail("stale output remained valid after SLVERR flush");
+        if (r_fire && (m_axi_rresp != 2'b00)) begin
+            if (!u_dut.fifo_output_load_candidate)
+                fail("SLVERR did not coincide with FIFO output-load candidate");
+            if (u_dut.fifo_output_load)
+                fail("SLVERR did not suppress FIFO output load");
+            slverr_output_candidate_count <=
+                slverr_output_candidate_count + 1;
+            slverr_seen <= 1'b1;
+            check_error_output_q <= 1'b1;
+        end
         if (u_dut.fifo_write_commit && u_dut.fifo_output_load)
             simultaneous_push_pop <= simultaneous_push_pop + 1;
         if (u_dut.fifo_write_commit &&
@@ -254,6 +281,37 @@ task run_command;
     end
 endtask
 
+task run_slverr_recovery_command;
+    input integer command_index;
+    begin
+        active_command = command_index;
+        command_output_beats = 0;
+        inject_slverr = 1'b1;
+        @(negedge clk);
+        cmd_addr = frame_base(command_index);
+        cmd_len_bytes = FRAME_BYTES;
+        cmd_valid = 1'b1;
+        while (!cmd_ready)
+            @(negedge clk);
+        @(negedge clk);
+        cmd_valid = 1'b0;
+
+        while (!cmd_done)
+            @(negedge clk);
+        inject_slverr = 1'b0;
+        if (!cmd_error)
+            fail("SLVERR command did not report error");
+        if (!slverr_seen || (slverr_output_candidate_count != 1))
+            fail("SLVERR output-load collision was not exercised once");
+        if (command_output_beats != 0)
+            fail("SLVERR command propagated stale output data");
+        if (u_dut.fifo_count != 0 || u_dut.reserved_beats != 0 ||
+            out_valid || (u_dut.outstanding_count != 0) ||
+            (ar_queue_count != 0))
+            fail("SLVERR command did not drain all queued state");
+    end
+endtask
+
 integer command_index;
 initial begin
     repeat (8) @(posedge clk);
@@ -261,7 +319,9 @@ initial begin
     rstn = 1'b1;
     repeat (4) @(posedge clk);
 
-    for (command_index = 0; command_index < COMMANDS;
+    run_slverr_recovery_command(0);
+
+    for (command_index = 1; command_index <= COMMANDS;
          command_index = command_index + 1)
         run_command(command_index);
 
@@ -273,10 +333,13 @@ initial begin
         fail("packed-beat FIFO pointers did not repeatedly wrap");
     if (debug_peak_outstanding != 4)
         fail("four outstanding AXI reads were not observed");
+    if (slverr_output_candidate_count != 1)
+        fail("SLVERR output-load collision count mismatch");
 
-    $display("DMA_AXI_READ_PREFETCH_COVER commands=%0d simultaneous_push_pop=%0d write_wraps=%0d read_wraps=%0d peak_outstanding=%0d",
+    $display("DMA_AXI_READ_PREFETCH_COVER commands=%0d simultaneous_push_pop=%0d write_wraps=%0d read_wraps=%0d peak_outstanding=%0d slverr_output_candidate=%0d",
              COMMANDS, simultaneous_push_pop, fifo_write_wraps,
-             fifo_read_wraps, debug_peak_outstanding);
+             fifo_read_wraps, debug_peak_outstanding,
+             slverr_output_candidate_count);
     if (errors != 0)
         $fatal(1, "tb_rtl_dma_axi_read_prefetch failed errors=%0d", errors);
     $display("PASS tb_rtl_dma_axi_read_prefetch commands=%0d frame_bytes=%0d output_beats=%0d",

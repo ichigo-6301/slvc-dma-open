@@ -2014,7 +2014,7 @@ always @(posedge clk or negedge rstn) begin
                      tp_global_cycle_q + 1'b1,
                      u_dut.u_rx_payload_cdc_bridge.source_active_q,
                      u_dut.u_rx_payload_cdc_bridge.source_payload_done_q,
-                     u_dut.u_rx_payload_cdc_bridge.SOURCE_PAYLOAD_LOOKAHEAD,
+                     u_dut.u_rx_payload_cdc_bridge.ALLOW_SOURCE_PAYLOAD_LOOKAHEAD,
                      u_dut.u_rx_payload_cdc_bridge.s_cmd_fire,
                      u_dut.pay_cpl_valid,
                      u_dut.pay_cpl_ready,

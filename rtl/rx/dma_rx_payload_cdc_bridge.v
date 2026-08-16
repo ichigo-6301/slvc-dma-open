@@ -7,7 +7,8 @@ module dma_rx_payload_cdc_bridge #(
     parameter integer TAG_WIDTH = 8,
     parameter integer CMD_FIFO_LOG2 = 2,
     parameter integer PAYLOAD_FIFO_LOG2 = 5,
-    parameter integer CPL_FIFO_LOG2 = 2
+    parameter integer CPL_FIFO_LOG2 = 2,
+    parameter integer ALLOW_SOURCE_PAYLOAD_LOOKAHEAD = 1
 )(
     input                       s_clk,
     input                       s_rst_n,
@@ -138,23 +139,17 @@ wire completion_tag_mismatch = (cpl_tag_raw != active_tag_q);
 //
 // The integrated Async RX source is a decoupled ready/valid producer. It may
 // pre-present the next committed frame while the current frame waits for its
-// completion/CQ ownership sequence. That presentation is legal while ready is
-// low; the bridge must reject only an actual transfer outside the active
-// command-to-TLAST window. Standalone bridge builds retain the stricter
-// valid-attempt checker used by the directed protocol-error regression.
-`ifdef DMA_RX_MEM_ASYNC_PROFILE
-localparam integer SOURCE_PAYLOAD_LOOKAHEAD = 1;
-`else
-localparam integer SOURCE_PAYLOAD_LOOKAHEAD = 0;
-`endif
+// completion/CQ ownership sequence. Parameterized lookahead mode permits that
+// presentation while ready is low, but it can never enter the FIFO. Strict
+// mode still allows payload valid to be held alongside a pending command.
 wire source_payload_valid_outside_frame = s_payload_tvalid &&
-                                          ((!source_active_q && !s_cmd_fire) ||
+                                          ((!source_active_q && !s_cmd_valid) ||
                                            source_payload_done_q);
 wire source_payload_transfer_outside_frame = s_payload_fire &&
                                              (!source_active_q ||
                                               source_payload_done_q);
 wire source_payload_outside_frame =
-    (SOURCE_PAYLOAD_LOOKAHEAD != 0) ?
+    (ALLOW_SOURCE_PAYLOAD_LOOKAHEAD != 0) ?
         source_payload_transfer_outside_frame :
         source_payload_valid_outside_frame;
 wire mem_completion_outside_frame = m_cpl_valid && !mem_active_q;

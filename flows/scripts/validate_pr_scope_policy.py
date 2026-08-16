@@ -47,8 +47,10 @@ POLICY_PATHS = frozenset({
     "Makefile",
     "flows/scripts/test_validate_asic_evidence.py",
     "flows/scripts/test_validate_pr_scope_policy.py",
+    "flows/scripts/test_validate_throughput_publication_gate.py",
     "flows/scripts/validate_asic_evidence.py",
     "flows/scripts/validate_pr_scope_policy.py",
+    "flows/scripts/validate_throughput_publication_gate.py",
 })
 
 FUTURE_PUBLICATION_PATHS = frozenset(
@@ -64,6 +66,106 @@ FUTURE_PUBLICATION_PATHS = frozenset(
 EVIDENCE_TRIGGER_PATHS = FUTURE_PUBLICATION_PATHS - {
     "provenance/checksums.sha256",
 }
+
+THROUGHPUT_PUBLICATION_PATHS = frozenset({
+    "README.en.md",
+    "README.md",
+    "docs/assets/slvc_dma_async64_end_to_end_throughput.svg",
+    "docs/en/results.md",
+    "docs/zh-CN/results.md",
+    "evidence/slvc_dma_async64_end_to_end_sim_summary.yaml",
+    "evidence/throughput_simulation/async64_end_to_end/README.md",
+    "evidence/throughput_simulation/async64_end_to_end/artifacts.csv",
+    "evidence/throughput_simulation/async64_end_to_end/c2b4_physical_identity.json",
+    "evidence/throughput_simulation/async64_end_to_end/correctness_ladder.csv",
+    "evidence/throughput_simulation/async64_end_to_end/flow_fairness.csv",
+    "evidence/throughput_simulation/async64_end_to_end/latency_summary.csv",
+    "evidence/throughput_simulation/async64_end_to_end/manifest.json",
+    "evidence/throughput_simulation/async64_end_to_end/matrix.csv",
+    "evidence/throughput_simulation/async64_end_to_end/metrics.csv",
+    "evidence/throughput_simulation/async64_end_to_end/points.csv",
+    "evidence/throughput_simulation/async64_end_to_end/stall_breakdown.csv",
+    "evidence/throughput_simulation/async64_end_to_end/verification.csv",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/README.md",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/artifacts.csv",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/latency.csv",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/manifest.json",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/matrix.csv",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/metrics.csv",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/points.csv",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/stall_breakdown.csv",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/verification.csv",
+    "flows/scripts/check_showcase_render.py",
+    "flows/scripts/dma_async64_throughput_contract.py",
+    "flows/scripts/generate_showcase_assets.py",
+    "flows/scripts/run_dma_async64_throughput_matrix.py",
+    "flows/scripts/test_generate_showcase_assets.py",
+    "flows/scripts/test_validate_dma_async64_throughput.py",
+    "flows/scripts/test_validate_dma_async64_throughput_blocked.py",
+    "flows/scripts/validate_dma_async64_throughput.py",
+    "flows/scripts/validate_dma_async64_throughput_blocked.py",
+    "modelsim/run_rtl_dma_async64_end_to_end_throughput.do",
+    "modelsim/run_rtl_dma_axi_read_prefetch.do",
+    "modelsim/run_rtl_rx_payload_cdc_bridge.do",
+    "pattern/axi_hp0_dual_master_64_model.v",
+    "pattern/dma_sim_def.vh",
+    "pattern/tb_rtl_dma_async64_end_to_end_throughput.v",
+    "pattern/tb_rtl_dma_axi_read_prefetch.v",
+    "pattern/tb_rtl_rx_payload_cdc_bridge.v",
+    "provenance/checksums.sha256",
+    "provenance/claims.yaml",
+    "provenance/evidence.yaml",
+    "provenance/nonclaims.yaml",
+    "provenance/showcase_assets.json",
+    "rtl/integration/frame_dma_rx_top.v",
+    "rtl/rx/dma_rx_payload_cdc_bridge.v",
+    "rtl/tx/dma_axi_read_prefetch.v",
+})
+
+THROUGHPUT_REQUIRED_PATHS = frozenset({
+    "README.en.md",
+    "README.md",
+    "docs/assets/slvc_dma_async64_end_to_end_throughput.svg",
+    "docs/en/results.md",
+    "docs/zh-CN/results.md",
+    "evidence/slvc_dma_async64_end_to_end_sim_summary.yaml",
+    "evidence/throughput_simulation/async64_end_to_end/manifest.json",
+    "evidence/throughput_simulation/async64_end_to_end/points.csv",
+    "evidence/throughput_simulation/async64_end_to_end/metrics.csv",
+    "evidence/throughput_simulation/async64_end_to_end/verification.csv",
+    "evidence/throughput_simulation/async64_end_to_end_blocked/manifest.json",
+    "flows/scripts/dma_async64_throughput_contract.py",
+    "flows/scripts/generate_showcase_assets.py",
+    "flows/scripts/run_dma_async64_throughput_matrix.py",
+    "flows/scripts/test_generate_showcase_assets.py",
+    "flows/scripts/test_validate_dma_async64_throughput.py",
+    "flows/scripts/test_validate_dma_async64_throughput_blocked.py",
+    "flows/scripts/validate_dma_async64_throughput.py",
+    "flows/scripts/validate_dma_async64_throughput_blocked.py",
+    "modelsim/run_rtl_dma_async64_end_to_end_throughput.do",
+    "modelsim/run_rtl_dma_axi_read_prefetch.do",
+    "modelsim/run_rtl_rx_payload_cdc_bridge.do",
+    "pattern/axi_hp0_dual_master_64_model.v",
+    "pattern/dma_sim_def.vh",
+    "pattern/tb_rtl_dma_async64_end_to_end_throughput.v",
+    "pattern/tb_rtl_dma_axi_read_prefetch.v",
+    "pattern/tb_rtl_rx_payload_cdc_bridge.v",
+    "provenance/checksums.sha256",
+    "provenance/claims.yaml",
+    "provenance/evidence.yaml",
+    "provenance/nonclaims.yaml",
+    "provenance/showcase_assets.json",
+    "rtl/integration/frame_dma_rx_top.v",
+    "rtl/rx/dma_rx_payload_cdc_bridge.v",
+    "rtl/tx/dma_axi_read_prefetch.v",
+})
+
+THROUGHPUT_TRIGGER_PATHS = frozenset({
+    "docs/assets/slvc_dma_async64_end_to_end_throughput.svg",
+    "evidence/slvc_dma_async64_end_to_end_sim_summary.yaml",
+    "flows/scripts/validate_dma_async64_throughput.py",
+})
+THROUGHPUT_TRIGGER_PREFIX = "evidence/throughput_simulation/"
 
 
 class PolicyError(RuntimeError):
@@ -113,13 +215,40 @@ def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY):
             _fail("bootstrap evidence PR exact path set mismatch")
         return "BOOTSTRAP_EVIDENCE_SCOPE_PASS"
 
-    publication_touched = bool(changed & EVIDENCE_TRIGGER_PATHS) or any(
-        path.startswith("evidence/asic_paired_dc/") for path in changed
+    throughput_publication_touched = bool(changed & THROUGHPUT_TRIGGER_PATHS) or any(
+        path.startswith(THROUGHPUT_TRIGGER_PREFIX) for path in changed
     )
+    asic_specific_touched = (
+        "provenance/asic_paired_dc_publication.yaml" in changed or any(
+            path.startswith("evidence/asic_paired_dc/") for path in changed
+        )
+    )
+    # Claims, result pages, and nonclaims are shared publication surfaces. If
+    # a throughput-specific sentinel is present, those paths belong to that
+    # bounded publication; otherwise retain the existing ASIC policy behavior.
+    asic_publication_touched = asic_specific_touched or (
+        bool(changed & EVIDENCE_TRIGGER_PATHS) and
+        not throughput_publication_touched
+    )
+    if asic_publication_touched and throughput_publication_touched:
+        _fail("ASIC and throughput publications must use separate pull requests")
+    publication_touched = asic_publication_touched or throughput_publication_touched
     if publication_touched and changed & POLICY_PATHS:
         _fail("evidence PR must not modify trusted policy")
     if not publication_touched:
         return "NOT_APPLICABLE"
+    if throughput_publication_touched:
+        unexpected = changed - THROUGHPUT_PUBLICATION_PATHS
+        if unexpected:
+            _fail("throughput PR contains forbidden path: {}".format(
+                sorted(unexpected)[0]
+            ))
+        missing = THROUGHPUT_REQUIRED_PATHS - changed
+        if missing:
+            _fail("throughput PR is missing required path: {}".format(
+                sorted(missing)[0]
+            ))
+        return "THROUGHPUT_EVIDENCE_SCOPE_PASS"
     unexpected = changed - FUTURE_PUBLICATION_PATHS
     if unexpected:
         _fail("evidence PR contains forbidden path: {}".format(sorted(unexpected)[0]))

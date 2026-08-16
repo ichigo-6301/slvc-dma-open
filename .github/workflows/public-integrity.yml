@@ -26,9 +26,8 @@ jobs:
         name: Verify showcase, provenance, links, assets, and flow contracts
         run: make showcase-check PYTHON=python3
       -
-        name: Enforce evidence-only pull-request scope
-        if: github.event_name == 'pull_request'
-        run: python3 flows/scripts/validate_asic_evidence.py --root . --base-ref "origin/${GITHUB_BASE_REF}"
+        name: Verify sanitized paired-DC evidence
+        run: python3 flows/scripts/validate_asic_evidence.py --root .
       -
         name: Exercise public Make profile
         run: make slvc_dma_512_defconfig PYTHON=python3
@@ -78,8 +77,11 @@ jobs:
         name: Verify sanitized ASIC paired-DC evidence
         run: python flows/scripts/validate_asic_evidence.py --root .
       -
+        name: Verify bounded Async64 throughput publication
+        run: python flows/scripts/validate_throughput_publication_gate.py --root .
+      -
         name: Verify backend, compatibility aliases, and showcase contracts
-        run: python -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy flows.scripts.test_generate_showcase_assets
+        run: python -m unittest flows.scripts.test_flowctl_make flows.scripts.test_n45_showcase flows.scripts.test_validate_asic_evidence flows.scripts.test_validate_pr_scope_policy flows.scripts.test_validate_throughput_publication_gate flows.scripts.test_generate_showcase_assets
       -
         name: Verify generic C2B4 backend without GNU Make
         run: python flows/scripts/flowctl.py --config configs/dma_rx512_reg_c2_b4_m2_sp64_defconfig run-selected --dry-run

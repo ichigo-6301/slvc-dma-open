@@ -23,6 +23,13 @@ except ImportError:
 PASS_MARKER = "DMA_ASYNC64_END_TO_END_THROUGHPUT_PASS"
 POINT_MARKER = "DMA_TP_POINT"
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
+EXPECTED_SIMULATORS = {
+    "windows": (
+        "Model Technology ModelSim SE-64 vsim 2020.4 "
+        "Simulator 2020.10 Oct 13 2020"
+    ),
+    "linux": "Questa Sim-64 vsim 10.7c Simulator 2018.08 Aug 17 2018",
+}
 
 
 class RunError(Exception):
@@ -52,10 +59,15 @@ def command_output(command, cwd, env=None):
 
 
 def git_output(root, args):
-    return command_output(
-        ["git", "-c", "safe.directory={}".format(root.as_posix())] + args,
-        root,
-    )
+    command = ["git", "-c", "safe.directory={}".format(root.as_posix())] + args
+    process = subprocess.Popen(command, cwd=str(root), stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    if process.returncode != 0:
+        raise RunError("git command failed ({}): {}: {}".format(
+            process.returncode, " ".join(command),
+            error.decode("utf-8", errors="replace").strip()))
+    return output.decode("utf-8", errors="replace").strip()
 
 
 def git_head(root):
@@ -96,6 +108,16 @@ def validate_source_checkout(root, requested_commit=None):
     return source_commit
 
 
+def validate_simulator(platform, version):
+    expected = EXPECTED_SIMULATORS[platform]
+    if version != expected:
+        raise RunError(
+            "unexpected simulator for {}: expected {!r}, got {!r}".format(
+                platform, expected, version
+            )
+        )
+
+
 def run(args):
     root = Path(args.root).resolve()
     modelsim = root / "modelsim"
@@ -112,9 +134,11 @@ def run(args):
         raise RunError("unknown matrix point(s): {}".format(", ".join(missing)))
 
     version = command_output([args.vsim, "-version"], modelsim).splitlines()[0]
+    validate_simulator(args.platform, version)
     records = []
     failures = []
     for index, point in enumerate(points, 1):
+        validate_source_checkout(root, source_commit)
         log_path = output_dir / (point["point_id"] + ".log")
         if log_path.exists() and not args.force:
             raise RunError("refusing to overwrite {}".format(log_path))
@@ -138,6 +162,7 @@ def run(args):
                 cwd=str(modelsim), env=env, stdout=log_handle,
                 stderr=subprocess.STDOUT)
             returncode = process.wait()
+        validate_source_checkout(root, source_commit)
         log_text = log_path.read_bytes().decode("utf-8", errors="replace")
         passed = (returncode == 0 and
                   log_text.count(PASS_MARKER) == 1 and
@@ -161,6 +186,7 @@ def run(args):
             if not args.keep_going:
                 break
 
+    validate_source_checkout(root, source_commit)
     index_path = output_dir / "run_index.json"
     index_path.write_text(
         json.dumps({

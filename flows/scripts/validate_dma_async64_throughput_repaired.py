@@ -12,7 +12,7 @@ import re
 import subprocess
 import sys
 from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 try:
     from flows.scripts.dma_async64_throughput_contract import (
@@ -44,6 +44,13 @@ DOC_REL = Path("docs/throughput_private/async64_end_to_end_throughput_repaired.m
 
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
+EXPECTED_SIMULATORS = {
+    "windows": (
+        "Model Technology ModelSim SE-64 vsim 2020.4 "
+        "Simulator 2020.10 Oct 13 2020"
+    ),
+    "linux": "Questa Sim-64 vsim 10.7c Simulator 2018.08 Aug 17 2018",
+}
 KEY_VALUE = re.compile(r"([A-Za-z0-9_]+)=([^\s]+)")
 PRIVATE_PATTERNS = (
     re.compile(r"[A-Za-z]:[\\/]"),
@@ -270,6 +277,11 @@ def load_run_index(run_dir, platform, flow_commit, contracts, suite):
         raise ValidationError("run index identity mismatch: {}".format(path))
     if data.get("source_commit") != flow_commit or data.get("seed") != 71:
         raise ValidationError("run index source/seed mismatch: {}".format(path))
+    expected_simulator = EXPECTED_SIMULATORS[platform]
+    if data.get("simulator") != expected_simulator:
+        raise ValidationError(
+            "run index simulator mismatch for {}: {}".format(platform, path)
+        )
     records = data.get("records", [])
     expected_ids = [point["point_id"] for point in contracts]
     if [record.get("point_id") for record in records] != expected_ids:
@@ -291,6 +303,7 @@ def load_run_index(run_dir, platform, flow_commit, contracts, suite):
                     )
                 )
         if (record.get("platform") != platform or
+                record.get("simulator") != expected_simulator or
                 record.get("source_commit") != flow_commit or
                 record.get("returncode") != 0 or
                 record.get("log_file") != point_id + ".log"):
@@ -422,9 +435,32 @@ def collect_platform(run_dir, platform, flow_commit, contract_by_id,
     return points, latencies, fairness, verification, artifacts
 
 
+def c2b4_source_members(root, revision):
+    filelist = git_blob(
+        root, revision, "flows/asic/c2b4/c2b4_register.f"
+    ).decode()
+    members = []
+    for line in filelist.splitlines():
+        rel = line.strip()
+        if not rel or rel.startswith("#"):
+            continue
+        path = PurePosixPath(rel)
+        if (path.is_absolute() or ".." in path.parts or
+                rel.startswith(("+", "-"))):
+            raise ValidationError(
+                "unsupported C2B4 filelist member: {}".format(rel)
+            )
+        members.append(path.as_posix())
+    if not members or len(members) != len(set(members)):
+        raise ValidationError("C2B4 filelist is empty or contains duplicates")
+    return members
+
+
 def c2b4_identity(root, flow_commit):
+    members = c2b4_source_members(root, flow_commit)
     paths = git_output(root, ["ls-tree", "-r", "--name-only", BASELINE_COMMIT,
                               "--", "flows/asic/c2b4"]).decode().splitlines()
+    paths += members
     paths += ["configs/dma_rx512_reg_c2_b4_m2_sp64_defconfig", "Kconfig"]
     records = []
     for rel in sorted(set(paths)):
@@ -438,9 +474,6 @@ def c2b4_identity(root, flow_commit):
             "repaired_sha256": sha256_bytes(repaired),
             "identical": True,
         })
-    filelist = git_blob(root, flow_commit, "flows/asic/c2b4/c2b4_register.f").decode()
-    members = [line.strip() for line in filelist.splitlines()
-               if line.strip() and not line.lstrip().startswith("#")]
     forbidden = {"rtl/rx/dma_rx_payload_cdc_bridge.v",
                  "rtl/tx/dma_axi_read_prefetch.v"}
     if forbidden.intersection(members):
@@ -682,12 +715,14 @@ def validate_git_identity(root, manifest, require):
         "rtl/rx/dma_rx_payload_cdc_bridge.v",
         "rtl/tx/dma_axi_read_prefetch.v",
     }, "RTL repair whitelist mismatch: {}".format(rtl_diff))
-    protected = git_output(root, [
-        "diff", "--name-only", BASELINE_COMMIT, flow_commit, "--",
+    protected_paths = [
         "flows/asic/c2b4", "configs/dma_rx512_reg_c2_b4_m2_sp64_defconfig",
         "Kconfig", "evidence/asic_paired_dc", "provenance/claims.yaml",
         "provenance/evidence.yaml", "provenance/nonclaims.yaml",
-    ]).decode().splitlines()
+    ] + c2b4_source_members(root, flow_commit)
+    protected = git_output(root, [
+        "diff", "--name-only", BASELINE_COMMIT, flow_commit, "--",
+    ] + protected_paths).decode().splitlines()
     require(not protected, "C2B4/ASIC evidence identity changed: {}".format(protected))
 
 
@@ -865,6 +900,9 @@ def validate(root):
         require(record.get("baseline_sha256") == record.get("repaired_sha256") and
                 record.get("identical") is True,
                 "C2B4 file identity mismatch")
+    identity_paths = {record.get("path") for record in identity.get("files", [])}
+    require(set(identity.get("c2b4_source_members", [])).issubset(identity_paths),
+            "C2B4 filelist members are not all hash-bound")
     validate_git_identity(root, manifest, require)
 
     for name, expected in manifest.get("files", {}).items():

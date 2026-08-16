@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from flows.scripts import generate_showcase_assets as showcase_generator
 from flows.scripts import validate_throughput_publication_gate as gate
 
 
@@ -265,7 +266,7 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             ("tool", gate.CLAIM_FIXED["tool"]),
             ("claims", [gate.CLAIM_ID]),
             ("sha256", gate._sha256(summary_path.read_bytes())),
-            ("public", "true"),
+            ("public", True),
         ])
         self._append(self.root / gate.CLAIMS_REL, CLAIM_BLOCK)
         self._append(self.root / gate.EVIDENCE_REL, evidence_block)
@@ -418,6 +419,49 @@ class ThroughputPublicationGateTest(unittest.TestCase):
                 self.root, execute_validators=execute_validators
             )
 
+    def _replace_points_with_showcase_fixture(self):
+        header = (
+            "platform,point_id,frames,payload_bytes,shared_service,"
+            "response_latency_cycles,service_percent,mem_phase_ns,clock_mhz,"
+            "hw_cycles,steady_cycles,rx_peak_outstanding,"
+            "tx_peak_outstanding,frame_drop,deadlock,protocol_error,status"
+        )
+        identities = (
+            ("loopback_peak_phase3", 4194304, 1094782, 1094626, 100, 4),
+            ("loopback_size_64", 65536, 144437, 144274, 100, 1),
+            ("loopback_size_128", 131072, 152629, 152474, 100, 1),
+            ("loopback_size_256", 262144, 173122, 172966, 100, 2),
+            ("loopback_size_1024", 1048576, 308350, 308194, 100, 4),
+            ("loopback_size_4096", 4194304, 1094782, 1094626, 100, 4),
+            ("hp0_l16_s50", 4194304, 2160758, 2160497, 50, 4),
+            ("hp0_l16_s75", 4194304, 1450108, 1449900, 75, 4),
+            ("hp0_l16_s100", 4194304, 1094782, 1094626, 100, 4),
+        )
+        rows = [header]
+        for platform in ("windows", "linux"):
+            for point_id, payload, hw_cycles, steady_cycles, service, peak in identities:
+                rows.append(
+                    "{},{},1024,{},1,16,{},3,100,{},{},{},{},0,0,0,PASS".format(
+                        platform, point_id, payload, service, hw_cycles,
+                        steady_cycles, peak, peak,
+                    )
+                )
+        points_path = self.root / gate.PACKAGE_REL / "points.csv"
+        points_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+
+        manifest_path = self.root / gate.PACKAGE_REL / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["files"]["points.csv"] = gate._sha256(
+            points_path.read_bytes()
+        )
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        self.trusted_evidence_hashes["points.csv"] = gate._sha256(
+            points_path.read_bytes()
+        )
+
     def test_unpublished_tree_returns_explicit_status(self):
         self._copy_provenance()
         self.assertEqual(self._validate(),
@@ -425,6 +469,24 @@ class ThroughputPublicationGateTest(unittest.TestCase):
 
     def test_complete_publication_contract_passes(self):
         self._published_fixture()
+        self.assertEqual(
+            self._validate(),
+            "VERIFIED_RTL_SIMULATION_PUBLISHED",
+        )
+
+    def test_complete_publication_contract_matches_showcase_generator(self):
+        self._published_fixture()
+        self._replace_points_with_showcase_fixture()
+        for relative in (
+                showcase_generator.ARCHITECTURE_PATH,
+                showcase_generator.ARCHITECTURE_EN_PATH,
+                showcase_generator.RESEARCH_PATH,
+                showcase_generator.RESEARCH_EN_PATH):
+            target = self.root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / relative, target)
+        showcase_generator.write(self.root)
+        showcase_generator.check(self.root)
         self.assertEqual(
             self._validate(),
             "VERIFIED_RTL_SIMULATION_PUBLISHED",
@@ -494,7 +556,7 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         self._published_fixture()
         path = self.root / gate.CLAIMS_REL
         text = path.read_text(encoding="utf-8").replace(
-            'resume_eligible: "false"', 'resume_eligible: "true"'
+            "resume_eligible: false", "resume_eligible: true"
         )
         path.write_text(text, encoding="utf-8")
         with self.assertRaisesRegex(gate.PublicationError, "resume_eligible"):
@@ -517,8 +579,8 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         self._published_fixture()
         path = self.root / gate.CLAIMS_REL
         text = path.read_text(encoding="utf-8").replace(
-            '    resume_eligible: "false"',
-            '    resume_eligible: "true"\n'
+            "    resume_eligible: false",
+            "    resume_eligible: true\n"
             '    note: "resume_eligible: false"',
         )
         path.write_text(text, encoding="utf-8")

@@ -69,8 +69,8 @@ CLAIM_FIXED = {
         "Verified RTL simulation only; not FPGA/HP0 board throughput, "
         "DDR peak, Fmax, Same-clock512/Async512 64 B/cycle, or ASIC evidence."
     ),
-    "resume_eligible": "false",
-    "public": "true",
+    "resume_eligible": False,
+    "public": True,
 }
 EVIDENCE_FIELDS = frozenset({
     "path", "type", "source_ref", "tool", "claims", "sha256", "public",
@@ -89,7 +89,7 @@ NONCLAIM_FIXED = {
         "and not measured."
     ),
     "status": "not_claimed",
-    "public": "true",
+    "public": True,
 }
 SUMMARY_PROFILE = {
     "top": "frame_dma_rx_top",
@@ -581,6 +581,10 @@ def _yaml_scalar(raw, context):
         if not isinstance(value, str):
             _fail("{} quoted scalar must be text".format(context))
         return value
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
     if not raw or raw != raw.strip():
         _fail("{} has noncanonical scalar".format(context))
     return raw
@@ -1019,7 +1023,7 @@ def validate(root, execute_validators=True):
         "source_ref": source_ref,
         "tool": CLAIM_FIXED["tool"],
         "claims": [CLAIM_ID],
-        "public": "true",
+        "public": True,
     }
     _require_fixed_fields("throughput evidence", evidence, evidence_fixed)
     if evidence.get("sha256") != _sha256((root / SUMMARY_REL).read_bytes()):

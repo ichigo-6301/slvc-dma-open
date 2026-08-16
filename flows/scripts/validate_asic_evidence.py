@@ -53,6 +53,23 @@ EXPECTED_EVIDENCE_REGISTRY_NORMALIZED_SHA256 = (
 EXPECTED_PROVENANCE_README_SHA256 = (
     "12fe0583121fda0e2f5c53b0352c2ea8c40b1473924b1668d0158ce375db63cd"
 )
+AUTHORIZED_THROUGHPUT_CLAIM_ID = (
+    "slvc_dma_async64_end_to_end_rtl_sim_throughput"
+)
+AUTHORIZED_THROUGHPUT_EVIDENCE_ID = (
+    "slvc_dma_async64_end_to_end_sim_summary"
+)
+AUTHORIZED_THROUGHPUT_NONCLAIM_ID = (
+    "slvc_dma_async64_end_to_end_not_hardware"
+)
+AUTHORIZED_RESULTS_START = (
+    "<!-- throughput-publication:"
+    "slvc_dma_async64_end_to_end_rtl_sim_throughput:start -->"
+)
+AUTHORIZED_RESULTS_END = (
+    "<!-- throughput-publication:"
+    "slvc_dma_async64_end_to_end_rtl_sim_throughput:end -->"
+)
 
 CSV_HEADERS = {
     "points.csv": (
@@ -882,8 +899,30 @@ def _text_sha256(path):
     return hashlib.sha256(path.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
 
 
+def _strip_authorized_registry_item(text, item_id, context):
+    pattern = re.compile(
+        r"(?ms)^  - id: " + re.escape(item_id) + r"\n.*?(?=^  - id: |\Z)"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        _fail("{} contains duplicate authorized throughput records".format(context))
+    if not matches:
+        return text
+    match = matches[0]
+    return text[:match.start()] + text[match.end():]
+
+
+def _registry_sha256_without_authorized_item(path, item_id):
+    text = path.read_text(encoding="utf-8")
+    normalized = _strip_authorized_registry_item(text, item_id, str(path))
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 def _normalized_evidence_registry_sha256(path):
     text = path.read_text(encoding="utf-8")
+    text = _strip_authorized_registry_item(
+        text, AUTHORIZED_THROUGHPUT_EVIDENCE_ID, str(path)
+    )
     pattern = (
         r"(?ms)(^  - id: slvc_dma_asic_paired_dc_publication\n"
         r".*?^    sha256: )[0-9a-f]{64}(?=\n)"
@@ -975,8 +1014,8 @@ def _validate_nonclaims(root):
             )
             if actual != value:
                 _fail("{} fixed {} mismatch".format(nonclaim_id, field))
-    if _text_sha256(
-        root / "provenance/nonclaims.yaml"
+    if _registry_sha256_without_authorized_item(
+        root / "provenance/nonclaims.yaml", AUTHORIZED_THROUGHPUT_NONCLAIM_ID
     ) != EXPECTED_NONCLAIMS_SHA256:
         _fail("fixed paired-DC nonclaim registry inventory mismatch")
 
@@ -1126,7 +1165,9 @@ def _validate_publication(root, evaluations):
         _fail("provenance evidence path must bind the publication manifest")
     if publication_hash != _sha256(root / PUBLICATION_REL):
         _fail("provenance evidence hash must bind the publication manifest")
-    if _text_sha256(root / "provenance/claims.yaml") != EXPECTED_CLAIMS_SHA256:
+    if _registry_sha256_without_authorized_item(
+        root / "provenance/claims.yaml", AUTHORIZED_THROUGHPUT_CLAIM_ID
+    ) != EXPECTED_CLAIMS_SHA256:
         _fail("fixed claim registry inventory mismatch")
     if _normalized_evidence_registry_sha256(
         root / "provenance/evidence.yaml"
@@ -1320,6 +1361,19 @@ def _validate_result_tables(root):
             text = (root / relative).read_text(encoding="utf-8")
         except OSError as error:
             _fail("cannot read evidence document {}: {}".format(relative, error))
+        if relative in ("docs/en/results.md", "docs/zh-CN/results.md"):
+            marker_pattern = re.compile(
+                r"(?ms)^" + re.escape(AUTHORIZED_RESULTS_START) +
+                r"\n.*?^" + re.escape(AUTHORIZED_RESULTS_END) + r"\n?"
+            )
+            matches = list(marker_pattern.finditer(text))
+            if len(matches) > 1 or (
+                    text.count(AUTHORIZED_RESULTS_START) != len(matches) or
+                    text.count(AUTHORIZED_RESULTS_END) != len(matches)):
+                _fail("invalid authorized throughput block in {}".format(relative))
+            if matches:
+                match = matches[0]
+                text = text[:match.start()] + text[match.end():]
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
         if digest != expected_hash:
             _fail("fixed evidence document content mismatch in {}".format(relative))

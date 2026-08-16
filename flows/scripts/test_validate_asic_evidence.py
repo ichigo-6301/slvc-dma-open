@@ -872,6 +872,73 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("fixed evidence document content mismatch")
 
+    def test_authorized_throughput_records_and_result_blocks_pass(self):
+        additions = {
+            "claims.yaml": (
+                "  - id: {}\n"
+                "    profile: bounded_sim\n"
+                "    evidence:\n"
+                "      - {}\n"
+                "    status: verified\n".format(
+                    validator.AUTHORIZED_THROUGHPUT_CLAIM_ID,
+                    validator.AUTHORIZED_THROUGHPUT_EVIDENCE_ID,
+                )
+            ),
+            "evidence.yaml": (
+                "  - id: {}\n"
+                "    path: evidence/throughput.yaml\n"
+                "    public: true\n".format(
+                    validator.AUTHORIZED_THROUGHPUT_EVIDENCE_ID
+                )
+            ),
+            "nonclaims.yaml": (
+                "  - id: {}\n"
+                "    statement: not hardware\n"
+                "    status: not_claimed\n".format(
+                    validator.AUTHORIZED_THROUGHPUT_NONCLAIM_ID
+                )
+            ),
+        }
+        for name, addition in additions.items():
+            path = self.root / "provenance" / name
+            path.write_text(
+                path.read_text(encoding="utf-8") + addition,
+                encoding="utf-8",
+            )
+        for relative in ("docs/en/results.md", "docs/zh-CN/results.md"):
+            path = self.root / relative
+            path.write_text(
+                path.read_text(encoding="utf-8") +
+                validator.AUTHORIZED_RESULTS_START + "\n" +
+                "## Bounded Async64 RTL Simulation\n\nAuthorized addition.\n" +
+                validator.AUTHORIZED_RESULTS_END + "\n",
+                encoding="utf-8",
+            )
+        validator.validate(self.root)
+
+    def test_authorized_result_marker_does_not_hide_unmarked_mutation(self):
+        path = self.root / "docs/en/results.md"
+        text = path.read_text(encoding="utf-8").replace(
+            "## SRAM A5 Research", "Unmarked mutation.\n\n## SRAM A5 Research", 1
+        )
+        text += (
+            validator.AUTHORIZED_RESULTS_START + "\nAuthorized.\n" +
+            validator.AUTHORIZED_RESULTS_END + "\n"
+        )
+        path.write_text(text, encoding="utf-8")
+        self.assert_fails("fixed evidence document content mismatch")
+
+    def test_duplicate_authorized_registry_item_fails(self):
+        path = self.root / "provenance/claims.yaml"
+        addition = "  - id: {}\n    status: verified\n".format(
+            validator.AUTHORIZED_THROUGHPUT_CLAIM_ID
+        )
+        path.write_text(
+            path.read_text(encoding="utf-8") + addition + addition,
+            encoding="utf-8",
+        )
+        self.assert_fails("duplicate")
+
     def test_html_closing_tag_is_not_a_posix_path(self):
         path = self.csv_path("README.md")
         text = path.read_text(encoding="utf-8")

@@ -177,6 +177,14 @@ PROTECTED_README_SHA256 = {
         "637963bd8f558d653bb708dcf58d165916bee5458902a6f6e73eec95b6365f09"
     ),
 }
+PROTECTED_RESULTS_SHA256 = {
+    Path("docs/en/results.md"): (
+        "e3bb0780925d02900cce02dee7cf196b8f28a997e9d5f0b7980c75b3d115688d"
+    ),
+    Path("docs/zh-CN/results.md"): (
+        "285d9f936c17e4a6cc39c5255c2e79330f6264eb0d93869578452dbc7f73b7fc"
+    ),
+}
 README_START = (
     "<!-- throughput-publication:"
     "slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:start -->"
@@ -327,6 +335,18 @@ SUPPLEMENTAL_SOURCE_PATHS = (
     "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
 )
 REQUIRED_SOURCE_PATHS = COMPILED_RTL_SOURCE_PATHS + SUPPLEMENTAL_SOURCE_PATHS
+UNPUBLISHED_SOURCE_REF = "c20681fad0eaa6ad55dbb919149765b175b29117"
+UNPUBLISHED_ABSENT_SOURCE_PATHS = frozenset({
+    "pattern/axi_hp0_dual_master_64_model.v",
+    "pattern/tb_rtl_dma_async64_end_to_end_throughput.v",
+    "pattern/tb_rtl_dma_axi_read_prefetch.v",
+    "modelsim/run_rtl_dma_async64_end_to_end_throughput.do",
+    "modelsim/run_rtl_dma_axi_read_prefetch.do",
+    "flows/scripts/dma_async64_throughput_contract.py",
+    "flows/scripts/run_dma_async64_throughput_matrix.py",
+    "flows/scripts/validate_dma_async64_throughput_repaired.py",
+    "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
+})
 
 REQUIRED_PATHS = frozenset({
     Path("README.en.md"),
@@ -519,6 +539,52 @@ def _validate_unpublished_readmes(root):
         )
         if _sha256(protected.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected homepage content".format(relative))
+
+
+def _validate_unpublished_state(root):
+    for relative, expected_hash in PROTECTED_MANIFEST_HASHES.items():
+        if _sha256(_read_text(root / relative).encode("utf-8")) != expected_hash:
+            _fail("{} modifies protected pre-publication content".format(
+                relative
+            ))
+
+    _validate_unpublished_readmes(root)
+    for relative, expected_hash in PROTECTED_RESULTS_SHA256.items():
+        if (_sha256(_read_text(root / relative).encode("utf-8")) !=
+                expected_hash):
+            _fail("{} modifies protected pre-publication content".format(
+                relative
+            ))
+
+    generator_rel = Path("flows/scripts/generate_showcase_assets.py")
+    if _sha256_file(root / generator_rel) != TRUSTED_SHOWCASE_GENERATOR_SHA256:
+        _fail("base-owned showcase generator identity mismatch")
+    manifest = _read_json(root / SHOWCASE_REL)
+    if any(
+            isinstance(asset, dict) and
+            asset.get("path") == CHART_REL.as_posix()
+            for asset in manifest.get("assets", [])):
+        _fail("throughput chart binding exists without the registered claim")
+    if (_normalized_showcase_bindings(root, manifest) !=
+            PROTECTED_SHOWCASE_BINDINGS_SHA256):
+        _fail("existing showcase asset bindings changed")
+
+    for relative in REQUIRED_SOURCE_PATHS:
+        path = root / relative
+        if relative in UNPUBLISHED_ABSENT_SOURCE_PATHS:
+            if path.exists():
+                _fail("publication-only source exists without the registered claim: "
+                      "{}".format(relative))
+            continue
+        if not path.is_file():
+            _fail("protected pre-publication source is missing: {}".format(
+                relative
+            ))
+        expected = _source_blob(root, UNPUBLISHED_SOURCE_REF, relative)
+        if path.read_bytes() != expected:
+            _fail("protected pre-publication source changed: {}".format(
+                relative
+            ))
 
 
 def _validate_results_blocks(root):
@@ -1004,7 +1070,7 @@ def validate(root, execute_validators=True):
     if not claim_present:
         if sentinels_present:
             _fail("throughput publication files exist without the registered claim")
-        _validate_unpublished_readmes(root)
+        _validate_unpublished_state(root)
         return "NOT_PUBLISHED"
 
     missing = [path for path in sorted(REQUIRED_PATHS, key=lambda item: item.as_posix())

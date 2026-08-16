@@ -85,6 +85,7 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         self.temp.cleanup()
 
     def _copy_provenance(self):
+        self.source_blobs = {}
         for relative in (gate.CLAIMS_REL, gate.EVIDENCE_REL, gate.NONCLAIMS_REL,
                          gate.SHOWCASE_REL):
             target = self.root / relative
@@ -141,6 +142,25 @@ class ThroughputPublicationGateTest(unittest.TestCase):
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        for relative in gate.REQUIRED_SOURCE_PATHS:
+            source = ROOT / relative
+            if not source.is_file():
+                continue
+            target = self.root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if not target.exists():
+                shutil.copyfile(source, target)
+            self.source_blobs[relative] = source.read_bytes()
+        manifest_path = self.root / gate.SHOWCASE_REL
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for asset in manifest["assets"]:
+            for source in asset.get("inputs", []):
+                source["sha256"] = gate._sha256(
+                    (self.root / source["path"]).read_bytes()
+                )
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
 
     @staticmethod
     def _append(path, text):
@@ -481,6 +501,62 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         with self.assertRaisesRegex(
                 gate.PublicationError, "modifies protected homepage content"):
             self._validate()
+
+    def test_unpublished_tree_rejects_source_and_harness_drift(self):
+        for relative in (
+                "rtl/rx/dma_rx_payload_cdc_bridge.v",
+                "pattern/tb_rtl_rx_payload_cdc_bridge.v"):
+            with self.subTest(path=relative):
+                self._copy_provenance()
+                path = self.root / relative
+                path.write_text(
+                    path.read_text(encoding="utf-8") +
+                    "\n// unauthorized rollback mutation\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(
+                        gate.PublicationError,
+                        "protected pre-publication source changed"):
+                    self._validate()
+                shutil.rmtree(self.root)
+                self.root.mkdir()
+
+    def test_unpublished_tree_rejects_publication_only_source_residue(self):
+        self._copy_provenance()
+        relative = next(iter(sorted(gate.UNPUBLISHED_ABSENT_SOURCE_PATHS)))
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("residual publication source\n", encoding="utf-8")
+        with self.assertRaisesRegex(
+                gate.PublicationError, "publication-only source exists"):
+            self._validate()
+
+    def test_unpublished_tree_protects_remaining_public_contracts(self):
+        mutations = (
+            (gate.CLAIMS_REL, "\n# unauthorized registry rewrite\n"),
+            (Path("docs/en/results.md"), "\nUnsupported result\n"),
+            (gate.SHOWCASE_REL, "\n"),
+        )
+        for relative, suffix in mutations:
+            with self.subTest(path=relative):
+                self._copy_provenance()
+                path = self.root / relative
+                if relative == gate.SHOWCASE_REL:
+                    manifest = json.loads(path.read_text(encoding="utf-8"))
+                    manifest["assets"][0]["source"] = "rewritten source"
+                    path.write_text(
+                        json.dumps(manifest, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                else:
+                    path.write_text(
+                        path.read_text(encoding="utf-8") + suffix,
+                        encoding="utf-8",
+                    )
+                with self.assertRaises(gate.PublicationError):
+                    self._validate()
+                shutil.rmtree(self.root)
+                self.root.mkdir()
 
     def test_complete_publication_contract_passes(self):
         self._published_fixture()

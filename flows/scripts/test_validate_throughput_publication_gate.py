@@ -292,19 +292,27 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         self._append(self.root / gate.EVIDENCE_REL, evidence_block)
         self._append(self.root / gate.NONCLAIMS_REL, NONCLAIM_BLOCK)
 
-        readme_block = (
-            gate.README_START + "\n" +
-            "<!-- claim:{} maturity:verified -->\n".format(gate.CLAIM_ID) +
-            "3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; "
-            "95.779434%. See {link}.\n" + gate.README_END + "\n"
-        )
-        for relative, link in (
-                (Path("README.md"), "docs/zh-CN/results.md"),
-                (Path("README.en.md"), "docs/en/results.md")):
+        readme_blocks = {
+            Path("README.md"): (
+                gate.README_START + "\n" +
+                "<!-- claim:{} maturity:verified -->\n".format(gate.CLAIM_ID) +
+                "3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; "
+                "95.779434%。详见[结果](docs/zh-CN/results.md)。\n" +
+                gate.README_END + "\n"
+            ),
+            Path("README.en.md"): (
+                gate.README_START + "\n" +
+                "<!-- claim:{} maturity:verified -->\n".format(gate.CLAIM_ID) +
+                "3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; "
+                "95.779434%. See [Results](docs/en/results.md).\n" +
+                gate.README_END + "\n"
+            ),
+        }
+        for relative, readme_block in readme_blocks.items():
             self._insert_before(
                 self.root / relative,
                 gate.README_BLOCK_FOLLOWER[relative],
-                readme_block.format(link=link),
+                readme_block,
             )
 
         result_block = (
@@ -315,30 +323,10 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             "3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; "
             "95.779434%. Pending / not measured / not claimed.\n" +
             gate.RESULTS_END + "\n"
-        ).format(asset=gate.CHART_REL.as_posix())
+        ).format(asset=gate.RESULTS_ASSET_LINK)
         for relative in (Path("docs/en/results.md"),
                          Path("docs/zh-CN/results.md")):
             self._append(self.root / relative, result_block)
-
-        self.readme_block_hashes = {}
-        for relative in (Path("README.md"), Path("README.en.md")):
-            _, block = gate._bounded_block(
-                (self.root / relative).read_text(encoding="utf-8"),
-                gate.README_START, gate.README_END, str(relative), True,
-            )
-            self.readme_block_hashes[relative] = gate._sha256(
-                block.encode("utf-8")
-            )
-        self.results_block_hashes = {}
-        for relative in (Path("docs/en/results.md"),
-                         Path("docs/zh-CN/results.md")):
-            _, block = gate._bounded_block(
-                (self.root / relative).read_text(encoding="utf-8"),
-                gate.RESULTS_START, gate.RESULTS_END, str(relative), True,
-            )
-            self.results_block_hashes[relative] = gate._sha256(
-                block.encode("utf-8")
-            )
 
         (self.root / gate.CHART_REL).write_text(
             '<svg xmlns="http://www.w3.org/2000/svg" width="1600" '
@@ -417,16 +405,6 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         )
         with mock.patch.object(gate, "TRUSTED_EVIDENCE_FILE_SHA256", trusted), \
                 mock.patch.object(gate, "TRUSTED_BLOCKED_FILE_SHA256", blocked), \
-                mock.patch.object(
-                    gate, "EXPECTED_README_BLOCK_SHA256",
-                    getattr(self, "readme_block_hashes",
-                            gate.EXPECTED_README_BLOCK_SHA256),
-                ), \
-                mock.patch.object(
-                    gate, "EXPECTED_RESULTS_BLOCK_SHA256",
-                    getattr(self, "results_block_hashes",
-                            gate.EXPECTED_RESULTS_BLOCK_SHA256),
-                ), \
                 mock.patch.object(
                     gate, "_source_blob",
                     side_effect=lambda root, commit, relative:

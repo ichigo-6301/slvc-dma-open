@@ -17,6 +17,7 @@ CLAIM_ID = "slvc_dma_async64_end_to_end_rtl_sim_throughput"
 EVIDENCE_ID = "slvc_dma_async64_end_to_end_sim_summary"
 NONCLAIM_ID = "slvc_dma_async64_end_to_end_not_hardware"
 CHART_REL = Path("docs/assets/slvc_dma_async64_end_to_end_throughput.svg")
+RESULTS_ASSET_LINK = "../assets/slvc_dma_async64_end_to_end_throughput.svg"
 PACKAGE_REL = Path("evidence/throughput_simulation/async64_end_to_end")
 BLOCKED_PACKAGE_REL = Path(
     "evidence/throughput_simulation/async64_end_to_end_blocked"
@@ -203,10 +204,10 @@ RESULTS_END = (
 )
 EXPECTED_README_BLOCK_SHA256 = {
     Path("README.md"): (
-        "b6cda206f805c8ce24921deb0c0fa9d1549bf5b06d3fd7a51d7a1e6c6dcf43ba"
+        "8fd151d0f4da9fda908014def07885e5810f8f338db8419be86e2d426fe446f3"
     ),
     Path("README.en.md"): (
-        "0b0300dda48196e7226531281f69c2f90b554094d220b0cec034b823fd139595"
+        "79b50995c150b80a0d26fc0b95009563b53f4b896e83c770c7061871f70c987b"
     ),
 }
 README_BLOCK_FOLLOWER = {
@@ -215,10 +216,10 @@ README_BLOCK_FOLLOWER = {
 }
 EXPECTED_RESULTS_BLOCK_SHA256 = {
     Path("docs/en/results.md"): (
-        "5fce2d07aef9c35f4a467cefbceacc06880902d40358c72a2ba4e59ab896fe92"
+        "183c6b482a63bab6b405bbcd30222d42289acde05b33312f7513d183c050b7c6"
     ),
     Path("docs/zh-CN/results.md"): (
-        "dfbd58de61a2c125d08d88f9474ea78e21b31185fe335378d24272a70e734bba"
+        "183c6b482a63bab6b405bbcd30222d42289acde05b33312f7513d183c050b7c6"
     ),
 }
 
@@ -593,7 +594,7 @@ def _validate_unpublished_state(root):
 def _validate_results_blocks(root):
     required_common = (
         "<!-- claim:{} maturity:verified -->".format(CLAIM_ID),
-        CHART_REL.as_posix(),
+        RESULTS_ASSET_LINK,
         "width=\"1000\"",
         "3.831177 MB/s/MHz",
         "383.117735 MB/s",
@@ -603,6 +604,11 @@ def _validate_results_blocks(root):
     )
     for relative in (Path("docs/en/results.md"),
                      Path("docs/zh-CN/results.md")):
+        if ((root / relative).parent / RESULTS_ASSET_LINK).resolve() != (
+                root / CHART_REL).resolve():
+            _fail("{} throughput image link does not resolve to chart".format(
+                relative
+            ))
         text = _read_text(root / relative)
         _, block = _bounded_block(
             text, RESULTS_START, RESULTS_END, str(relative), True

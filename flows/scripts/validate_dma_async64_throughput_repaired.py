@@ -17,11 +17,11 @@ from pathlib import Path
 try:
     from flows.scripts.dma_async64_throughput_contract import (
         CLOCK_MHZ, MAIN_POINT_ID, correctness_ladder_points, matrix_points,
-        payload_model_limit)
+        expected_payload_bytes, payload_model_limit)
 except ImportError:
     from dma_async64_throughput_contract import (
         CLOCK_MHZ, MAIN_POINT_ID, correctness_ladder_points, matrix_points,
-        payload_model_limit)
+        expected_payload_bytes, payload_model_limit)
 
 
 BASELINE_COMMIT = "c20681fad0eaa6ad55dbb919149765b175b29117"
@@ -276,6 +276,29 @@ def load_run_index(run_dir, platform, flow_commit, contracts, suite):
         raise ValidationError("run index matrix order mismatch: {}".format(path))
     if any(record.get("status") != "PASS" for record in records):
         raise ValidationError("run index contains a non-PASS point: {}".format(path))
+    contract_fields = (
+        "scenario", "frames", "payload_arg_bytes", "model",
+        "shared_service", "response_latency_cycles", "service_percent",
+        "mem_phase_ns",
+    )
+    for contract, record in zip(contracts, records):
+        point_id = contract["point_id"]
+        for field in contract_fields:
+            if record.get(field) != contract[field]:
+                raise ValidationError(
+                    "run index {} mismatch for {}: {}".format(
+                        field, point_id, path
+                    )
+                )
+        if (record.get("platform") != platform or
+                record.get("source_commit") != flow_commit or
+                record.get("returncode") != 0 or
+                record.get("log_file") != point_id + ".log"):
+            raise ValidationError(
+                "run index execution identity mismatch for {}: {}".format(
+                    point_id, path
+                )
+            )
     return data, {record["point_id"]: record for record in records}
 
 
@@ -309,6 +332,8 @@ def collect_platform(run_dir, platform, flow_commit, contract_by_id,
         if missing:
             raise ValidationError("point {} missing fields {}".format(point_id, missing))
         if (raw_point["frames"] != str(contract["frames"]) or
+                raw_point["payload_bytes"] !=
+                str(expected_payload_bytes(contract)) or
                 raw_point["shared"] != str(contract["shared_service"]) or
                 raw_point["response_latency"] !=
                 str(contract["response_latency_cycles"]) or
@@ -732,6 +757,22 @@ def validate(root):
             "correctness_ladder.csv is not regenerated from raw points")
 
     for point in points:
+        contract = contract_by_id.get(point["point_id"])
+        require(contract is not None,
+                "unknown point contract: {}".format(point["point_id"]))
+        if contract is not None:
+            require(
+                point["scenario"] == contract["scenario"] and
+                point["frames"] == str(contract["frames"]) and
+                point["payload_bytes"] ==
+                str(expected_payload_bytes(contract)) and
+                point["shared_service"] == str(contract["shared_service"]) and
+                point["response_latency_cycles"] ==
+                str(contract["response_latency_cycles"]) and
+                point["service_percent"] == str(contract["service_percent"]) and
+                point["mem_phase_ns"] == str(contract["mem_phase_ns"]),
+                "point contract mismatch: {}".format(point["point_key"]),
+            )
         require(point["status"] == "PASS" and point["pass_marker"] == "true",
                 "non-PASS point: {}".format(point["point_key"]))
         for field in ("frame_fail", "frame_drop", "deadlock", "protocol_error"):

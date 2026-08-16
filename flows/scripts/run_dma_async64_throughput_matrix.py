@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -21,6 +22,7 @@ except ImportError:
 
 PASS_MARKER = "DMA_ASYNC64_END_TO_END_THROUGHPUT_PASS"
 POINT_MARKER = "DMA_TP_POINT"
+HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 
 
 class RunError(Exception):
@@ -49,16 +51,57 @@ def command_output(command, cwd, env=None):
     return output.decode("utf-8", errors="replace").strip()
 
 
+def git_output(root, args):
+    return command_output(
+        ["git", "-c", "safe.directory={}".format(root.as_posix())] + args,
+        root,
+    )
+
+
 def git_head(root):
-    return command_output(["git", "rev-parse", "HEAD"], root).splitlines()[-1]
+    return git_output(root, ["rev-parse", "HEAD"]).splitlines()[-1]
+
+
+def git_commit(root, revision):
+    return git_output(
+        root, ["rev-parse", "--verify", "{}^{{commit}}".format(revision)]
+    ).splitlines()[-1]
+
+
+def git_status(root):
+    return git_output(
+        root, ["status", "--porcelain", "--untracked-files=all"]
+    )
+
+
+def validate_source_checkout(root, requested_commit=None):
+    head = git_head(root)
+    if not HEX40.match(head):
+        raise RunError("checkout HEAD is not a full commit SHA")
+    if requested_commit is not None and not HEX40.match(requested_commit):
+        raise RunError("--source-commit must be a full 40-character SHA")
+    source_commit = git_commit(root, requested_commit or head)
+    if source_commit != head:
+        raise RunError(
+            "source commit {} does not match checkout HEAD {}".format(
+                source_commit, head
+            )
+        )
+    dirty = git_status(root)
+    if dirty:
+        first = dirty.splitlines()[0]
+        raise RunError(
+            "source checkout must be clean before simulation: {}".format(first)
+        )
+    return source_commit
 
 
 def run(args):
     root = Path(args.root).resolve()
     modelsim = root / "modelsim"
     output_dir = Path(args.output_dir).resolve()
+    source_commit = validate_source_checkout(root, args.source_commit)
     output_dir.mkdir(parents=True, exist_ok=True)
-    source_commit = args.source_commit or git_head(root)
     selected = set(args.points.split(",")) if args.points else None
     contract = (matrix_points() if args.suite == "matrix" else
                 correctness_ladder_points())

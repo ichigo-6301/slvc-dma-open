@@ -3,11 +3,32 @@ from __future__ import print_function
 import csv
 import json
 import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from flows.scripts import validate_dma_async64_throughput_repaired as validator
+
+
+PUBLIC_PACKAGE_REL = Path(
+    "evidence/throughput_simulation/async64_end_to_end"
+)
+HISTORICAL_EVIDENCE_COMMIT = (
+    "9059e33184ed0f5d8cd8c0e49fdcf005f43e7fad"
+)
+HISTORICAL_FLOW_COMMIT = "5d696137f799319f63b04d93164da6ff1f9c2001"
+ADAPTED_TEST_REL = Path(
+    "flows/scripts/test_validate_dma_async64_throughput_repaired.py"
+)
+
+
+def historical_blob(root, relative, commit=HISTORICAL_EVIDENCE_COMMIT):
+    return subprocess.check_output(
+        ["git", "-c", "safe.directory={}".format(root.as_posix()),
+         "show", "{}:{}".format(commit, relative)],
+        cwd=str(root), stderr=subprocess.STDOUT,
+    )
 
 
 class Async64RepairedThroughputEvidenceTests(unittest.TestCase):
@@ -18,12 +39,29 @@ class Async64RepairedThroughputEvidenceTests(unittest.TestCase):
         for rel in validator.SOURCE_PATHS:
             target = self.root / rel
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(str(self.source_root / rel), str(target))
-        shutil.copytree(str(self.source_root / validator.PACKAGE_REL),
-                        str(self.root / validator.PACKAGE_REL))
+            if Path(rel) == ADAPTED_TEST_REL:
+                target.write_bytes(historical_blob(
+                    self.source_root, Path(rel).as_posix(),
+                    HISTORICAL_FLOW_COMMIT,
+                ))
+            else:
+                shutil.copy2(str(self.source_root / rel), str(target))
+        package = self.root / validator.PACKAGE_REL
+        package.mkdir(parents=True, exist_ok=True)
+        for source in (self.source_root / PUBLIC_PACKAGE_REL).iterdir():
+            if source.name in {"README.md", "manifest.json"}:
+                continue
+            shutil.copy2(str(source), str(package / source.name))
+        for name in ("README.md", "manifest.json"):
+            relative = validator.PACKAGE_REL / name
+            (package / name).write_bytes(
+                historical_blob(self.source_root, relative.as_posix())
+            )
         target_doc = self.root / validator.DOC_REL
         target_doc.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(str(self.source_root / validator.DOC_REL), str(target_doc))
+        target_doc.write_bytes(
+            historical_blob(self.source_root, validator.DOC_REL.as_posix())
+        )
 
     def tearDown(self):
         self.temp.cleanup()

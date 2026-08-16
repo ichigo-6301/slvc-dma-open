@@ -1,0 +1,58 @@
+{
+  "boundaries": {
+    "asic_result": false,
+    "board_measurement": false,
+    "ddr_peak": false,
+    "fmax": false,
+    "resume_eligible": false,
+    "sameclock512_async512_64_bytes_per_cycle": false
+  },
+  "claim_id": "slvc_dma_async64_end_to_end_rtl_sim_throughput",
+  "classification": "VERIFIED_RTL_SIMULATION",
+  "fpga_emulation": {
+    "status": "pending_not_measured_not_claimed",
+    "value": null
+  },
+  "main_point": {
+    "e2e_mbps_per_mhz": "3.831177",
+    "frames": 1024,
+    "gbits_per_s_at_100mhz": "3.064942",
+    "mb_per_s_at_100mhz": "383.117735",
+    "mem_phase_ns": 3,
+    "model": "HP0_SHARED",
+    "model_efficiency_percent": "95.779434",
+    "payload_bytes_per_frame": 4096,
+    "payload_only_model_limit_mbps_per_mhz": "4.000000",
+    "point_id": "loopback_peak_phase3",
+    "response_latency_cycles": 16,
+    "service_percent": 100,
+    "steady_mbps_per_mhz": "3.831723"
+  },
+  "numeric_authority": "evidence/throughput_simulation/async64_end_to_end/points.csv",
+  "profile": {
+    "aclk_mhz": 100,
+    "max_burst_beats": 16,
+    "max_outstanding": 4,
+    "mem_clk_mhz": 100,
+    "rx_contexts": 16,
+    "rx_frontend_bits": 512,
+    "rx_memory_bits": 64,
+    "seed": 71,
+    "top": "frame_dma_rx_top",
+    "tx_contexts": 16
+  },
+  "schema": "slvc_dma_async64_end_to_end_rtl_simulation_v1",
+  "source_ref": "5d696137f799319f63b04d93164da6ff1f9c2001",
+  "validation": {
+    "deadlock": 0,
+    "dual_platform_trace_match": true,
+    "frame_drop": 0,
+    "ladder_points": 5,
+    "linux_platform": "Questa Sim-64 10.7c",
+    "matrix_points": 28,
+    "mixed16_fair": true,
+    "peak_outstanding": 4,
+    "protocol_error": 0,
+    "windows_platform": "ModelSim SE-64 2020.4"
+  }
+}

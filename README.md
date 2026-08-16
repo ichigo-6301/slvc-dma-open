@@ -33,6 +33,10 @@
 | RX Memory Profiles / CDC | Same-clock512、Async64、Async512；跨域 Command、按序 512-bit Payload 与 Tagged Completion；512-bit profile 为 `64 B/cycle`、W utilization `100%`、peak outstanding `4` | ready ideal-memory RTL/interface 结果；Async64 为 `8 B/cycle`；不是板级 DDR 或 10G 实测 | [架构](docs/zh-CN/architecture.md#rx-memory-开发-profile) · [验证](docs/zh-CN/verification.md#rx-writer-与-cdc) · [结果](docs/zh-CN/results.md#rtl-功能与接口吞吐) · [Evidence](evidence/slvc_dma_rx_payload_cdc_regression_summary.yaml) |
 | C2B4 ASIC implementation | 两通道、4 KiB/channel、register-expanded；550 MHz DC handoff，450 MHz route/OpenRCX/PT；setup/hold WNS `+0.041322/+0.000341 ns`；standard-cell area `1.04207 mm²`；DRC/antenna/electrical `0` | 固定两通道 RX512 memory-subsystem 实现点；不是完整 DMA、SRAM、Fmax 或 foundry signoff | [架构](docs/zh-CN/architecture.md#asic-memory-binding) · [ASIC](docs/zh-CN/asic_implementation.md#c2b4-register-expanded-profile) · [结果](docs/zh-CN/results.md#asic-c2b4-register-expanded) · [Evidence](evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml) |
 
+<!-- throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:start -->
+<!-- claim:slvc_dma_async64_end_to_end_rtl_sim_throughput maturity:verified -->
+3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; 95.779434%。详见[结果](docs/zh-CN/results.md)。
+<!-- throughput-publication:slvc_dma_async64_end_to_end_rtl_sim_throughput:readme:end -->
 <a id="frame-lifecycle"></a>
 
 ## 架构与帧生命周期

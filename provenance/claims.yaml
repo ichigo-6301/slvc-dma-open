@@ -333,3 +333,19 @@ claims:
     status: verified
     caveat: "Full 4x4 characterization, performance, power, C4B4 integration, macro DRC/LVS/PEX, and foundry signoff are not complete."
     public: true
+  - id: slvc_dma_async64_end_to_end_rtl_sim_throughput
+    profile: slvc_dma_v1_512_async64_full_loopback_sim
+    statement: "For 1024 x 4 KiB full TX-to-RX loopback at 100 MHz, hardware end-to-end payload throughput was 3.831177 MB/s/MHz (383.117735 MB/s, 3.064942 Gb/s), 95.779434% of the 4 MB/s/MHz HP0_SHARED payload-only model ceiling."
+    metric: end_to_end_payload_throughput
+    value: 3.831177
+    unit: MB/s/MHz
+    benchmark: 1024 x 4096-byte full TX-to-RX loopback
+    configuration: 16 RX/16 TX contexts; Async64 64-bit memory backend; aclk=mem_clk=100 MHz; phase 3 ns; seed 71; HP0_SHARED latency 16 cycles and service 100%
+    source_ref: 5d696137f799319f63b04d93164da6ff1f9c2001
+    tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
+    evidence:
+      - slvc_dma_async64_end_to_end_sim_summary
+    status: verified
+    caveat: "Verified RTL simulation only; not FPGA/HP0 board throughput, DDR peak, Fmax, Same-clock512/Async512 64 B/cycle, or ASIC evidence."
+    resume_eligible: false
+    public: true

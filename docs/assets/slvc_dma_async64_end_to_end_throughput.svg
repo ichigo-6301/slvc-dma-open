@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc" data-theme-contract="mrtc-engineering-report" data-claim-id="slvc_dma_async64_end_to_end_rtl_sim_throughput" data-classification="VERIFIED_RTL_SIMULATION" data-e2e-mbps-per-mhz="3.831177" data-steady-mbps-per-mhz="3.831723" data-model-efficiency-percent="95.779434" data-fpga-emulation="pending-not-measured-not-claimed">
+  <title id="title">Async64 End-to-End RTL Simulation Throughput</title>
+  <desc id="desc">A deterministic report of the bounded dual-platform Async64 full-loopback RTL simulation.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#1456a0"/></marker>
+  </defs>
+  <style>.title{font:700 38px Arial,Helvetica,sans-serif;fill:#111827}
+    .subtitle{font:400 22px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .panel-title{font:700 25px Arial,Helvetica,sans-serif;fill:#102f5e}
+    .section{font:700 22px Arial,Helvetica,sans-serif;fill:#111827}
+    .body{font:400 19px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .body-bold{font:700 19px Arial,Helvetica,sans-serif;fill:#111827}
+    .metric{font:700 23px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .small{font:400 16px Arial,Helvetica,sans-serif;fill:#4b5563}
+    .foot{font:400 17px Arial,Helvetica,sans-serif;fill:#374151}
+    .table-head{font:700 17px Arial,Helvetica,sans-serif;fill:#ffffff}
+    .table-header{font:700 16px Arial,Helvetica,sans-serif;fill:#111827}
+    .table{font:400 17px Arial,Helvetica,sans-serif;fill:#1f2937}
+    .table-strong{font:700 17px Arial,Helvetica,sans-serif;fill:#1456a0}
+    .rule{stroke:#102f5e;stroke-width:1.5}
+    .thin{stroke:#9ca3af;stroke-width:1}
+    .box{fill:#ffffff;stroke:#6b7280;stroke-width:1.2}
+    .box-blue{fill:#ffffff;stroke:#1456a0;stroke-width:1.4}
+    .panel-header{fill:#102f5e;stroke:#102f5e;stroke-width:1}
+    .flow{fill:none;stroke:#6b7280;stroke-width:1.5;marker-end:url(#arrow)}
+    .flow-blue{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .flow-return{fill:none;stroke:#1456a0;stroke-width:1.8;marker-end:url(#arrow-blue)}
+    .boundary{fill:none;stroke:#8b9199;stroke-width:1.5;stroke-dasharray:8 6}
+    .orange{fill:#b45309}
+    .green{fill:#047857}</style>
+  <rect width="1600" height="1000" fill="#ffffff"/>
+  <g data-layout-region="page-header">
+    <rect data-layout-box="true" x="30" y="18" width="1540" height="112" fill="none" stroke="none"/>
+    <text x="40" y="60" class="title">Async64 End-to-End RTL Simulation Throughput</text>
+    <text x="40" y="98" class="subtitle">Bounded 16 RX / 16 TX full-loopback simulation; raw counters remain the numeric authority.</text>
+    <line x1="40" y1="124" x2="1560" y2="124" class="rule"/>
+  </g>
+  <g data-layout-region="throughput-primary">
+    <rect data-layout-box="true" x="50" y="160" width="1500" height="185" class="box-blue"/>
+    <rect x="50" y="160" width="1500" height="55" class="panel-header"/>
+    <text x="75" y="196" class="table-head">Main point: 1024 x 4 KiB, HP0_SHARED, 100 MHz, phase 3 ns</text>
+    <text x="80" y="258" class="metric">3.831177 MB/s/MHz</text>
+    <text x="80" y="300" class="body">E2E = 383.117735 MB/s = 3.064942 Gb/s</text>
+    <text x="470" y="258" class="metric">3.831723 MB/s/MHz</text>
+    <text x="470" y="300" class="body">steady-state payload window</text>
+    <text x="865" y="258" class="metric">4.000000 MB/s/MHz</text>
+    <text x="865" y="300" class="body">payload-only model ceiling</text>
+    <text x="1260" y="258" class="metric">95.779434%</text>
+    <text x="1260" y="300" class="body">model efficiency</text>
+  </g>
+  <g data-layout-region="throughput-size-sweep">
+    <rect data-layout-box="true" x="50" y="375" width="730" height="350" class="box"/>
+    <rect x="50" y="375" width="730" height="55" class="panel-header"/>
+    <text x="75" y="411" class="table-head">Frame-length sweep</text>
+    <text x="80" y="475" class="small">64 B: 0.453734 MB/s/MHz</text>
+    <text x="80" y="523" class="small">128 B: 0.858762 MB/s/MHz</text>
+    <text x="80" y="571" class="small">256 B: 1.514215 MB/s/MHz</text>
+    <text x="80" y="619" class="small">1024 B: 3.400603 MB/s/MHz</text>
+    <text x="80" y="667" class="small">4096 B: 3.831177 MB/s/MHz</text>
+    <line x1="385" y1="469" x2="450" y2="469" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="517" x2="500" y2="517" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="565" x2="565" y2="565" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="613" x2="700" y2="613" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="661" x2="745" y2="661" stroke="#1456a0" stroke-width="12"/>
+    <line x1="385" y1="695" x2="745" y2="695" class="thin"/>
+  </g>
+  <g data-layout-region="throughput-service-sweep">
+    <rect data-layout-box="true" x="820" y="375" width="730" height="350" class="box"/>
+    <rect x="820" y="375" width="730" height="55" class="panel-header"/>
+    <text x="845" y="411" class="table-head">HP0_SHARED service sensitivity, fixed 16-cycle response</text>
+    <text x="850" y="500" class="body">50%: 1.941126 MB/s/MHz</text>
+    <text x="850" y="575" class="body">75%: 2.892408 MB/s/MHz</text>
+    <text x="850" y="650" class="body">100%: 3.831177 MB/s/MHz</text>
+    <line x1="1170" y1="493" x2="1325" y2="493" stroke="#1456a0" stroke-width="18"/>
+    <line x1="1170" y1="568" x2="1405" y2="568" stroke="#1456a0" stroke-width="18"/>
+    <line x1="1170" y1="643" x2="1480" y2="643" stroke="#1456a0" stroke-width="18"/>
+    <line x1="1170" y1="695" x2="1480" y2="695" class="thin"/>
+  </g>
+  <g data-layout-region="throughput-verification">
+    <rect data-layout-box="true" x="50" y="755" width="950" height="205" class="box-blue"/>
+    <rect x="50" y="755" width="950" height="55" class="panel-header"/>
+    <text x="75" y="791" class="table-head">Verification summary</text>
+    <text x="75" y="845" class="body-bold">ModelSim SE-64 2020.4 + Questa Sim-64 10.7c</text>
+    <text x="75" y="885" class="body">Peak outstanding = 4</text>
+    <text x="340" y="885" class="body">16-flow fairness = PASS</text>
+    <text x="650" y="885" class="body">Drop / protocol error / deadlock = 0</text>
+    <text x="75" y="930" class="foot">Claim: slvc_dma_async64_end_to_end_rtl_sim_throughput</text>
+  </g>
+  <g data-layout-region="throughput-fpga-boundary">
+    <rect data-layout-box="true" x="1030" y="755" width="520" height="205" class="box"/>
+    <rect x="1030" y="755" width="520" height="55" class="panel-header"/>
+    <text x="1055" y="791" class="table-head">FPGA emulation</text>
+    <text x="1055" y="845" class="metric">Pending / not measured / not claimed</text>
+    <text x="1055" y="885" class="small">not FPGA/HP0 board throughput; not DDR peak</text>
+    <text x="1055" y="920" class="small">not Fmax; not ASIC evidence; not the 64 B/cycle result</text>
+  </g>
+</svg>

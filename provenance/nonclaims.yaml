@@ -109,3 +109,9 @@ nonclaims:
     reason: "The adapter is an optional upstream compatibility layer and does not alter the core channel table, CQE layout, register map, or release tag."
     status: not_claimed
     public: true
+  - id: slvc_dma_async64_end_to_end_not_hardware
+    profile: slvc_dma_v1_512_async64_full_loopback_sim
+    statement: "FPGA/HP0 board throughput, DDR peak, Fmax, Same-clock512/Async512 64 B/cycle, and ASIC performance are not claimed by this simulation result."
+    reason: "The published point is a dual-platform RTL simulation using the bounded HP0_SHARED service model; FPGA emulation remains pending and not measured."
+    status: not_claimed
+    public: true

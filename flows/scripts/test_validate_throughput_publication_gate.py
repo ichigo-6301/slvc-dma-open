@@ -695,6 +695,25 @@ class ThroughputPublicationGateTest(unittest.TestCase):
                 gate.PublicationError, "differs from source_ref"):
             self._validate()
 
+    def test_publication_adapted_repaired_test_may_differ_from_as_run(self):
+        self._published_fixture()
+        self.assertEqual(
+            gate.PUBLICATION_ADAPTED_SOURCE_PATHS,
+            frozenset({
+                "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
+            }),
+        )
+        path = self.root / next(iter(gate.PUBLICATION_ADAPTED_SOURCE_PATHS))
+        path.write_text(
+            path.read_text(encoding="utf-8") +
+            "\n# public-package fixture adapter\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            self._validate(),
+            "VERIFIED_RTL_SIMULATION_PUBLISHED",
+        )
+
     def test_unmodified_filelist_cannot_hide_compiled_source_drift(self):
         self._published_fixture()
         path = self.root / "rtl/tx/dma_tx_engine.v"

@@ -33,7 +33,7 @@ BLOCKED_VALIDATOR_REL = Path(
 )
 MAIN_POINT_ID = "loopback_peak_phase3"
 TRUSTED_FLOW_AS_RUN_COMMIT = (
-    "5d696137f799319f63b04d93164da6ff1f9c2001"
+    "328d5b8dea06582b5b20cd21373dbc2a97aa4a95"
 )
 TRUSTED_RTL_FIX_COMMIT = (
     "ad1ea4a927425773d772f6438c06c332e0b87830"
@@ -229,10 +229,10 @@ EXPECTED_RESULTS_BLOCK_SHA256 = {
 # reproducibility validators.
 TRUSTED_EVIDENCE_FILE_SHA256 = {
     "artifacts.csv": (
-        "c7efea108b947cb2f8a67789ea25387366171d64512c3ed7944abc12238c643a"
+        "a6e3db31179f0db47867e5e7a79aff34e2f7ebd54dd8f4ca5c4dde49ec9a9fda"
     ),
     "c2b4_physical_identity.json": (
-        "f798384f9e4b0b1713ddb881b7dde1e3dae54783377127332b36a86ad849d6da"
+        "25bc50bd40e28458bba79809212b5499be59fa49964bf2d7438ffcbcb9f8cd12"
     ),
     "correctness_ladder.csv": (
         "d543dd0d5f011c132bad104114a0e7236648070b002eeb0312e3647e0440d1c5"

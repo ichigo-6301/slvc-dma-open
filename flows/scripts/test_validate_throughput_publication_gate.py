@@ -381,6 +381,39 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         with self.assertRaisesRegex(gate.PublicationError, "without the registered claim"):
             self._validate()
 
+    def test_every_publication_file_is_a_no_claim_sentinel(self):
+        self._copy_provenance()
+        for relative in gate.PUBLICATION_SENTINELS:
+            target = self.root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("residual publication artifact\n", encoding="utf-8")
+            with self.subTest(path=relative):
+                with self.assertRaisesRegex(
+                        gate.PublicationError, "without the registered claim"):
+                    self._validate()
+            target.unlink()
+
+    def test_registry_and_showcase_residue_require_the_claim(self):
+        for relative, residue in (
+                (gate.EVIDENCE_REL,
+                 "\n  - id: {}\n".format(gate.EVIDENCE_ID)),
+                (gate.NONCLAIMS_REL,
+                 "\n  - id: {}\n".format(gate.NONCLAIM_ID)),
+                (gate.SHOWCASE_REL,
+                 "\n{}\n".format(gate.CHART_REL.as_posix()))):
+            with self.subTest(path=relative):
+                self._copy_provenance()
+                path = self.root / relative
+                path.write_text(
+                    path.read_text(encoding="utf-8") + residue,
+                    encoding="utf-8",
+                )
+                with self.assertRaisesRegex(
+                        gate.PublicationError, "without the registered claim"):
+                    self._validate()
+                shutil.rmtree(self.root)
+                self.root.mkdir()
+
     def test_missing_validator_or_evidence_fails(self):
         self._published_fixture()
         (self.root / gate.VALIDATOR_REL).unlink()
@@ -444,6 +477,17 @@ class ThroughputPublicationGateTest(unittest.TestCase):
     def test_checked_out_source_must_match_source_ref(self):
         self._published_fixture()
         path = self.root / "rtl/tx/dma_axi_read_prefetch.v"
+        path.write_text(
+            path.read_text(encoding="utf-8") + "\n// post-run mutation\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+                gate.PublicationError, "differs from source_ref"):
+            self._validate()
+
+    def test_unmodified_filelist_cannot_hide_compiled_source_drift(self):
+        self._published_fixture()
+        path = self.root / "rtl/tx/dma_tx_engine.v"
         path.write_text(
             path.read_text(encoding="utf-8") + "\n// post-run mutation\n",
             encoding="utf-8",

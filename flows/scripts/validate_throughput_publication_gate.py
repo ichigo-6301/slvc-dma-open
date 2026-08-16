@@ -261,10 +261,56 @@ TRUSTED_BLOCKED_FILE_SHA256 = {
     "stall_breakdown.csv": "0f9755c7aa057d65e6f49afa677c71578a0d60766cbb1f4681134d4b00c772dc",
     "verification.csv": "f1f97d1b909e21befe0dd90fb1b94a7cc9d99abe2461301dc5eec4144c0f4161",
 }
-REQUIRED_SOURCE_PATHS = (
-    "rtl/integration/frame_dma_rx_top.v",
+COMPILED_RTL_SOURCE_PATHS = (
+    "rtl/include/dma_defs.vh",
+    "rtl/adapters/dma_udp_ipv4_to_shdr64_adapter.v",
+    "rtl/common/dma_axis_register_slice.v",
+    "rtl/common/dma_axis_width_pack_512.v",
+    "rtl/common/dma_axis_skid_buffer.v",
+    "rtl/common/dma_async_fifo.v",
+    "rtl/common/dma_async_fifo_tech.v",
+    "rtl/common/dma_axis_async_fifo.v",
+    "rtl/common/dma_ctrl_msg_async_fifo.v",
+    "rtl/common/dma_payload_beat_ram.v",
+    "rtl/common/dma_reset_sync.v",
+    "rtl/rx/dma_rx_parser.v",
+    "rtl/rx/dma_rx_parser_pipe.v",
+    "rtl/rx/dma_rx_channel_match.v",
+    "rtl/rx/dma_rx_payload_buffer.v",
+    "rtl/rx/dma_rx_ingress_queue.v",
+    "rtl/rx/dma_rx_fc_ingress_bank.v",
+    "rtl/rx/dma_rx_fc_ctrl.v",
+    "rtl/rx/dma_axi_write_engine.v",
+    "rtl/rx/dma_axi_write_engine_512.v",
+    "rtl/rx/dma_axi_write_engine_64_stream.v",
+    "rtl/rx/dma_rx_payload_serializer_512_to_64.v",
     "rtl/rx/dma_rx_payload_cdc_bridge.v",
+    "rtl/tx/dma_tx_header_builder.v",
     "rtl/tx/dma_axi_read_prefetch.v",
+    "rtl/tx/dma_tx_engine.v",
+    "rtl/cq/dma_cq_writer.v",
+    "rtl/cq/dma_cq_single_writer.v",
+    "rtl/rx/dma_rx_write_arbiter.v",
+    "rtl/control/dma_ufc_mailbox.v",
+    "rtl/control/dma_axil_regs.v",
+    "rtl/tx/dma_tx_channel_table.v",
+    "rtl/rx/dma_rx_channel_table.v",
+    "rtl/tx/dma_tx_desc_channel_table.v",
+    "rtl/rx/dma_frame_payload_ram.v",
+    "rtl/rx/dma_frame_shared_pool.v",
+    "rtl/rx/dma_rx_frame_shared_adapter.v",
+    "rtl/rx/dma_rx_ingress_source_selector.v",
+    "rtl/carrier/dma_aurora_ufc_adapter.v",
+    "rtl/integration/frame_dma_rx_top.v",
+    "rtl/integration/dma_rx_payload_async_ooc_top.v",
+    "rtl/integration/frame_dma_rx_axis_width_frontend.v",
+    "rtl/integration/frame_dma_wrapper.v",
+    "rtl/integration/slvc_dma_wrapper.v",
+    "rtl/carrier/slvc_carrier_cdc_adapter.v",
+    "rtl/carrier/mcf_endpoint.v",
+    "rtl/carrier/frame_dma_rx_aurora_ufc_wrap.v",
+)
+SUPPLEMENTAL_SOURCE_PATHS = (
     "filelists/dma_rtl.f",
     "pattern/dma_sim_def.vh",
     "pattern/axi_hp0_dual_master_64_model.v",
@@ -280,6 +326,7 @@ REQUIRED_SOURCE_PATHS = (
     "flows/scripts/validate_dma_async64_throughput_repaired.py",
     "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
 )
+REQUIRED_SOURCE_PATHS = COMPILED_RTL_SOURCE_PATHS + SUPPLEMENTAL_SOURCE_PATHS
 
 REQUIRED_PATHS = frozenset({
     Path("README.en.md"),
@@ -334,10 +381,15 @@ REQUIRED_PATHS = frozenset({
     Path("rtl/tx/dma_axi_read_prefetch.v"),
 })
 
-PUBLICATION_SENTINELS = (
-    CHART_REL,
-    PACKAGE_REL / "manifest.json",
-    SUMMARY_REL,
+PUBLICATION_SENTINELS = tuple(
+    sorted(
+        (
+            path for path in REQUIRED_PATHS
+            if path in {CHART_REL, SUMMARY_REL}
+            or path.parent in {PACKAGE_REL, BLOCKED_PACKAGE_REL}
+        ),
+        key=lambda item: item.as_posix(),
+    )
 )
 
 
@@ -790,6 +842,17 @@ def _validate_package_manifest(root, source_ref):
     if package_readme != EXPECTED_PACKAGE_README:
         _fail("throughput package README payload mismatch")
 
+    filelist_blob = _source_blob(root, source_ref, "filelists/dma_rtl.f")
+    try:
+        filelist_paths = tuple(
+            line.strip() for line in filelist_blob.decode("utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        )
+    except UnicodeDecodeError as error:
+        _fail("trusted DMA filelist is not UTF-8: {}".format(error))
+    if filelist_paths != COMPILED_RTL_SOURCE_PATHS:
+        _fail("trusted DMA filelist source inventory mismatch")
+
     sources = manifest.get("sources")
     if not isinstance(sources, list):
         _fail("throughput package source inventory is missing")
@@ -914,6 +977,16 @@ def validate(root, execute_validators=True):
     sentinels_present = [path for path in PUBLICATION_SENTINELS if (root / path).exists()]
     if _publication_markers_present(root):
         sentinels_present.append(Path("bounded-publication-marker"))
+    for relative, item_id in (
+            (EVIDENCE_REL, EVIDENCE_ID),
+            (NONCLAIMS_REL, NONCLAIM_ID)):
+        path = root / relative
+        if path.is_file() and "  - id: {}\n".format(item_id) in _read_text(path):
+            sentinels_present.append(relative)
+    showcase_path = root / SHOWCASE_REL
+    if (showcase_path.is_file() and
+            CHART_REL.as_posix() in _read_text(showcase_path)):
+        sentinels_present.append(SHOWCASE_REL)
     if not claim_present:
         if sentinels_present:
             _fail("throughput publication files exist without the registered claim")

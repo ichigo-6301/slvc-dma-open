@@ -19,8 +19,8 @@
   "experiment_id": "slvc_dma_u5_async64_end_to_end_throughput_repaired",
   "files": {
     "README.md": "32b2074d5e93a7deb7c5f1314410649ed22dba93b19596e5f458f83d74046d93",
-    "artifacts.csv": "a7d85fa8248b5d2233fce7e64d4565f2cad3e067dd24556973b0dd92ec1bbeec",
-    "c2b4_physical_identity.json": "9659d97801e21f3dbdc17259fdcbf517e63aea6ea4c605382e72208515b01828",
+    "artifacts.csv": "c7efea108b947cb2f8a67789ea25387366171d64512c3ed7944abc12238c643a",
+    "c2b4_physical_identity.json": "f798384f9e4b0b1713ddb881b7dde1e3dae54783377127332b36a86ad849d6da",
     "correctness_ladder.csv": "d543dd0d5f011c132bad104114a0e7236648070b002eeb0312e3647e0440d1c5",
     "flow_fairness.csv": "c4982bb573f9bae5a27ba1cb5db8ee536329c57574939678fd2679d0cdf8c1d8",
     "latency_summary.csv": "63a9843b6c3f556d47faf31e6cc5c9ae3c20fbcda7db860782284c03f5ef1a35",
@@ -30,7 +30,7 @@
     "stall_breakdown.csv": "c5157c30cfcc7122721c008b0651f83305338ab6aed34aded60a62193ef9df40",
     "verification.csv": "4a2834e4c5551054bc492ba7df68417330b78308a94c95c37cb242a25368384f"
   },
-  "flow_as_run_commit": "9ed985fc1a03b9d56c6a9d27dd9eea47a0eceed4",
+  "flow_as_run_commit": "5d696137f799319f63b04d93164da6ff1f9c2001",
   "formal_matrix_completed": true,
   "formulas": {
     "e2e_mbps_per_mhz": "payload_bytes / hardware_end_to_end_cycles",
@@ -78,13 +78,13 @@
     },
     {
       "path": "rtl/rx/dma_rx_payload_cdc_bridge.v",
-      "sha256": "6e5b4fd2ae21ee84f08fe4c07889b0f58855fe19788add918e540a004701b9a0",
-      "size_bytes": 14694
+      "sha256": "c38548755686f3f07a0457d8700e317c70c5b273b5386f9b8d565c95834e7f1a",
+      "size_bytes": 14547
     },
     {
       "path": "rtl/tx/dma_axi_read_prefetch.v",
-      "sha256": "b43156f594fef813bc54b8f65c7d343129f99ff5c67c5b3d57d6799308406f07",
-      "size_bytes": 15429
+      "sha256": "3d453ee3c65ff0fb6db62b7047249c84e6d07ab8dc1f98a5f54a63dd0a085d05",
+      "size_bytes": 15897
     },
     {
       "path": "filelists/dma_rtl.f",
@@ -103,18 +103,18 @@
     },
     {
       "path": "pattern/tb_rtl_dma_async64_end_to_end_throughput.v",
-      "sha256": "755d17907bfedac273141519d1987d2f056ee0900581d51758971b264fb04df5",
-      "size_bytes": 88784
+      "sha256": "5b3de943080d24c8ddbdb10c538b1a835e0941c0a80bd31f7a08e7173a31f81a",
+      "size_bytes": 88790
     },
     {
       "path": "pattern/tb_rtl_rx_payload_cdc_bridge.v",
-      "sha256": "42108bdab3e0be59064a8d6a8c31c7e7c04d6c7d54cbaf40973ce92a8b92d3a7",
-      "size_bytes": 23702
+      "sha256": "9ca32f6d4e6a8303cd137c13781ae65b19e56ce81e9462b356f35eb258ff3555",
+      "size_bytes": 26595
     },
     {
       "path": "pattern/tb_rtl_dma_axi_read_prefetch.v",
-      "sha256": "9cbb1431079e1bf1f79d1348d5e22c3b6134ca5b92a0d9505ebc9af47846d807",
-      "size_bytes": 9358
+      "sha256": "8cc9d9b2dac6d537d751bc3d35a5ac7f7b8056be489a8274085068548555e66a",
+      "size_bytes": 11683
     },
     {
       "path": "modelsim/run_rtl_dma_async64_end_to_end_throughput.do",
@@ -123,8 +123,8 @@
     },
     {
       "path": "modelsim/run_rtl_rx_payload_cdc_bridge.do",
-      "sha256": "5d5b546d3f34f041edffaefba0d332684f313fc6d199826c1daa11211de118b6",
-      "size_bytes": 397
+      "sha256": "5e55c716f71c7e8e8a2a5761b0346f4afaffe809ba6a99660aec372f7f718a75",
+      "size_bytes": 515
     },
     {
       "path": "modelsim/run_rtl_dma_axi_read_prefetch.do",

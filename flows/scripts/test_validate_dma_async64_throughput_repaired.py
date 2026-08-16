@@ -17,13 +17,10 @@ PUBLIC_PACKAGE_REL = Path(
     "evidence/throughput_simulation/async64_end_to_end"
 )
 HISTORICAL_EVIDENCE_COMMIT = (
-    "9059e33184ed0f5d8cd8c0e49fdcf005f43e7fad"
+    "5f4b3edf6014024dbfccfe0c24034325b342349c"
 )
-HISTORICAL_FLOW_COMMIT = "5d696137f799319f63b04d93164da6ff1f9c2001"
+HISTORICAL_FLOW_COMMIT = "328d5b8dea06582b5b20cd21373dbc2a97aa4a95"
 ADAPTED_SOURCE_RELS = {
-    Path("flows/scripts/dma_async64_throughput_contract.py"),
-    Path("flows/scripts/run_dma_async64_throughput_matrix.py"),
-    Path("flows/scripts/validate_dma_async64_throughput_repaired.py"),
     Path("flows/scripts/test_validate_dma_async64_throughput_repaired.py"),
 }
 

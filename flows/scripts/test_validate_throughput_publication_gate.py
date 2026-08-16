@@ -15,12 +15,12 @@ from flows.scripts import validate_throughput_publication_gate as gate
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_REF = gate.TRUSTED_FLOW_AS_RUN_COMMIT
-REVIEWED_SOURCE_REF = "328d5b8dea06582b5b20cd21373dbc2a97aa4a95"
+REVIEWED_SOURCE_REF = "c82118cfbf28633d82a315925a390143c91ea117"
 REVIEWED_ARTIFACTS_SHA256 = (
-    "a6e3db31179f0db47867e5e7a79aff34e2f7ebd54dd8f4ca5c4dde49ec9a9fda"
+    "4d010378812ee203584f42066930349684c9e0e13c2a9c650abf21d0775cded5"
 )
 REVIEWED_C2B4_IDENTITY_SHA256 = (
-    "25bc50bd40e28458bba79809212b5499be59fa49964bf2d7438ffcbcb9f8cd12"
+    "da7473a1879c61c68ec38832fd30b523146dc25920cdff8d89e0c8f93a970d3c"
 )
 
 
@@ -318,14 +318,15 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             Path("README.md"): (
                 gate.README_START + "\n" +
                 "<!-- claim:{} maturity:verified -->\n".format(gate.CLAIM_ID) +
-                "3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; "
+                "双平台 RTL 仿真：3.831177 MB/s/MHz；383.117735 MB/s；3.064942 Gb/s；"
                 "95.779434%。详见[结果](docs/zh-CN/results.md)。\n" +
                 gate.README_END + "\n"
             ),
             Path("README.en.md"): (
                 gate.README_START + "\n" +
                 "<!-- claim:{} maturity:verified -->\n".format(gate.CLAIM_ID) +
-                "3.831177 MB/s/MHz; 383.117735 MB/s; 3.064942 Gb/s; "
+                "Dual-platform RTL simulation: 3.831177 MB/s/MHz; "
+                "383.117735 MB/s; 3.064942 Gb/s; "
                 "95.779434%. See [Results](docs/en/results.md).\n" +
                 gate.README_END + "\n"
             ),
@@ -814,6 +815,21 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(gate.PublicationError, "payload mismatch"):
+            self._validate()
+
+    def test_hidden_only_readme_boundary_fails(self):
+        self._published_fixture()
+        path = self.root / "README.en.md"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "Dual-platform RTL simulation:",
+                "<!-- Dual-platform RTL simulation: -->",
+                1,
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+                gate.PublicationError, "visible RTL-simulation boundary"):
             self._validate()
 
     def test_exact_readme_block_inside_code_fence_fails(self):

@@ -912,17 +912,19 @@ def _strip_authorized_registry_item(text, item_id, context):
     return text[:match.start()] + text[match.end():]
 
 
-def _registry_sha256_without_authorized_item(path, item_id):
+def _registry_sha256_without_authorized_item(path, item_id, authorized):
     text = path.read_text(encoding="utf-8")
-    normalized = _strip_authorized_registry_item(text, item_id, str(path))
+    normalized = (_strip_authorized_registry_item(text, item_id, str(path))
+                  if authorized else text)
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-def _normalized_evidence_registry_sha256(path):
+def _normalized_evidence_registry_sha256(path, authorized):
     text = path.read_text(encoding="utf-8")
-    text = _strip_authorized_registry_item(
-        text, AUTHORIZED_THROUGHPUT_EVIDENCE_ID, str(path)
-    )
+    if authorized:
+        text = _strip_authorized_registry_item(
+            text, AUTHORIZED_THROUGHPUT_EVIDENCE_ID, str(path)
+        )
     pattern = (
         r"(?ms)(^  - id: slvc_dma_asic_paired_dc_publication\n"
         r".*?^    sha256: )[0-9a-f]{64}(?=\n)"
@@ -1002,6 +1004,12 @@ def _validate_record_fields(body, expected, context):
 
 def _validate_nonclaims(root):
     records = _registered_records(root / "provenance/nonclaims.yaml")
+    claim_registered = AUTHORIZED_THROUGHPUT_CLAIM_ID in _registered_records(
+        root / "provenance/claims.yaml"
+    )
+    if (AUTHORIZED_THROUGHPUT_NONCLAIM_ID in records and
+            not claim_registered):
+        _fail("authorized throughput nonclaim requires the registered claim")
     if not set(EXPECTED_NONCLAIMS).issubset(records):
         _fail("paired-DC nonclaim registry record is missing")
     for nonclaim_id, expected in EXPECTED_NONCLAIMS.items():
@@ -1015,7 +1023,8 @@ def _validate_nonclaims(root):
             if actual != value:
                 _fail("{} fixed {} mismatch".format(nonclaim_id, field))
     if _registry_sha256_without_authorized_item(
-        root / "provenance/nonclaims.yaml", AUTHORIZED_THROUGHPUT_NONCLAIM_ID
+        root / "provenance/nonclaims.yaml", AUTHORIZED_THROUGHPUT_NONCLAIM_ID,
+        claim_registered,
     ) != EXPECTED_NONCLAIMS_SHA256:
         _fail("fixed paired-DC nonclaim registry inventory mismatch")
 
@@ -1093,6 +1102,12 @@ def _validate_publication(root, evaluations):
 
     claim_records = _registered_records(root / "provenance/claims.yaml")
     evidence_records = _registered_records(root / "provenance/evidence.yaml")
+    throughput_claim_registered = (
+        AUTHORIZED_THROUGHPUT_CLAIM_ID in claim_records
+    )
+    if (AUTHORIZED_THROUGHPUT_EVIDENCE_ID in evidence_records and
+            not throughput_claim_registered):
+        _fail("authorized throughput evidence requires the registered claim")
     if not expected_claims.issubset(claim_records):
         _fail("paired-DC claim is missing from provenance/claims.yaml")
     publication_id = "slvc_dma_asic_paired_dc_publication"
@@ -1166,11 +1181,12 @@ def _validate_publication(root, evaluations):
     if publication_hash != _sha256(root / PUBLICATION_REL):
         _fail("provenance evidence hash must bind the publication manifest")
     if _registry_sha256_without_authorized_item(
-        root / "provenance/claims.yaml", AUTHORIZED_THROUGHPUT_CLAIM_ID
+        root / "provenance/claims.yaml", AUTHORIZED_THROUGHPUT_CLAIM_ID,
+        throughput_claim_registered,
     ) != EXPECTED_CLAIMS_SHA256:
         _fail("fixed claim registry inventory mismatch")
     if _normalized_evidence_registry_sha256(
-        root / "provenance/evidence.yaml"
+        root / "provenance/evidence.yaml", throughput_claim_registered
     ) != EXPECTED_EVIDENCE_REGISTRY_NORMALIZED_SHA256:
         _fail("fixed evidence registry inventory mismatch")
     if _text_sha256(

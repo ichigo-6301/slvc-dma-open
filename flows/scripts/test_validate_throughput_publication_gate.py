@@ -12,7 +12,7 @@ from flows.scripts import validate_throughput_publication_gate as gate
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE_REF = "a" * 40
+SOURCE_REF = gate.TRUSTED_FLOW_AS_RUN_COMMIT
 
 
 def _yaml_record(item_id, fields):
@@ -89,6 +89,16 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         with path.open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
 
+    @staticmethod
+    def _insert_before(path, follower, text):
+        content = path.read_text(encoding="utf-8")
+        if content.count(follower) != 1:
+            raise AssertionError("fixture follower mismatch: {}".format(path))
+        path.write_text(
+            content.replace(follower, text + follower, 1),
+            encoding="utf-8",
+        )
+
     def _published_fixture(self):
         self._copy_provenance()
         for relative in gate.REQUIRED_PATHS:
@@ -158,7 +168,7 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             "dual_platform_complete": True,
             "c2b4_physical_source_changed": False,
             "c2b4_physical_rerun_performed": False,
-            "rtl_fix_commit": SOURCE_REF,
+            "rtl_fix_commit": gate.TRUSTED_RTL_FIX_COMMIT,
             "baseline_commit": "c20681fad0eaa6ad55dbb919149765b175b29117",
             "blocked_evidence_commit": "e6a6696603b10c4475fca468e9c40c727197ac9c",
             "profile": dict(
@@ -213,7 +223,11 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         for relative, link in (
                 (Path("README.md"), "docs/zh-CN/results.md"),
                 (Path("README.en.md"), "docs/en/results.md")):
-            self._append(self.root / relative, readme_block.format(link=link))
+            self._insert_before(
+                self.root / relative,
+                gate.README_BLOCK_FOLLOWER[relative],
+                readme_block.format(link=link),
+            )
 
         result_block = (
             gate.RESULTS_START + "\n" +
@@ -396,6 +410,19 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         with self.assertRaisesRegex(gate.PublicationError, "resume_eligible"):
             self._validate()
 
+    def test_untrusted_source_ref_fails(self):
+        self._published_fixture()
+        path = self.root / gate.CLAIMS_REL
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                gate.TRUSTED_FLOW_AS_RUN_COMMIT, "b" * 40, 1
+            ),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+                gate.PublicationError, "trusted flow-as-run commit"):
+            self._validate()
+
     def test_decoy_resume_eligibility_text_does_not_bypass_actual_value(self):
         self._published_fixture()
         path = self.root / gate.CLAIMS_REL
@@ -500,6 +527,22 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(gate.PublicationError, "payload mismatch"):
+            self._validate()
+
+    def test_exact_readme_block_inside_code_fence_fails(self):
+        self._published_fixture()
+        path = self.root / "README.en.md"
+        text = path.read_text(encoding="utf-8")
+        protected, block = gate._bounded_block(
+            text, gate.README_START, gate.README_END, str(path), True
+        )
+        self.assertEqual(protected.count("```bash\n"), 1)
+        path.write_text(
+            protected.replace("```bash\n", "```bash\n" + block, 1),
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(
+                gate.PublicationError, "structural position mismatch"):
             self._validate()
 
     def test_result_block_rejects_extra_measurement(self):

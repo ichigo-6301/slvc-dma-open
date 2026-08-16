@@ -31,6 +31,12 @@ BLOCKED_VALIDATOR_REL = Path(
     "flows/scripts/validate_dma_async64_throughput_blocked.py"
 )
 MAIN_POINT_ID = "loopback_peak_phase3"
+TRUSTED_FLOW_AS_RUN_COMMIT = (
+    "5d696137f799319f63b04d93164da6ff1f9c2001"
+)
+TRUSTED_RTL_FIX_COMMIT = (
+    "ad1ea4a927425773d772f6438c06c332e0b87830"
+)
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -195,6 +201,10 @@ EXPECTED_README_BLOCK_SHA256 = {
         "0b0300dda48196e7226531281f69c2f90b554094d220b0cec034b823fd139595"
     ),
 }
+README_BLOCK_FOLLOWER = {
+    Path("README.md"): '<a id="frame-lifecycle"></a>',
+    Path("README.en.md"): '<a id="frame-lifecycle"></a>',
+}
 EXPECTED_RESULTS_BLOCK_SHA256 = {
     Path("docs/en/results.md"): (
         "5fce2d07aef9c35f4a467cefbceacc06880902d40358c72a2ba4e59ab896fe92"
@@ -209,8 +219,11 @@ EXPECTED_RESULTS_BLOCK_SHA256 = {
 # publication decision base-owned even though the feature PR carries its own
 # reproducibility validators.
 TRUSTED_EVIDENCE_FILE_SHA256 = {
+    "artifacts.csv": (
+        "c7efea108b947cb2f8a67789ea25387366171d64512c3ed7944abc12238c643a"
+    ),
     "c2b4_physical_identity.json": (
-        "9659d97801e21f3dbdc17259fdcbf517e63aea6ea4c605382e72208515b01828"
+        "f798384f9e4b0b1713ddb881b7dde1e3dae54783377127332b36a86ad849d6da"
     ),
     "correctness_ladder.csv": (
         "d543dd0d5f011c132bad104114a0e7236648070b002eeb0312e3647e0440d1c5"
@@ -263,8 +276,8 @@ REQUIRED_SOURCE_PATHS = (
     "modelsim/run_rtl_dma_axi_read_prefetch.do",
     "flows/scripts/dma_async64_throughput_contract.py",
     "flows/scripts/run_dma_async64_throughput_matrix.py",
-    "flows/scripts/validate_dma_async64_throughput.py",
-    "flows/scripts/test_validate_dma_async64_throughput.py",
+    "flows/scripts/validate_dma_async64_throughput_repaired.py",
+    "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
 )
 
 REQUIRED_PATHS = frozenset({
@@ -427,6 +440,12 @@ def _validate_readme_blocks(root):
         if (_sha256(block.encode("utf-8")) !=
                 EXPECTED_README_BLOCK_SHA256[relative]):
             _fail("{} throughput block payload mismatch".format(relative))
+        follower = README_BLOCK_FOLLOWER[relative]
+        if text.count(follower) != 1 or (
+                text.find(block) + len(block) != text.find(follower)):
+            _fail("{} throughput block structural position mismatch".format(
+                relative
+            ))
         for token in required_common + (result_links[relative],):
             if block.count(token) != 1:
                 _fail("{} throughput block token mismatch: {}".format(
@@ -705,7 +724,7 @@ def _validate_package_manifest(root, source_ref):
         "schema_version": 3,
         "experiment_id": "slvc_dma_async64_end_to_end_rtl_simulation",
         "classification": "VERIFIED_RTL_SIMULATION",
-        "flow_as_run_commit": source_ref,
+        "flow_as_run_commit": TRUSTED_FLOW_AS_RUN_COMMIT,
         "claim_id": CLAIM_ID,
         "public_claim_eligible": True,
         "resume_eligible": False,
@@ -714,7 +733,7 @@ def _validate_package_manifest(root, source_ref):
         "dual_platform_complete": True,
         "c2b4_physical_source_changed": False,
         "c2b4_physical_rerun_performed": False,
-        "rtl_fix_commit": source_ref,
+        "rtl_fix_commit": TRUSTED_RTL_FIX_COMMIT,
         "baseline_commit": "c20681fad0eaa6ad55dbb919149765b175b29117",
         "blocked_evidence_commit": "e6a6696603b10c4475fca468e9c40c727197ac9c",
     }
@@ -915,6 +934,8 @@ def validate(root, execute_validators=True):
     source_ref = claim.get("source_ref", "")
     if not HEX40.fullmatch(source_ref):
         _fail("throughput claim source_ref must be a full commit SHA")
+    if source_ref != TRUSTED_FLOW_AS_RUN_COMMIT:
+        _fail("throughput claim source_ref is not the trusted flow-as-run commit")
 
     evidence = _parse_registry_record(evidence_block, EVIDENCE_ID)
     _require_field_set("throughput evidence", evidence, EVIDENCE_FIELDS)

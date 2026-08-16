@@ -947,6 +947,30 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         )
         self.assert_fails("requires the registered claim")
 
+    def test_authorized_evidence_without_registered_claim_fails(self):
+        path = self.root / "provenance/evidence.yaml"
+        path.write_text(
+            path.read_text(encoding="utf-8") +
+            "  - id: {}\n    path: evidence/throughput.yaml\n"
+            "    public: true\n".format(
+                validator.AUTHORIZED_THROUGHPUT_EVIDENCE_ID
+            ),
+            encoding="utf-8",
+        )
+        self.assert_fails("evidence requires the registered claim")
+
+    def test_authorized_nonclaim_without_registered_claim_fails(self):
+        path = self.root / "provenance/nonclaims.yaml"
+        path.write_text(
+            path.read_text(encoding="utf-8") +
+            "  - id: {}\n    statement: not hardware\n"
+            "    status: not_claimed\n".format(
+                validator.AUTHORIZED_THROUGHPUT_NONCLAIM_ID
+            ),
+            encoding="utf-8",
+        )
+        self.assert_fails("nonclaim requires the registered claim")
+
     def test_duplicate_authorized_registry_item_fails(self):
         path = self.root / "provenance/claims.yaml"
         addition = "  - id: {}\n    status: verified\n".format(

@@ -70,7 +70,7 @@ def git_commit(root, revision):
 
 def git_status(root):
     return git_output(
-        root, ["status", "--porcelain=v1", "--untracked-files=all"]
+        root, ["status", "--porcelain", "--untracked-files=all"]
     )
 
 

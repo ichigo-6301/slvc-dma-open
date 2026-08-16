@@ -2,6 +2,7 @@
 """Mutation tests for the Async64 publication gate."""
 
 import json
+import re
 import shutil
 import tempfile
 import unittest
@@ -48,6 +49,32 @@ NONCLAIM_BLOCK = _yaml_record(
 )
 
 
+def _without_registry_item(text, item_id):
+    pattern = re.compile(
+        r"(?ms)^  - id: " + re.escape(item_id) + r"\n.*?(?=^  - id: |\Z)"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        raise AssertionError("duplicate fixture registry item: {}".format(item_id))
+    if not matches:
+        return text
+    match = matches[0]
+    return text[:match.start()] + text[match.end():]
+
+
+def _without_bounded_block(text, start, end):
+    pattern = re.compile(
+        r"(?ms)^" + re.escape(start) + r"\n.*?^" + re.escape(end) + r"\n?"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        raise AssertionError("duplicate fixture publication block")
+    if not matches:
+        return text
+    match = matches[0]
+    return text[:match.start()] + text[match.end():]
+
+
 class ThroughputPublicationGateTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -62,15 +89,43 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+        for relative, item_id in (
+                (gate.CLAIMS_REL, gate.CLAIM_ID),
+                (gate.EVIDENCE_REL, gate.EVIDENCE_ID),
+                (gate.NONCLAIMS_REL, gate.NONCLAIM_ID)):
+            path = self.root / relative
+            path.write_text(
+                _without_registry_item(
+                    path.read_text(encoding="utf-8"), item_id
+                ),
+                encoding="utf-8",
+            )
         for relative in (
                 Path("README.md"), Path("README.en.md"),
                 Path("docs/en/results.md"), Path("docs/zh-CN/results.md")):
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
+            if relative.name.startswith("README"):
+                start, end = gate.README_START, gate.README_END
+            else:
+                start, end = gate.RESULTS_START, gate.RESULTS_END
+            target.write_text(
+                _without_bounded_block(
+                    target.read_text(encoding="utf-8"), start, end
+                ),
+                encoding="utf-8",
+            )
 
         manifest = json.loads(
             (ROOT / gate.SHOWCASE_REL).read_text(encoding="utf-8")
+        )
+        manifest["assets"] = [
+            asset for asset in manifest["assets"]
+            if asset.get("path") != gate.CHART_REL.as_posix()
+        ]
+        (self.root / gate.SHOWCASE_REL).write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
         )
         copy_paths = set()
         for asset in manifest["assets"]:
@@ -81,6 +136,8 @@ class ThroughputPublicationGateTest(unittest.TestCase):
                 copy_paths.add(Path(source["path"]))
         for relative in copy_paths:
             target = self.root / relative
+            if target.exists():
+                continue
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
 

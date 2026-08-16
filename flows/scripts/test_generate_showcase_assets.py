@@ -18,6 +18,23 @@ from flows.scripts import generate_showcase_assets as generator
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _remove_optional_throughput_claim(path):
+    text = path.read_text(encoding="utf-8")
+    pattern = re.compile(
+        r"(?ms)^  - id: " +
+        re.escape(generator.ASYNC64_THROUGHPUT_CLAIM) +
+        r"\n.*?(?=^  - id: |\Z)"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        raise AssertionError("duplicate optional throughput claim in fixture")
+    if matches:
+        match = matches[0]
+        path.write_text(
+            text[:match.start()] + text[match.end():], encoding="utf-8"
+        )
+
+
 class ShowcaseAssetsTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -43,6 +60,7 @@ class ShowcaseAssetsTest(unittest.TestCase):
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPOSITORY_ROOT / relative, destination)
+        _remove_optional_throughput_claim(self.root / generator.CLAIMS_PATH)
         generator.write(self.root)
 
     def tearDown(self):
@@ -56,6 +74,8 @@ class ShowcaseAssetsTest(unittest.TestCase):
 
     def reset_file(self, relative):
         shutil.copyfile(REPOSITORY_ROOT / relative, self.root / relative)
+        if relative == generator.CLAIMS_PATH:
+            _remove_optional_throughput_claim(self.root / relative)
 
     def insert_png_chunk(self, relative, kind, data):
         path = self.root / relative

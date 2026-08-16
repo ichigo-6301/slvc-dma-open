@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import csv
 import json
+import re
 import shutil
 import tempfile
 import unittest
@@ -15,6 +16,20 @@ from flows.scripts import validate_asic_evidence as validator
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _without_throughput_results_block(text):
+    pattern = re.compile(
+        r"(?ms)^" + re.escape(validator.AUTHORIZED_RESULTS_START) +
+        r"\n.*?^" + re.escape(validator.AUTHORIZED_RESULTS_END) + r"\n?"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        raise AssertionError("duplicate authorized throughput results block")
+    if not matches:
+        return text
+    match = matches[0]
+    return text[:match.start()] + text[match.end():]
 
 
 class AsicEvidenceMutationTest(unittest.TestCase):
@@ -31,11 +46,29 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             "evidence.yaml", "nonclaims.yaml"
         ):
             shutil.copy2(ROOT / "provenance" / name, provenance / name)
+        for name, item_id in (
+                ("claims.yaml", validator.AUTHORIZED_THROUGHPUT_CLAIM_ID),
+                ("evidence.yaml", validator.AUTHORIZED_THROUGHPUT_EVIDENCE_ID),
+                ("nonclaims.yaml", validator.AUTHORIZED_THROUGHPUT_NONCLAIM_ID)):
+            path = provenance / name
+            path.write_text(
+                validator._strip_authorized_registry_item(
+                    path.read_text(encoding="utf-8"), item_id, str(path)
+                ),
+                encoding="utf-8",
+            )
         shutil.copy2(ROOT / "provenance/README.md", provenance / "README.md")
         for relative in validator.EXPECTED_DOC_SHA256:
             destination = self.root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / relative, destination)
+            if relative in ("docs/en/results.md", "docs/zh-CN/results.md"):
+                destination.write_text(
+                    _without_throughput_results_block(
+                        destination.read_text(encoding="utf-8")
+                    ),
+                    encoding="utf-8",
+                )
 
     def tearDown(self):
         self.temporary.cleanup()

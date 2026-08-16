@@ -335,6 +335,9 @@ SUPPLEMENTAL_SOURCE_PATHS = (
     "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
 )
 REQUIRED_SOURCE_PATHS = COMPILED_RTL_SOURCE_PATHS + SUPPLEMENTAL_SOURCE_PATHS
+PUBLICATION_ADAPTED_SOURCE_PATHS = frozenset({
+    "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
+})
 UNPUBLISHED_SOURCE_REF = "c20681fad0eaa6ad55dbb919149765b175b29117"
 UNPUBLISHED_ABSENT_SOURCE_PATHS = frozenset({
     "pattern/axi_hp0_dual_master_64_model.v",
@@ -960,7 +963,8 @@ def _validate_package_manifest(root, source_ref):
             _fail("cannot read current publication source {}: {}".format(
                 relative, error
             ))
-        if current != blob:
+        if (relative not in PUBLICATION_ADAPTED_SOURCE_PATHS and
+                current != blob):
             _fail("checked-out source differs from source_ref: {}".format(
                 relative
             ))

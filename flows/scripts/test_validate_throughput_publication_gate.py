@@ -77,6 +77,8 @@ def _without_bounded_block(text, start, end):
 
 
 class ThroughputPublicationGateTest(unittest.TestCase):
+    unpublished_source_blobs = {}
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
@@ -84,7 +86,7 @@ class ThroughputPublicationGateTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def _copy_provenance(self):
+    def _copy_provenance(self, published_sources=False):
         self.source_blobs = {}
         for relative in (gate.CLAIMS_REL, gate.EVIDENCE_REL, gate.NONCLAIMS_REL,
                          gate.SHOWCASE_REL):
@@ -143,14 +145,27 @@ class ThroughputPublicationGateTest(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
         for relative in gate.REQUIRED_SOURCE_PATHS:
-            source = ROOT / relative
-            if not source.is_file():
-                continue
             target = self.root / relative
+            if (not published_sources and
+                    relative in gate.UNPUBLISHED_ABSENT_SOURCE_PATHS):
+                if target.is_file():
+                    target.unlink()
+                continue
+            if published_sources:
+                source = ROOT / relative
+                if not source.is_file():
+                    continue
+                data = source.read_bytes()
+            else:
+                data = self.unpublished_source_blobs.get(relative)
+                if data is None:
+                    data = gate._source_blob(
+                        ROOT, gate.UNPUBLISHED_SOURCE_REF, relative
+                    )
+                    self.unpublished_source_blobs[relative] = data
             target.parent.mkdir(parents=True, exist_ok=True)
-            if not target.exists():
-                shutil.copyfile(source, target)
-            self.source_blobs[relative] = source.read_bytes()
+            target.write_bytes(data)
+            self.source_blobs[relative] = data
         manifest_path = self.root / gate.SHOWCASE_REL
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         for asset in manifest["assets"]:
@@ -178,7 +193,7 @@ class ThroughputPublicationGateTest(unittest.TestCase):
         )
 
     def _published_fixture(self):
-        self._copy_provenance()
+        self._copy_provenance(published_sources=True)
         for relative in gate.REQUIRED_PATHS:
             target = self.root / relative
             if not target.exists():

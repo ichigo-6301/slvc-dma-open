@@ -270,6 +270,7 @@ REQUIRED_SOURCE_PATHS = (
     "pattern/axi_hp0_dual_master_64_model.v",
     "pattern/tb_rtl_dma_async64_end_to_end_throughput.v",
     "pattern/tb_rtl_rx_payload_cdc_bridge.v",
+    "pattern/tb_rtl_rx_mem_async_backend.v",
     "pattern/tb_rtl_dma_axi_read_prefetch.v",
     "modelsim/run_rtl_dma_async64_end_to_end_throughput.do",
     "modelsim/run_rtl_rx_payload_cdc_bridge.do",

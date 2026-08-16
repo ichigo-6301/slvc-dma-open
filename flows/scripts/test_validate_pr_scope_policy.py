@@ -74,6 +74,15 @@ class TrustedScopePolicyTest(unittest.TestCase):
             "THROUGHPUT_EVIDENCE_SCOPE_PASS",
         )
 
+    def test_throughput_scope_matches_as_run_changed_sources(self):
+        required = policy.THROUGHPUT_REQUIRED_PATHS
+        for path in (
+                "flows/scripts/validate_dma_async64_throughput_repaired.py",
+                "flows/scripts/test_validate_dma_async64_throughput_repaired.py",
+                "pattern/tb_rtl_rx_mem_async_backend.v"):
+            self.assertIn(path, required)
+        self.assertNotIn("rtl/integration/frame_dma_rx_top.v", required)
+
     def test_throughput_publication_requires_complete_contract(self):
         changed = set(policy.THROUGHPUT_REQUIRED_PATHS)
         changed.remove("pattern/tb_rtl_dma_axi_read_prefetch.v")

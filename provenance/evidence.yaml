@@ -134,5 +134,5 @@ evidence:
     tool: ModelSim SE-64 2020.4 / Questa Sim-64 10.7c
     claims:
       - slvc_dma_async64_end_to_end_rtl_sim_throughput
-    sha256: 60709db446738e2685de09350150bda60561dbcf323d0ab72e82a974ca7bce7a
+    sha256: c09d34e36b09d5ecf75c615ec747bcce6773793a671d44b457ab0a31cf9aea54
     public: true

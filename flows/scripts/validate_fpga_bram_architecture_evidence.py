@@ -358,8 +358,11 @@ def _validate_docs(root):
         for token in tokens:
             if text.count(token) != 1:
                 _fail("{} token count mismatch: {}".format(relative, token))
+        start = text.index(tokens[0])
+        end = text.index(tokens[1], start) + len(tokens[1])
+        publication = text[start:end]
         for phrase in FORBIDDEN_OVERCLAIMS:
-            if phrase in text:
+            if phrase in publication:
                 _fail("{} contains forbidden overclaim".format(relative))
 
 

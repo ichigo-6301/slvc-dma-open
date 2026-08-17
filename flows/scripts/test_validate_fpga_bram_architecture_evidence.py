@@ -211,6 +211,18 @@ class FpgaBramEvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(gate.EvidenceError, "forbidden overclaim"):
             gate.validate(self.root)
 
+    def test_preexisting_negative_boundary_outside_publication_is_allowed(self):
+        path = self.root / Path("README.en.md")
+        path.write_text(
+            path.read_text(encoding="utf-8") +
+            "Not a C2B4 or complete-DMA area reduction.\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(
+            gate.validate(self.root),
+            "FPGA_BRAM_ARCHITECTURE_EVIDENCE_PASS",
+        )
+
     def test_orphan_payload_fails(self):
         (self.root / gate.CLAIMS_REL).write_text(
             "kind: claims\nschema_version: 1.0.0\nclaims:\n", encoding="utf-8"

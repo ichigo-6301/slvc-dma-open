@@ -64,6 +64,24 @@ class FpgaEvidenceGateTest(unittest.TestCase):
         shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".git"))
         return temp, root
 
+    def test_unpublished_implementation_mutation_fails(self):
+        claims = (ROOT / gate.CLAIMS_REL).read_text(encoding="utf-8")
+        if "  - id: {}\n".format(gate.CLAIM_ID) in claims:
+            self.skipTest("unpublished fixture is not present on evidence ref")
+        temp = tempfile.TemporaryDirectory()
+        try:
+            root = Path(temp.name) / "repo"
+            shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(".git"))
+            path = root / "docs/en/fpga_implementation.md"
+            path.write_text(
+                path.read_text(encoding="utf-8") + "\nUnsupported 999 MHz Fmax.\n",
+                encoding="utf-8",
+            )
+            with self.assertRaises(gate.EvidenceError):
+                gate.validate(root, check_git_identity=False)
+        finally:
+            temp.cleanup()
+
     def test_published_fixture_passes_without_git_identity(self):
         temp, root = self._published_fixture()
         try:
@@ -126,6 +144,24 @@ class FpgaEvidenceGateTest(unittest.TestCase):
                     "no Fmax claim", "Fmax was achieved"
                 ),
                 encoding="utf-8",
+            )
+            with self.assertRaises(gate.EvidenceError):
+                gate.validate(root, check_git_identity=False)
+        finally:
+            temp.cleanup()
+
+    def test_document_block_position_mutation_fails(self):
+        temp, root = self._published_fixture()
+        try:
+            path = root / "README.en.md"
+            text = path.read_text(encoding="utf-8")
+            start = text.index(gate.README_START)
+            end = text.index(gate.README_END, start) + len(gate.README_END)
+            if text[end:end + 1] == "\n":
+                end += 1
+            block = text[start:end]
+            path.write_text(
+                block + "\n" + text[:start] + text[end:], encoding="utf-8"
             )
             with self.assertRaises(gate.EvidenceError):
                 gate.validate(root, check_git_identity=False)

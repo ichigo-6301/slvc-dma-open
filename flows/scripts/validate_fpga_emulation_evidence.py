@@ -133,12 +133,38 @@ EXPECTED_DOC_BLOCK_SHA256 = {
     Path("docs/zh-CN/results.md"): "12afebcc376a2883470c3be127be42b1a44632d0ea5b6365579e3b35cae2928c",
     Path("docs/en/results.md"): "cb301b87ed029684f2ef11370e3328d9bc74d6be10be2d86aeebaa104c10f378",
 }
+EXPECTED_DOC_LAYOUT_SHA256 = {
+    Path("README.md"): (
+        "12eeefce45eae3578b83e8f9f67d6d75df53a52bb427ef108c7668901b0c6ff9",
+        "9db414fbfa35f7bd6968c8b20b3e06223f69e424e542b803a0b60de6d206fb54",
+    ),
+    Path("README.en.md"): (
+        "1b018fecf67fe85e2d9ee3f7c977974a6324d87e9c4182c2433c7d1ee25a6663",
+        "bdf3ef22a0f6d6b5c596a0b1d2113aca213674eb0c601588277ad8580cf5adb2",
+    ),
+    Path("docs/zh-CN/results.md"): (
+        "143800c5ed73680492e19ab8a57f99873a38e7c0cd9c341fc08ba567fb0536d3",
+        "a847ac1b9b3049ecc207dfa9d8693fcb8fcd62c79691eb5fa626c277b114725d",
+    ),
+    Path("docs/en/results.md"): (
+        "0e7bcac1fabada3e9fad353bf40dcac617cd14b1afa3fccde8a5a9a840eff32c",
+        "a2f7ec67604d61371451ac47f83f23497a0ccb3c0750b8f2c6b6470f3b58c025",
+    ),
+}
 EXPECTED_FPGA_IMPLEMENTATION_SHA256 = {
     Path("docs/zh-CN/fpga_implementation.md"): (
         "01cae1ad6adb75ecbdbf941315514ac87bd8fd014eda1653129a9306e9162cb7"
     ),
     Path("docs/en/fpga_implementation.md"): (
         "bea9ffbe8821112df75441639f605d5b6e1edf49ed4a4c6eeaddbb66115b7c82"
+    ),
+}
+UNPUBLISHED_FPGA_IMPLEMENTATION_SHA256 = {
+    Path("docs/zh-CN/fpga_implementation.md"): (
+        "ffd1fd5dab0faed02a54c38cd7834beb40145ca992648e0f0851c53e7f014de5"
+    ),
+    Path("docs/en/fpga_implementation.md"): (
+        "e15a5b8ea9d5e4af74c65846f30023b240812a9a53826ddf3e46b8205722a4c8"
     ),
 }
 
@@ -395,9 +421,36 @@ def _verify_docs(root):
         digest = hashlib.sha256(matches[0].group(0).encode("utf-8")).hexdigest()
         if digest != EXPECTED_DOC_BLOCK_SHA256[relative]:
             _fail("{} FPGA publication payload mismatch".format(relative))
+        expected_prefix, expected_suffix = EXPECTED_DOC_LAYOUT_SHA256[relative]
+        prefix = hashlib.sha256(
+            text[:matches[0].start()].encode("utf-8")
+        ).hexdigest()
+        suffix = hashlib.sha256(
+            text[matches[0].end():].encode("utf-8")
+        ).hexdigest()
+        if prefix != expected_prefix or suffix != expected_suffix:
+            _fail("{} FPGA publication position mismatch".format(relative))
     for relative, expected in EXPECTED_FPGA_IMPLEMENTATION_SHA256.items():
         if _sha256(root / relative) != expected:
             _fail("{} fixed FPGA implementation document mismatch".format(
+                relative
+            ))
+
+
+def _verify_unpublished_docs(root):
+    for relative, start, end in (
+            (Path("README.md"), README_START, README_END),
+            (Path("README.en.md"), README_START, README_END),
+            (Path("docs/zh-CN/results.md"), RESULTS_START, RESULTS_END),
+            (Path("docs/en/results.md"), RESULTS_START, RESULTS_END)):
+        text = _read_text(root / relative)
+        if start in text or end in text:
+            _fail("{} contains FPGA publication markers without its claim".format(
+                relative
+            ))
+    for relative, expected in UNPUBLISHED_FPGA_IMPLEMENTATION_SHA256.items():
+        if _sha256(root / relative) != expected:
+            _fail("{} modifies protected unpublished FPGA documentation".format(
                 relative
             ))
 
@@ -418,6 +471,7 @@ def validate(root, check_git_identity=True):
     if not claim_present:
         if payload_present or related_present:
             _fail("FPGA evidence payload exists without its registered claim")
+        _verify_unpublished_docs(root)
         return "FPGA_EMULATION_EVIDENCE_NOT_PUBLISHED"
 
     _require_record(

@@ -179,6 +179,53 @@ class TrustedScopePolicyTest(unittest.TestCase):
                 base_fpga_claim_registered=True,
             )
 
+    def test_fpga_bram_publication_exact_scope_passes(self):
+        self.assertEqual(
+            policy.validate_event(
+                event(17, "3" * 40),
+                policy.FPGA_BRAM_REQUIRED_PATHS,
+                BOOTSTRAP_HEAD,
+            ),
+            "FPGA_BRAM_EVIDENCE_SCOPE_PASS",
+        )
+
+    def test_fpga_bram_publication_requires_complete_contract(self):
+        changed = set(policy.FPGA_BRAM_REQUIRED_PATHS)
+        changed.remove(
+            "evidence/fpga_resources/u5_13ch_bram_architecture/resources.csv"
+        )
+        with self.assertRaisesRegex(policy.PolicyError, "missing required path"):
+            policy.validate_event(event(17, "3" * 40), changed, BOOTSTRAP_HEAD)
+
+    def test_fpga_bram_publication_rejects_rtl_and_policy(self):
+        for path in (
+                "rtl/rx/dma_frame_shared_pool.v",
+                "flows/scripts/validate_fpga_bram_architecture_evidence.py"):
+            changed = set(policy.FPGA_BRAM_REQUIRED_PATHS)
+            changed.add(path)
+            with self.subTest(path=path):
+                with self.assertRaises(policy.PolicyError):
+                    policy.validate_event(
+                        event(17, "3" * 40), changed, BOOTSTRAP_HEAD
+                    )
+
+    def test_fpga_bram_and_board_throughput_cannot_be_mixed(self):
+        changed = set(policy.FPGA_BRAM_REQUIRED_PATHS)
+        changed.add(
+            "evidence/fpga_emulation/u5_sync_hp0_loopback/manifest.json"
+        )
+        with self.assertRaisesRegex(policy.PolicyError, "separate pull requests"):
+            policy.validate_event(event(17, "3" * 40), changed, BOOTSTRAP_HEAD)
+
+    def test_published_fpga_bram_evidence_cannot_be_modified_or_removed(self):
+        with self.assertRaisesRegex(policy.PolicyError, "already-published"):
+            policy.validate_event(
+                event(17, "3" * 40),
+                policy.FPGA_BRAM_REQUIRED_PATHS,
+                BOOTSTRAP_HEAD,
+                base_fpga_bram_claim_registered=True,
+            )
+
     def test_metadata_and_policy_combination_fails(self):
         changed = {
             "provenance/evidence.yaml",

@@ -146,10 +146,16 @@ class FpgaBramEvidenceTests(unittest.TestCase):
             gate.validate(self.root), "FPGA_BRAM_ARCHITECTURE_EVIDENCE_PASS"
         )
 
-    def test_policy_checkout_is_not_published(self):
+    def test_checkout_matches_registration_state(self):
         root = Path(__file__).resolve().parents[2]
+        claims = (root / gate.CLAIMS_REL).read_text(encoding="utf-8")
+        expected = (
+            "FPGA_BRAM_ARCHITECTURE_EVIDENCE_PASS"
+            if "  - id: {}\n".format(gate.CLAIM_ID) in claims
+            else "FPGA_BRAM_ARCHITECTURE_NOT_PUBLISHED"
+        )
         self.assertEqual(
-            gate.validate(root), "FPGA_BRAM_ARCHITECTURE_NOT_PUBLISHED"
+            gate.validate(root), expected
         )
 
     def test_resource_mutation_fails(self):

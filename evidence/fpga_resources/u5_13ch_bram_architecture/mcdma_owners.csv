@@ -1,0 +1,6 @@
+owner,instance,lut,ff,ramb36,ramb18,note
+sg_engine,GEN_SG_ENGINE.I_SG_ENGINE,3853,3699,0,2,hierarchies may overlap
+s2mm_buffer_fifo,INCLUDE_S2MM_SOF_EOF_GENERATOR.INCLUDE_BUF_FIFO.I_BUF_FIFO,304,96,8,1,hierarchies may overlap
+primary_datamover,I_PRMRY_DATAMOVER,5376,7569,17,3,hierarchies may overlap
+s2mm_realigner,GEN_INCLUDE_REALIGNER.I_S2MM_REALIGNER,1229,1407,1,1,hierarchies may overlap
+tstrb_fifo,I_TSTRB_FIFO,122,68,1,1,hierarchies may overlap

@@ -1,0 +1,11 @@
+design_id,stage,scope,stream_width_bits,memory_width_bits,channels,logical_payload_bytes,lut,ff,ramb36,ramb18,bram_tiles,status
+slvc_wrapper_synth,synthesis,complete_slvc_wrapper,512,64,DMA_MAX_CH=16;active_rx=13;active_tx=13,135168,41363,35650,44,3,45.5,measured
+slvc_wrapper_routed,routed,complete_slvc_wrapper,512,64,DMA_MAX_CH=16;active_rx=13;active_tx=13,135168,,,44,3,45.5,identity_confirmation
+slvc_fixed_ingress,synthesis,fixed_ingress_bank,512,64,16,131072,1533,1836,33,1,33.5,measured
+slvc_shared_adapter,synthesis,shared_adapter_including_pool,512,64,16,4096,3108,6449,11,2,12.0,measured
+slvc_shared_pool,synthesis,shared_pool_payload_subset,512,64,16,4096,1967,3528,7,1,7.5,measured_subset
+fifo13_payload512,synthesis,13_independent_payload_fifos,512,,13,106496,325,286,91,13,97.5,measured
+fifo13_axis577,synthesis,13_independent_axis_frame_fifos,577,,13,106496,325,286,104,13,110.5,measured
+packed_bank_13x8k,synthesis,ideal_centralized_payload_bank,512,,13,106496,0,0,28,1,28.5,lower_bound
+mcdma13x13_512_512,synthesis,axi_mcdma_13_mm2s_13_s2mm,512,512,13+13,,15216,17049,25,6,28.0,measured_lower_bound
+mcdma13x13_64_512,elaboration,axi_mcdma_13_mm2s_13_s2mm,512,64,13+13,,,,,,,unsupported_by_vivado_2018_3

@@ -93,6 +93,10 @@ Same-clock512 与 Async512 在 ready-memory model 下为 `64 B/cycle`，Async64 
 | 固定 Profile | 已验证固定点 | Evidence | 边界 |
 | --- | --- | --- | --- |
 | Frozen Core FPGA OOC | `frame_dma_wrapper` 在 XC7Z100 上完成 Vivado 2018.3 routed OOC 200 MHz | [FPGA summary](evidence/slvc_dma_v1_ooc_200m_summary.yaml) | 不含 UDP adapter；不是 bitstream、板级 timing 或吞吐 |
+<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:readme:start -->
+<!-- claim:slvc_dma_u5_13ch_bram_architecture_comparison maturity:partial -->
+| U5 13-channel BRAM architecture | 当前完整 SLVC wrapper 使用 `45.5` BRAM tiles，对比 13 路独立浅宽 FIFO 的 `97.5` tiles，减少 `53.333%` | [BRAM Evidence](evidence/slvc_dma_u5_13ch_bram_architecture_summary.yaml) | 有界资源比较；保留 16 个物理 Fixed slot 及共享容量，`partial` 且不可直接用于简历 |
+<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:readme:end -->
 | RX Memory development OOC | Same-clock512、Async64、Async512 在 Vivado 2018.3 routed OOC 200 MHz；Async64 另有 Vivado 2022.2 固定点 | [Profile summary](evidence/slvc_dma_rx_payload_cdc_fpga_ooc_summary.yaml) · [Async64 summary](evidence/slvc_dma_async64_vivado_2022_2_ooc_summary.yaml) | Development OOC；不是完整 DMA 或板级实现 |
 | C2B4 register-expanded ASIC | 550 MHz DC handoff；450 MHz OpenROAD/OpenRCX/PT internal closure | [C2B4 summary](evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml) | 两通道 RX512 subsystem；不是 Fmax、MMMC/OCV 或 signoff |
 | SRAM A5 research | 单宏 clock-delivery canary 已验证；完整 C4B4 仍被 proxy minimum-pulse 检查阻塞 | [A5 summary](evidence/slvc_dma_sram_a5_development_summary.yaml) | `partial/blocked`；没有 C4B4 SRAM DC/P&R/PT 结果 |

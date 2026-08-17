@@ -145,6 +145,15 @@ class TrustedScopePolicyTest(unittest.TestCase):
         with self.assertRaisesRegex(policy.PolicyError, "missing required path"):
             policy.validate_event(event(12, "3" * 40), changed, BOOTSTRAP_HEAD)
 
+    def test_fpga_emulation_publication_requires_debugger_transcript(self):
+        changed = set(policy.FPGA_EMULATION_REQUIRED_PATHS)
+        changed.remove(
+            "evidence/fpga_emulation/u5_sync_hp0_loopback/"
+            "debugger_capture_transcript.txt"
+        )
+        with self.assertRaisesRegex(policy.PolicyError, "missing required path"):
+            policy.validate_event(event(12, "3" * 40), changed, BOOTSTRAP_HEAD)
+
     def test_fpga_emulation_publication_rejects_rtl_and_policy(self):
         for path in ("rtl/tx/dma_axi_read_prefetch.v", "Makefile"):
             changed = set(policy.FPGA_EMULATION_REQUIRED_PATHS)

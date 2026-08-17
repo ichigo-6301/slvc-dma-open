@@ -27,6 +27,7 @@ CHECKSUM_GENERATOR = $(PYTHON) "$(ROOT)/provenance/generate_checksums.py" --root
 SHOWCASE_ASSET_GENERATOR = $(PYTHON) "$(ROOT)/flows/scripts/generate_showcase_assets.py" --root "$(ROOT)"
 SHOWCASE_RENDER_CHECKER = $(PYTHON) "$(ROOT)/flows/scripts/check_showcase_render.py" --root "$(ROOT)"
 THROUGHPUT_PUBLICATION_GATE = $(PYTHON) "$(ROOT)/flows/scripts/validate_throughput_publication_gate.py" --root "$(ROOT)"
+FPGA_EMULATION_EVIDENCE_GATE = $(PYTHON) "$(ROOT)/flows/scripts/validate_fpga_emulation_evidence.py" --root "$(ROOT)"
 
 export DMA_FLOW_ROOT := $(ROOT)
 export DMA_FLOW_CONFIG := $(CONFIG_PATH)
@@ -52,7 +53,7 @@ DEFCONFIG_TARGETS := slvc_dma_512_core_only_defconfig \
 
 .RECIPEPREFIX := >
 .DEFAULT_GOAL := help
-.PHONY: help showcase-check showcase-assets-check refresh-showcase-assets public-hygiene asic-evidence-check throughput-publication-check results-asset-check refresh-results-asset refresh-checksums verify-current-checksums \
+.PHONY: help showcase-check showcase-assets-check refresh-showcase-assets public-hygiene asic-evidence-check throughput-publication-check fpga-emulation-evidence-check results-asset-check refresh-results-asset refresh-checksums verify-current-checksums \
         defconfig $(DEFCONFIG_TARGETS) menuconfig showconfig validate-profile \
         list-stages selected selected-dry-run $(FLOW_STAGES) $(DRY_RUN_TARGETS)
 
@@ -73,6 +74,7 @@ help:
 >   '  make showcase-assets-check        Verify deterministic architecture/result SVGs' \
 >   '  make asic-evidence-check          Validate sanitized ASIC paired-DC evidence' \
 >   '  make throughput-publication-check Validate bounded Async64 simulation publication' \
+>   '  make fpga-emulation-evidence-check Validate bounded U5 board observation' \
 >   '  make results-asset-check          Compatibility alias for showcase-assets-check' \
 >   '  make verify-current-checksums      Verify the tracked checksum manifest' \
 >   '' \
@@ -82,7 +84,7 @@ help:
 >   'Utilities: n45-a5-{model,clock-delivery}-audit' \
 >   'Local tools, PDKs, and libraries belong in flows/local/ (ignored).'
 
-showcase-check: showcase-assets-check public-hygiene asic-evidence-check throughput-publication-check
+showcase-check: showcase-assets-check public-hygiene asic-evidence-check throughput-publication-check fpga-emulation-evidence-check
 > @cd "$(ROOT)" && $(PYTHON) -m unittest discover -s flows/scripts -p 'test_*.py'
 > @printf '%s\n' 'SHOWCASE_CHECK_PASS'
 
@@ -94,6 +96,9 @@ asic-evidence-check:
 
 throughput-publication-check:
 > @$(THROUGHPUT_PUBLICATION_GATE)
+
+fpga-emulation-evidence-check:
+> @$(FPGA_EMULATION_EVIDENCE_GATE)
 
 showcase-assets-check:
 > @$(SHOWCASE_ASSET_GENERATOR) --check

@@ -93,6 +93,44 @@ class ThroughputPublicationGateTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_optional_fpga_registry_normalization_is_exact(self):
+        base = "schema_version: 1\nclaims:\n"
+        record = (
+            "  - id: {}\n"
+            "    status: partial\n".format(gate.OPTIONAL_FPGA_CLAIM_ID)
+        )
+        self.assertEqual(
+            base,
+            gate._strip_optional_fpga_registry_item(
+                gate.CLAIMS_REL, base + record, True
+            ),
+        )
+        with self.assertRaises(gate.PublicationError):
+            gate._strip_optional_fpga_registry_item(
+                gate.CLAIMS_REL, base + record + record, True
+            )
+        with self.assertRaises(gate.PublicationError):
+            gate._strip_optional_fpga_registry_item(
+                gate.CLAIMS_REL, base + record, False
+            )
+
+    def test_optional_fpga_doc_normalization_is_exact(self):
+        base = "before\n\nafter\n"
+        block = (
+            gate.FPGA_README_START + "\n"
+            "Authorized board observation.\n" +
+            gate.FPGA_README_END + "\n"
+        )
+        actual, captured = gate._strip_optional_fpga_doc_block(
+            "before\n" + block + "\nafter\n", Path("README.md"), True
+        )
+        self.assertEqual(base, actual)
+        self.assertEqual(block, captured)
+        with self.assertRaises(gate.PublicationError):
+            gate._strip_optional_fpga_doc_block(
+                "before\n" + block + "\nafter\n", Path("README.md"), False
+            )
+
     def _copy_provenance(self, published_sources=False):
         self.source_blobs = {}
         for relative in (gate.CLAIMS_REL, gate.EVIDENCE_REL, gate.NONCLAIMS_REL,

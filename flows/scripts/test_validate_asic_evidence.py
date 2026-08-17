@@ -32,6 +32,20 @@ def _without_throughput_results_block(text):
     return text[:match.start()] + text[match.end():]
 
 
+def _without_fpga_results_block(text):
+    pattern = re.compile(
+        r"(?ms)^" + re.escape(validator.AUTHORIZED_FPGA_RESULTS_START) +
+        r"\n.*?^" + re.escape(validator.AUTHORIZED_FPGA_RESULTS_END) + r"\n?"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        raise AssertionError("duplicate authorized FPGA results block")
+    if not matches:
+        return text
+    match = matches[0]
+    return text[:match.start()] + text[match.end():]
+
+
 class AsicEvidenceMutationTest(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
@@ -49,7 +63,10 @@ class AsicEvidenceMutationTest(unittest.TestCase):
         for name, item_id in (
                 ("claims.yaml", validator.AUTHORIZED_THROUGHPUT_CLAIM_ID),
                 ("evidence.yaml", validator.AUTHORIZED_THROUGHPUT_EVIDENCE_ID),
-                ("nonclaims.yaml", validator.AUTHORIZED_THROUGHPUT_NONCLAIM_ID)):
+                ("nonclaims.yaml", validator.AUTHORIZED_THROUGHPUT_NONCLAIM_ID),
+                ("claims.yaml", validator.AUTHORIZED_FPGA_CLAIM_ID),
+                ("evidence.yaml", validator.AUTHORIZED_FPGA_EVIDENCE_ID),
+                ("nonclaims.yaml", validator.AUTHORIZED_FPGA_NONCLAIM_ID)):
             path = provenance / name
             path.write_text(
                 validator._strip_authorized_registry_item(
@@ -64,8 +81,10 @@ class AsicEvidenceMutationTest(unittest.TestCase):
             shutil.copy2(ROOT / relative, destination)
             if relative in ("docs/en/results.md", "docs/zh-CN/results.md"):
                 destination.write_text(
-                    _without_throughput_results_block(
-                        destination.read_text(encoding="utf-8")
+                    _without_fpga_results_block(
+                        _without_throughput_results_block(
+                            destination.read_text(encoding="utf-8")
+                        )
                     ),
                     encoding="utf-8",
                 )
@@ -945,6 +964,50 @@ class AsicEvidenceMutationTest(unittest.TestCase):
                 validator.AUTHORIZED_RESULTS_START + "\n" +
                 "## Bounded Async64 RTL Simulation\n\nAuthorized addition.\n" +
                 validator.AUTHORIZED_RESULTS_END + "\n",
+                encoding="utf-8",
+            )
+        validator.validate(self.root)
+
+    def test_authorized_fpga_records_and_result_blocks_pass(self):
+        additions = {
+            "claims.yaml": (
+                "  - id: {}\n"
+                "    profile: bounded_fpga\n"
+                "    evidence:\n"
+                "      - {}\n"
+                "    status: partial\n".format(
+                    validator.AUTHORIZED_FPGA_CLAIM_ID,
+                    validator.AUTHORIZED_FPGA_EVIDENCE_ID,
+                )
+            ),
+            "evidence.yaml": (
+                "  - id: {}\n"
+                "    path: evidence/fpga.yaml\n"
+                "    public: true\n".format(
+                    validator.AUTHORIZED_FPGA_EVIDENCE_ID
+                )
+            ),
+            "nonclaims.yaml": (
+                "  - id: {}\n"
+                "    statement: bounded single run\n"
+                "    status: not_claimed\n".format(
+                    validator.AUTHORIZED_FPGA_NONCLAIM_ID
+                )
+            ),
+        }
+        for name, addition in additions.items():
+            path = self.root / "provenance" / name
+            path.write_text(
+                path.read_text(encoding="utf-8") + addition,
+                encoding="utf-8",
+            )
+        for relative in ("docs/en/results.md", "docs/zh-CN/results.md"):
+            path = self.root / relative
+            path.write_text(
+                path.read_text(encoding="utf-8") +
+                validator.AUTHORIZED_FPGA_RESULTS_START + "\n" +
+                "## Bounded FPGA Observation\n\nAuthorized addition.\n" +
+                validator.AUTHORIZED_FPGA_RESULTS_END + "\n",
                 encoding="utf-8",
             )
         validator.validate(self.root)

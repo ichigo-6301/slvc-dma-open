@@ -96,6 +96,10 @@ Same-clock512 与 Async512 在 ready-memory model 下为 `64 B/cycle`，Async64 
 | RX Memory development OOC | Same-clock512、Async64、Async512 在 Vivado 2018.3 routed OOC 200 MHz；Async64 另有 Vivado 2022.2 固定点 | [Profile summary](evidence/slvc_dma_rx_payload_cdc_fpga_ooc_summary.yaml) · [Async64 summary](evidence/slvc_dma_async64_vivado_2022_2_ooc_summary.yaml) | Development OOC；不是完整 DMA 或板级实现 |
 | C2B4 register-expanded ASIC | 550 MHz DC handoff；450 MHz OpenROAD/OpenRCX/PT internal closure | [C2B4 summary](evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml) | 两通道 RX512 subsystem；不是 Fmax、MMMC/OCV 或 signoff |
 | SRAM A5 research | 单宏 clock-delivery canary 已验证；完整 C4B4 仍被 proxy minimum-pulse 检查阻塞 | [A5 summary](evidence/slvc_dma_sram_a5_development_summary.yaml) | `partial/blocked`；没有 C4B4 SRAM DC/P&R/PT 结果 |
+<!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:start -->
+<!-- claim:slvc_dma_u5_sync_hp0_loopback_board_throughput maturity:partial -->
+**单次 FPGA 板级观测：** XC7Z100、13 RX/13 TX、100 MHz 同步 PL 本地 TX0->RX0 回环，经现有 64-bit HP0 搬运 1024 x 4 KiB payload；人工转录的 SDK debugger 计数对应 start write 返回后的 completion-window 速率 `1.559 MB/s/MHz`、`155.872 MB/s`、`1.247 Gb/s`。这是 `FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN`，不含启动延迟、重复性统计或简历级资格；[证据与边界](evidence/fpga_emulation/u5_sync_hp0_loopback/README.md)。
+<!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:end -->
 
 <a id="research-branches"></a>
 

@@ -349,3 +349,19 @@ claims:
     caveat: "Verified RTL simulation only; not FPGA/HP0 board throughput, DDR peak, Fmax, Same-clock512/Async512 64 B/cycle, or ASIC evidence."
     resume_eligible: false
     public: true
+  - id: slvc_dma_u5_sync_hp0_loopback_board_throughput
+    profile: slvc_dma_u5_sync_hp0_loopback_fpga
+    statement: "In one 1024 x 4 KiB U5 synchronous TX0-to-RX0 loopback run at 100 MHz, operator-transcribed debugger counters imply a post-start-write-return completion-window payload rate of 1.558722 MB/s/MHz (155.872225 MB/s, 1.246978 Gb/s)."
+    metric: debugger_transcribed_post_start_completion_payload_rate
+    value: 1.558722
+    unit: MB/s/MHz
+    benchmark: single 1024 x 4096-byte U5 TX0-to-RX0 loopback observation
+    configuration: 13 RX/13 TX contexts; synchronous 100 MHz PL-local loopback; 512-bit AXIS register slice; existing 64-bit PS HP0 port
+    source_ref: 144231a9694b1a6f4698082a333ceb39d7029d08
+    tool: Vivado/SDK 2018.3
+    evidence:
+      - slvc_dma_u5_sync_hp0_loopback_summary
+    status: partial
+    caveat: "FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN; launch latency, independent screenshot/memory export, source-to-binary build traceability, automated UART transcript, steady-state capture, repeatability statistics, Async64 CDC board result, DDR peak, Fmax, 64 B/cycle Writer result, and ASIC result are not included."
+    resume_eligible: false
+    public: true

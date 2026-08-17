@@ -253,6 +253,7 @@ FPGA_BRAM_PUBLICATION_PATHS = frozenset({
     "provenance/claims.yaml",
     "provenance/evidence.yaml",
     "provenance/nonclaims.yaml",
+    "provenance/showcase_assets.json",
 })
 
 FPGA_BRAM_REQUIRED_PATHS = FPGA_BRAM_PUBLICATION_PATHS

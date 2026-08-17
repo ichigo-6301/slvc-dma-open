@@ -1,0 +1,12 @@
+SLVC DMA U5 SDK LOG EXCERPT
+classification=SANITIZED_IDENTITY_TIMELINE
+original_size_bytes=112593
+original_sha256=7059bf95c533e4ee0cc47c1c018bde70246621a1c79071d8f9ecb03e83777ec4
+
+04:54:16 INFO FPGA configured successfully with bitstream [REDACTED_LOCAL_PATH]/top.bit
+06:27:48 INFO Processor reset completed for ps7_cortexa9_0
+06:27:48 INFO DMA_LOOPBACK_NEW.elf downloaded to ps7_cortexa9_0
+06:27:49 INFO con command executed
+
+The downloaded ELF was built at 2026-08-17 06:27:39.863 +08:00.
+The original log does not contain a reliable final UART throughput line.

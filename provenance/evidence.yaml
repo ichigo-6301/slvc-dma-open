@@ -136,3 +136,12 @@ evidence:
       - slvc_dma_async64_end_to_end_rtl_sim_throughput
     sha256: c09d34e36b09d5ecf75c615ec747bcce6773793a671d44b457ab0a31cf9aea54
     public: true
+  - id: slvc_dma_u5_sync_hp0_loopback_summary
+    path: evidence/slvc_dma_u5_sync_hp0_loopback_summary.yaml
+    type: fpga_debugger_captured_single_run
+    source_ref: 144231a9694b1a6f4698082a333ceb39d7029d08
+    tool: Vivado/SDK 2018.3
+    claims:
+      - slvc_dma_u5_sync_hp0_loopback_board_throughput
+    sha256: cf4cec3cef74a4be2bc77c6df9a1570d68641e0cc31e6c3b868c9833dd80e131
+    public: true

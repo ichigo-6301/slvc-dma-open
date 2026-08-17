@@ -115,3 +115,9 @@ nonclaims:
     reason: "The published point is a dual-platform RTL simulation using the bounded HP0_SHARED service model; FPGA emulation remains pending and not measured."
     status: not_claimed
     public: true
+  - id: slvc_dma_u5_sync_hp0_loopback_not_transferable
+    profile: slvc_dma_u5_sync_hp0_loopback_fpga
+    statement: "This single U5 observation is not Async64 CDC board testing, Aurora performance, DDR peak, FPGA Fmax, the 64 B/cycle Writer result, ASIC evidence, or a statistical repeatability result."
+    reason: "The measured profile is a 13 RX/13 TX, 100 MHz synchronous PL-local loopback over the existing 64-bit HP0 port, captured once in the SDK debugger after the timing window and correctness gates."
+    status: not_claimed
+    public: true

@@ -96,6 +96,10 @@ Verified quantitative results are separated into three non-transferable scopes: 
 | RX Memory development OOC | Same-clock512, Async64, and Async512 completed Vivado 2018.3 routed OOC at 200 MHz; Async64 also has a separate Vivado 2022.2 point | [Profile summary](evidence/slvc_dma_rx_payload_cdc_fpga_ooc_summary.yaml) · [Async64 summary](evidence/slvc_dma_async64_vivado_2022_2_ooc_summary.yaml) | Development OOC; not complete DMA or a board implementation |
 | C2B4 register-expanded ASIC | 550 MHz DC handoff and 450 MHz OpenROAD/OpenRCX/PT internal closure | [C2B4 summary](evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml) | Two-channel RX512 subsystem; not Fmax, MMMC/OCV, or signoff |
 | SRAM A5 research | One-macro clock-delivery canary verified; full C4B4 remains blocked by proxy minimum-pulse checks | [A5 summary](evidence/slvc_dma_sram_a5_development_summary.yaml) | `partial/blocked`; no C4B4 SRAM DC/P&R/PT result |
+<!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:start -->
+<!-- claim:slvc_dma_u5_sync_hp0_loopback_board_throughput maturity:partial -->
+**Single FPGA board observation:** On XC7Z100 with 13 RX/13 TX contexts, a 100 MHz synchronous PL-local TX0-to-RX0 loopback moved 1024 x 4 KiB through the existing 64-bit HP0 port. SDK debugger counters give `1.559 MB/s/MHz`, `155.872 MB/s`, and `1.247 Gb/s`. This is `FPGA_DEBUGGER_CAPTURED_SINGLE_RUN`, without repeatability statistics or resume eligibility; see the [evidence and boundaries](evidence/fpga_emulation/u5_sync_hp0_loopback/README.md).
+<!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:end -->
 
 <a id="research-branches"></a>
 

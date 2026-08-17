@@ -1,0 +1,6 @@
+--- connectivity/helloworld.c
++++ throughput-1024/helloworld.c
+@@
+-#define DMA_TEST_MODE DMA_TEST_CONNECTIVITY
++#define DMA_TEST_MODE DMA_TEST_THROUGHPUT
++#define DMA_THROUGHPUT_FRAME_COUNT 1024U

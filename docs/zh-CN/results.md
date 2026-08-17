@@ -75,6 +75,15 @@ Async64 发出 8,192 个 16-beat burst，并观察到 8,192 个 planner bubble c
 | ExtraNetDelay_high | +0.162 ns | +0.054 ns | 38,088 | 40,785 | 44 | 3 | 0 |
 
 三组 routed OOC 的 TNS/THS 均为 0。Optional UDP adapter 不在 `frame_dma_wrapper` 内，因此这些 core 资源不包含 adapter logic。
+<!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:start -->
+## FPGA 板级单次观测
+
+<!-- claim:slvc_dma_u5_sync_hp0_loopback_board_throughput maturity:partial -->
+
+XC7Z100 上的同步 PL 本地回环使用 13 RX/13 TX compile identity、TX0->512-bit AXIS register slice->RX0、100 MHz PL clock 和现有 64-bit PS HP0 端口。单次 1024 x 4096-byte workload 的 debugger 原始计数为 4,194,304 payload bytes、8,969,535 XTime ticks 和 2,690,860 个 100 MHz 等效周期；`Decimal` 重算得到 `1.558722 MB/s/MHz`、`155.872225 MB/s`、`1.246978 Gb/s`（首页取三位显示为 `1.247 Gb/s`），即保守 4 B/cycle 共享 HP0 模型上限的 `38.968062%`。
+
+该结果等级为 `FPGA_DEBUGGER_CAPTURED_SINGLE_RUN` / `partial`。断点位于计时结束、CQ/payload/resource/error 检查之后；UART 尾部不完整，因此不作为原始数值来源。它不是 Async64 CDC 板测、Aurora、DDR peak、Fmax、64 B/cycle Writer、ASIC 或重复性统计结果，也不具备简历级资格。Evidence：[summary](../../evidence/slvc_dma_u5_sync_hp0_loopback_summary.yaml) · [package](../../evidence/fpga_emulation/u5_sync_hp0_loopback/README.md)。
+<!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:end -->
 
 ## ASIC C2B4 Register-Expanded
 

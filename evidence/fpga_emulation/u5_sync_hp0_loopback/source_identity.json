@@ -1,0 +1,31 @@
+{
+  "schema": "slvc_dma_u5_source_identity_v1",
+  "as_run_rtl": {
+    "u5_dma_overlay_commit": "144231a9694b1a6f4698082a333ceb39d7029d08",
+    "private_dma_baseline": "be71e1660dc27c49af771132de086a7e3ad48b7f",
+    "repaired_simulation_source": "abdc9fdc0effdd9e42d2c30b007562448b7d8bb3",
+    "public_equivalent_prefetch_fix": "42d562bf99ef00fb893cda4e8160889caa1be2d4",
+    "public_evidence_baseline": "efb16bb4456a76f87a1dfcf0dc1c6ab6d40240c7"
+  },
+  "sdk_sources": {
+    "fpga/u5/benchmark/helloworld.c": "48f94f9dd87223bbfd1cd58558f7380bdc5f521d36373b5f24cc48b4d351f902",
+    "fpga/u5/benchmark/dma_loopback_regs.h": "2e78bcae0b4da9065379a3c0612b333abd875c016f2b2d76b0e02ab6d3102467",
+    "fpga/u5/benchmark/dma_mmio_diag.c": "35954f27b38b8dfce9a8a85e94ab3addcf35960a49d5a97f683bd8288ab5bc8e",
+    "fpga/u5/benchmark/dma_mmio_diag.h": "5520e1f7637aca1bd4a47928be02433413810d0f5a5932785012fa3046cc42f0"
+  },
+  "connectivity_source_sha256": "a5fca8d6ed33f5f499b70ffc6cec43d5e8fe3a8143ad0bac7793c5436c07fb41",
+  "as_run_source_change": [
+    "DMA_TEST_MODE=DMA_TEST_THROUGHPUT",
+    "DMA_THROUGHPUT_FRAME_COUNT=1024U"
+  ],
+  "integration_hashes": {
+    "synchronous_top_v": "8e77b7ae27a6166520f2f4077e62eb752c57a1eafd7c5c7c034aad52174beab9",
+    "block_design": "4e6f1b039eea964d54bf8f653c1d5c2fde1e8f45a353af31942af97db996f287",
+    "board_xdc": "a37744e4f529369a458025bde1dfec9857c7e353d3279ab19ec88d8c17b49243"
+  },
+  "physical_boundary": {
+    "c2b4_source_set_changed": false,
+    "production_rtl_changed_by_publication": false,
+    "current_public_main_board_tested": false
+  }
+}

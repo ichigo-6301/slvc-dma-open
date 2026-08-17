@@ -1,0 +1,60 @@
+{
+  "schema": "slvc_dma_u5_fpga_observation_v1",
+  "run_id": "u5_sync_hp0_loopback_1024x4k_20260817_062748_cst",
+  "classification": "FPGA_DEBUGGER_CAPTURED_SINGLE_RUN",
+  "claim_status": "partial",
+  "numeric_authority": "evidence/fpga_emulation/u5_sync_hp0_loopback/raw_counters.csv",
+  "derived_metrics": "evidence/fpga_emulation/u5_sync_hp0_loopback/derived_metrics.csv",
+  "profile": {
+    "part": "xc7z100ffg900-2",
+    "dma_max_ch": 16,
+    "dma_rx_ch_num": 13,
+    "dma_tx_ch_num": 13,
+    "active_tx_channel": 0,
+    "active_rx_channel": 0,
+    "pl_clock_mhz": 100,
+    "memory_port": "64-bit PS HP0",
+    "loopback": "DMA TX -> 512-bit AXIS register slice -> DMA RX",
+    "carrier_cdc_adapter_instantiated": false
+  },
+  "workload": {
+    "frames": 1024,
+    "frame_bytes": 4096,
+    "payload_bytes": 4194304,
+    "timer_start": "after descriptor-start AXI4-Lite write returns",
+    "timer_stop": "final RX CQE owner observed by software"
+  },
+  "capture": {
+    "method": "SDK debugger variable read after report breakpoint",
+    "correctness_gate": "passed_before_report_call",
+    "debugger_intervention_in_measurement_window": false,
+    "uart_tail_complete": false,
+    "repeat_count": 1,
+    "steady_state_captured": false
+  },
+  "toolchain": {
+    "vivado": "2018.3",
+    "sdk": "2018.3",
+    "bsp_counts_per_second": 333333343
+  },
+  "fpga_maturity": {
+    "fpga_source_ready": "verified",
+    "fpga_rtl_simulation": "verified",
+    "fpga_synthesis": "verified",
+    "fpga_implementation": "verified",
+    "fpga_timing": "partial",
+    "fpga_bitstream": "verified",
+    "fpga_board_smoke": "partial",
+    "fpga_workload_validation": "partial"
+  },
+  "boundaries": {
+    "resume_eligible": false,
+    "async64_cdc_board_result": false,
+    "aurora_performance": false,
+    "ddr_peak": false,
+    "fmax": false,
+    "sameclock512_async512_64_bytes_per_cycle": false,
+    "asic_result": false,
+    "statistical_repeatability": false
+  }
+}

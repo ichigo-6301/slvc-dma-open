@@ -1,0 +1,40 @@
+schema: slvc_dma_u5_sync_hp0_loopback_summary_v1
+claim_id: slvc_dma_u5_sync_hp0_loopback_board_throughput
+classification: FPGA_DEBUGGER_CAPTURED_SINGLE_RUN
+status: partial
+resume_eligible: false
+source_ref: 144231a9694b1a6f4698082a333ceb39d7029d08
+profile:
+  part: xc7z100ffg900-2
+  rx_contexts: 13
+  tx_contexts: 13
+  active_path: TX0-to-RX0 synchronous PL-local loopback
+  pl_clock_mhz: 100
+  memory_port: 64-bit PS HP0
+workload:
+  frames: 1024
+  frame_bytes: 4096
+  payload_bytes: 4194304
+measurement:
+  xtime_ticks: 8969535
+  counts_per_second: 333333343
+  equivalent_pl_cycles_100mhz: 2690860
+result:
+  mb_per_s_per_mhz: 1.558722
+  mb_per_s_at_100mhz: 155.872225
+  gbits_per_s_at_100mhz: 1.246978
+  hp0_shared_model_efficiency_percent: 38.968062
+capture:
+  correctness_gate: passed_before_report_call
+  debugger_intervention_in_measurement_window: false
+  uart_tail_complete: false
+  repeat_count: 1
+  steady_state_captured: false
+boundaries:
+  async64_cdc_board_result: false
+  aurora_performance: false
+  ddr_peak: false
+  fmax: false
+  sameclock512_async512_64_bytes_per_cycle: false
+  asic_result: false
+  statistical_repeatability: false

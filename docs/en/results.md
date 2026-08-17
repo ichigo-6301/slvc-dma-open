@@ -75,6 +75,15 @@ The same-clock netlist contains zero RX-payload CDC cells. Both async profiles h
 | ExtraNetDelay_high | +0.162 ns | +0.054 ns | 38,088 | 40,785 | 44 | 3 | 0 |
 
 All three routed OOC runs have zero TNS and THS. The optional UDP adapter is outside `frame_dma_wrapper`, so these frozen-core resource values exclude adapter logic.
+<!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:start -->
+## Single FPGA Board Observation
+
+<!-- claim:slvc_dma_u5_sync_hp0_loopback_board_throughput maturity:partial -->
+
+The synchronous PL-local loopback on XC7Z100 uses a 13 RX/13 TX compile identity, TX0 through a 512-bit AXIS register slice to RX0, a 100 MHz PL clock, and the existing 64-bit PS HP0 port. One 1024 x 4096-byte workload produced debugger counters of 4,194,304 payload bytes, 8,969,535 XTime ticks, and 2,690,860 equivalent 100 MHz cycles. `Decimal` recomputation gives `1.558722 MB/s/MHz`, `155.872225 MB/s`, and `1.246978 Gb/s` (shown as `1.247 Gb/s` at three decimals on the homepage), or `38.968062%` of the conservative 4 B/cycle shared-HP0 model ceiling.
+
+The result is `FPGA_DEBUGGER_CAPTURED_SINGLE_RUN` / `partial`. The breakpoint is after timing stops and after CQ, payload, resource-release, and error checks; the incomplete UART tail is not a numeric source. This is not an Async64 CDC board result, Aurora performance, DDR peak, Fmax, the 64 B/cycle Writer result, ASIC evidence, or repeatability statistics, and it is not resume eligible. Evidence: [summary](../../evidence/slvc_dma_u5_sync_hp0_loopback_summary.yaml) · [package](../../evidence/fpga_emulation/u5_sync_hp0_loopback/README.md).
+<!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:end -->
 
 ## ASIC C2B4 Register-Expanded
 

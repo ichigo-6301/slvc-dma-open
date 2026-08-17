@@ -71,6 +71,15 @@ AUTHORIZED_FPGA_EVIDENCE_ID = (
 AUTHORIZED_FPGA_NONCLAIM_ID = (
     "slvc_dma_u5_sync_hp0_loopback_not_transferable"
 )
+AUTHORIZED_BRAM_CLAIM_ID = (
+    "slvc_dma_u5_13ch_bram_architecture_comparison"
+)
+AUTHORIZED_BRAM_EVIDENCE_ID = (
+    "slvc_dma_u5_13ch_bram_architecture_summary"
+)
+AUTHORIZED_BRAM_NONCLAIM_ID = (
+    "slvc_dma_u5_bram_architecture_not_equivalent"
+)
 AUTHORIZED_RESULTS_START = (
     "<!-- throughput-publication:"
     "slvc_dma_async64_end_to_end_rtl_sim_throughput:start -->"
@@ -86,6 +95,14 @@ AUTHORIZED_FPGA_RESULTS_START = (
 AUTHORIZED_FPGA_RESULTS_END = (
     "<!-- fpga-emulation-publication:"
     "slvc_dma_u5_sync_hp0_loopback_board_throughput:end -->"
+)
+AUTHORIZED_BRAM_RESULTS_START = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:start -->"
+)
+AUTHORIZED_BRAM_RESULTS_END = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:end -->"
 )
 
 CSV_HEADERS = {
@@ -942,6 +959,15 @@ def _registry_sha256_without_authorized_item(path, item_id, authorized):
         normalized = _strip_authorized_registry_item(
             normalized, fpga_item, str(path)
         )
+    bram_item = {
+        "claims.yaml": AUTHORIZED_BRAM_CLAIM_ID,
+        "evidence.yaml": AUTHORIZED_BRAM_EVIDENCE_ID,
+        "nonclaims.yaml": AUTHORIZED_BRAM_NONCLAIM_ID,
+    }.get(path.name)
+    if bram_item:
+        normalized = _strip_authorized_registry_item(
+            normalized, bram_item, str(path)
+        )
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
@@ -953,6 +979,9 @@ def _normalized_evidence_registry_sha256(path, authorized):
         )
     text = _strip_authorized_registry_item(
         text, AUTHORIZED_FPGA_EVIDENCE_ID, str(path)
+    )
+    text = _strip_authorized_registry_item(
+        text, AUTHORIZED_BRAM_EVIDENCE_ID, str(path)
     )
     pattern = (
         r"(?ms)(^  - id: slvc_dma_asic_paired_dc_publication\n"
@@ -1041,6 +1070,9 @@ def _validate_nonclaims(root):
     if (AUTHORIZED_FPGA_NONCLAIM_ID in records and
             AUTHORIZED_FPGA_CLAIM_ID not in claim_records):
         _fail("authorized FPGA nonclaim requires the registered claim")
+    if (AUTHORIZED_BRAM_NONCLAIM_ID in records and
+            AUTHORIZED_BRAM_CLAIM_ID not in claim_records):
+        _fail("authorized FPGA BRAM nonclaim requires the registered claim")
     if not set(EXPECTED_NONCLAIMS).issubset(records):
         _fail("paired-DC nonclaim registry record is missing")
     for nonclaim_id, expected in EXPECTED_NONCLAIMS.items():
@@ -1137,12 +1169,16 @@ def _validate_publication(root, evaluations):
         AUTHORIZED_THROUGHPUT_CLAIM_ID in claim_records
     )
     fpga_claim_registered = AUTHORIZED_FPGA_CLAIM_ID in claim_records
+    bram_claim_registered = AUTHORIZED_BRAM_CLAIM_ID in claim_records
     if (AUTHORIZED_THROUGHPUT_EVIDENCE_ID in evidence_records and
             not throughput_claim_registered):
         _fail("authorized throughput evidence requires the registered claim")
     if (AUTHORIZED_FPGA_EVIDENCE_ID in evidence_records and
             not fpga_claim_registered):
         _fail("authorized FPGA evidence requires the registered claim")
+    if (AUTHORIZED_BRAM_EVIDENCE_ID in evidence_records and
+            not bram_claim_registered):
+        _fail("authorized FPGA BRAM evidence requires the registered claim")
     if not expected_claims.issubset(claim_records):
         _fail("paired-DC claim is missing from provenance/claims.yaml")
     publication_id = "slvc_dma_asic_paired_dc_publication"
@@ -1405,10 +1441,15 @@ def _validate_result_tables(root):
     authorized_fpga_claim_count = claims_text.count(
         "  - id: {}\n".format(AUTHORIZED_FPGA_CLAIM_ID)
     )
+    authorized_bram_claim_count = claims_text.count(
+        "  - id: {}\n".format(AUTHORIZED_BRAM_CLAIM_ID)
+    )
     if authorized_claim_count > 1:
         _fail("duplicate authorized throughput claim")
     if authorized_fpga_claim_count > 1:
         _fail("duplicate authorized FPGA claim")
+    if authorized_bram_claim_count > 1:
+        _fail("duplicate authorized FPGA BRAM claim")
     for relative, expected_rows in EXPECTED_RESULT_ROWS.items():
         try:
             text = (root / relative).read_text(encoding="utf-8")
@@ -1457,6 +1498,23 @@ def _validate_result_tables(root):
                         "claim in {}".format(relative)
                     )
                 match = fpga_matches[0]
+                text = text[:match.start()] + text[match.end():]
+            bram_marker_pattern = re.compile(
+                r"(?ms)^" + re.escape(AUTHORIZED_BRAM_RESULTS_START) +
+                r"\n.*?^" + re.escape(AUTHORIZED_BRAM_RESULTS_END) + r"\n?"
+            )
+            bram_matches = list(bram_marker_pattern.finditer(text))
+            if len(bram_matches) > 1 or (
+                    text.count(AUTHORIZED_BRAM_RESULTS_START) != len(bram_matches) or
+                    text.count(AUTHORIZED_BRAM_RESULTS_END) != len(bram_matches)):
+                _fail("invalid authorized FPGA BRAM block in {}".format(relative))
+            if bram_matches:
+                if authorized_bram_claim_count != 1:
+                    _fail(
+                        "authorized FPGA BRAM result block requires the "
+                        "registered claim in {}".format(relative)
+                    )
+                match = bram_matches[0]
                 text = text[:match.start()] + text[match.end():]
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
         if digest != expected_hash:

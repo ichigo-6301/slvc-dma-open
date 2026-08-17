@@ -226,6 +226,7 @@ FPGA_EMULATION_REQUIRED_PATHS = frozenset({
     "provenance/claims.yaml",
     "provenance/evidence.yaml",
     "provenance/nonclaims.yaml",
+    "provenance/showcase_assets.json",
 })
 
 FPGA_EMULATION_TRIGGER_PATHS = frozenset({

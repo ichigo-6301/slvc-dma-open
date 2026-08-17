@@ -19,6 +19,9 @@ NONCLAIM_ID = "slvc_dma_async64_end_to_end_not_hardware"
 OPTIONAL_FPGA_CLAIM_ID = "slvc_dma_u5_sync_hp0_loopback_board_throughput"
 OPTIONAL_FPGA_EVIDENCE_ID = "slvc_dma_u5_sync_hp0_loopback_summary"
 OPTIONAL_FPGA_NONCLAIM_ID = "slvc_dma_u5_sync_hp0_loopback_not_transferable"
+OPTIONAL_BRAM_CLAIM_ID = "slvc_dma_u5_13ch_bram_architecture_comparison"
+OPTIONAL_BRAM_EVIDENCE_ID = "slvc_dma_u5_13ch_bram_architecture_summary"
+OPTIONAL_BRAM_NONCLAIM_ID = "slvc_dma_u5_bram_architecture_not_equivalent"
 CHART_REL = Path("docs/assets/slvc_dma_async64_end_to_end_throughput.svg")
 RESULTS_ASSET_LINK = "../assets/slvc_dma_async64_end_to_end_throughput.svg"
 PACKAGE_REL = Path("evidence/throughput_simulation/async64_end_to_end")
@@ -220,6 +223,22 @@ FPGA_RESULTS_START = (
 FPGA_RESULTS_END = (
     "<!-- fpga-emulation-publication:"
     "slvc_dma_u5_sync_hp0_loopback_board_throughput:end -->"
+)
+BRAM_README_START = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:readme:start -->"
+)
+BRAM_README_END = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:readme:end -->"
+)
+BRAM_RESULTS_START = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:start -->"
+)
+BRAM_RESULTS_END = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:end -->"
 )
 EXPECTED_README_BLOCK_SHA256 = {
     Path("README.md"): (
@@ -518,7 +537,7 @@ def _source_blob(root, commit, relative):
         ))
 
 
-def _validate_readme_blocks(root, fpga_claim_registered):
+def _validate_readme_blocks(root, fpga_claim_registered, bram_claim_registered):
     required_common = (
         "<!-- claim:{} maturity:verified -->".format(CLAIM_ID),
         "3.831177 MB/s/MHz",
@@ -537,6 +556,9 @@ def _validate_readme_blocks(root, fpga_claim_registered):
         )
         protected, _ = _strip_optional_fpga_doc_block(
             protected, relative, fpga_claim_registered
+        )
+        protected, _ = _strip_optional_bram_doc_block(
+            protected, relative, bram_claim_registered
         )
         if _sha256(protected.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected homepage content".format(relative))
@@ -564,7 +586,8 @@ def _validate_readme_blocks(root, fpga_claim_registered):
             ))
 
 
-def _validate_unpublished_readmes(root, fpga_claim_registered):
+def _validate_unpublished_readmes(root, fpga_claim_registered,
+                                  bram_claim_registered):
     for relative, expected_hash in PROTECTED_README_SHA256.items():
         text = _read_text(root / relative)
         protected, _ = _bounded_block(
@@ -573,24 +596,36 @@ def _validate_unpublished_readmes(root, fpga_claim_registered):
         protected, _ = _strip_optional_fpga_doc_block(
             protected, relative, fpga_claim_registered
         )
+        protected, _ = _strip_optional_bram_doc_block(
+            protected, relative, bram_claim_registered
+        )
         if _sha256(protected.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected homepage content".format(relative))
 
 
-def _validate_unpublished_state(root, fpga_claim_registered):
+def _validate_unpublished_state(root, fpga_claim_registered,
+                                bram_claim_registered):
     for relative, expected_hash in PROTECTED_MANIFEST_HASHES.items():
         text = _strip_optional_fpga_registry_item(
             relative, _read_text(root / relative), fpga_claim_registered
+        )
+        text = _strip_optional_bram_registry_item(
+            relative, text, bram_claim_registered
         )
         if _sha256(text.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected pre-publication content".format(
                 relative
             ))
 
-    _validate_unpublished_readmes(root, fpga_claim_registered)
+    _validate_unpublished_readmes(
+        root, fpga_claim_registered, bram_claim_registered
+    )
     for relative, expected_hash in PROTECTED_RESULTS_SHA256.items():
         text, _ = _strip_optional_fpga_doc_block(
             _read_text(root / relative), relative, fpga_claim_registered
+        )
+        text, _ = _strip_optional_bram_doc_block(
+            text, relative, bram_claim_registered
         )
         if _sha256(text.encode("utf-8")) != expected_hash:
             _fail("{} modifies protected pre-publication content".format(
@@ -708,6 +743,28 @@ def _strip_optional_fpga_registry_item(path, text, authorized):
     return text[:match.start()] + text[match.end():]
 
 
+def _strip_optional_bram_registry_item(path, text, authorized):
+    item_id = {
+        CLAIMS_REL: OPTIONAL_BRAM_CLAIM_ID,
+        EVIDENCE_REL: OPTIONAL_BRAM_EVIDENCE_ID,
+        NONCLAIMS_REL: OPTIONAL_BRAM_NONCLAIM_ID,
+    }.get(path)
+    if not item_id:
+        return text
+    pattern = re.compile(
+        r"(?ms)^  - id: " + re.escape(item_id) + r"\n.*?(?=^  - id: |\Z)"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1:
+        _fail("{} contains duplicate optional FPGA BRAM records".format(path))
+    if not matches:
+        return text
+    if not authorized:
+        _fail("{} contains an FPGA BRAM record without its claim".format(path))
+    match = matches[0]
+    return text[:match.start()] + text[match.end():]
+
+
 def _strip_optional_fpga_doc_block(text, relative, authorized):
     if relative in (Path("README.md"), Path("README.en.md")):
         start, end = FPGA_README_START, FPGA_README_END
@@ -731,11 +788,36 @@ def _strip_optional_fpga_doc_block(text, relative, authorized):
     return text[:match.start()] + text[match.end():], match.group(0)
 
 
-def _verify_append_only(path, text, item_id, fpga_claim_registered):
+def _strip_optional_bram_doc_block(text, relative, authorized):
+    if relative in (Path("README.md"), Path("README.en.md")):
+        start, end = BRAM_README_START, BRAM_README_END
+    elif relative in (Path("docs/en/results.md"), Path("docs/zh-CN/results.md")):
+        start, end = BRAM_RESULTS_START, BRAM_RESULTS_END
+    else:
+        return text, ""
+    pattern = re.compile(
+        r"(?ms)^" + re.escape(start) + r"\n.*?^" + re.escape(end) + r"\n?"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1 or text.count(start) != len(matches) or text.count(end) != len(matches):
+        _fail("{} optional FPGA BRAM publication block mismatch".format(relative))
+    if not matches:
+        return text, ""
+    if not authorized:
+        _fail("{} contains an FPGA BRAM block without its claim".format(relative))
+    match = matches[0]
+    return text[:match.start()] + text[match.end():], match.group(0)
+
+
+def _verify_append_only(path, text, item_id, fpga_claim_registered,
+                        bram_claim_registered):
     match = _item_block(text, item_id)
     protected_text = text[:match.start()] + text[match.end():]
     protected_text = _strip_optional_fpga_registry_item(
         path, protected_text, fpga_claim_registered
+    )
+    protected_text = _strip_optional_bram_registry_item(
+        path, protected_text, bram_claim_registered
     )
     protected = protected_text.encode("utf-8")
     if _sha256(protected) != PROTECTED_MANIFEST_HASHES[path]:
@@ -1153,6 +1235,9 @@ def validate(root, execute_validators=True):
     fpga_claim_registered = (
         "  - id: {}\n".format(OPTIONAL_FPGA_CLAIM_ID) in claims_text
     )
+    bram_claim_registered = (
+        "  - id: {}\n".format(OPTIONAL_BRAM_CLAIM_ID) in claims_text
+    )
     sentinels_present = [path for path in PUBLICATION_SENTINELS if (root / path).exists()]
     if _publication_markers_present(root):
         sentinels_present.append(Path("bounded-publication-marker"))
@@ -1169,7 +1254,9 @@ def validate(root, execute_validators=True):
     if not claim_present:
         if sentinels_present:
             _fail("throughput publication files exist without the registered claim")
-        _validate_unpublished_state(root, fpga_claim_registered)
+        _validate_unpublished_state(
+            root, fpga_claim_registered, bram_claim_registered
+        )
         return "NOT_PUBLISHED"
 
     missing = [path for path in sorted(REQUIRED_PATHS, key=lambda item: item.as_posix())
@@ -1178,15 +1265,18 @@ def validate(root, execute_validators=True):
         _fail("throughput publication is missing {}".format(missing[0]))
 
     claim_block = _verify_append_only(
-        CLAIMS_REL, claims_text, CLAIM_ID, fpga_claim_registered
+        CLAIMS_REL, claims_text, CLAIM_ID, fpga_claim_registered,
+        bram_claim_registered
     )
     evidence_text = _read_text(root / EVIDENCE_REL)
     evidence_block = _verify_append_only(
-        EVIDENCE_REL, evidence_text, EVIDENCE_ID, fpga_claim_registered
+        EVIDENCE_REL, evidence_text, EVIDENCE_ID, fpga_claim_registered,
+        bram_claim_registered
     )
     nonclaims_text = _read_text(root / NONCLAIMS_REL)
     nonclaim_block = _verify_append_only(
-        NONCLAIMS_REL, nonclaims_text, NONCLAIM_ID, fpga_claim_registered
+        NONCLAIMS_REL, nonclaims_text, NONCLAIM_ID, fpga_claim_registered,
+        bram_claim_registered
     )
     claim = _parse_registry_record(claim_block, CLAIM_ID)
     _require_field_set("throughput claim", claim, CLAIM_FIELDS)
@@ -1217,7 +1307,9 @@ def validate(root, execute_validators=True):
 
     _validate_summary(root, source_ref)
     _validate_package_manifest(root, source_ref)
-    _validate_readme_blocks(root, fpga_claim_registered)
+    _validate_readme_blocks(
+        root, fpga_claim_registered, bram_claim_registered
+    )
     _validate_results_blocks(root)
     _validate_showcase_binding(root)
     _validate_chart(root)

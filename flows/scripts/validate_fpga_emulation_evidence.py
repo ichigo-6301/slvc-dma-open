@@ -17,6 +17,7 @@ from pathlib import Path
 CLAIM_ID = "slvc_dma_u5_sync_hp0_loopback_board_throughput"
 EVIDENCE_ID = "slvc_dma_u5_sync_hp0_loopback_summary"
 NONCLAIM_ID = "slvc_dma_u5_sync_hp0_loopback_not_transferable"
+BRAM_CLAIM_ID = "slvc_dma_u5_13ch_bram_architecture_comparison"
 README_START = (
     "<!-- fpga-emulation-publication:"
     "slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:start -->"
@@ -32,6 +33,22 @@ RESULTS_START = (
 RESULTS_END = (
     "<!-- fpga-emulation-publication:"
     "slvc_dma_u5_sync_hp0_loopback_board_throughput:end -->"
+)
+BRAM_README_START = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:readme:start -->"
+)
+BRAM_README_END = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:readme:end -->"
+)
+BRAM_RESULTS_START = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:start -->"
+)
+BRAM_RESULTS_END = (
+    "<!-- fpga-bram-publication:"
+    "slvc_dma_u5_13ch_bram_architecture_comparison:end -->"
 )
 SOURCE_REF = "144231a9694b1a6f4698082a333ceb39d7029d08"
 PUBLIC_SOURCE_REF = "efb16bb4456a76f87a1dfcf0dc1c6ab6d40240c7"
@@ -401,7 +418,31 @@ def _verify_git_source_tree(root):
         _fail("production RTL/profile/filelist/constraint tree changed")
 
 
-def _verify_docs(root):
+def _strip_optional_bram_doc_block(text, relative, authorized):
+    if relative in (Path("README.md"), Path("README.en.md")):
+        start, end = BRAM_README_START, BRAM_README_END
+    elif relative in (
+            Path("docs/zh-CN/results.md"), Path("docs/en/results.md"),
+            Path("docs/zh-CN/fpga_implementation.md"),
+            Path("docs/en/fpga_implementation.md")):
+        start, end = BRAM_RESULTS_START, BRAM_RESULTS_END
+    else:
+        return text
+    pattern = re.compile(
+        r"(?ms)^" + re.escape(start) + r"\n.*?^" + re.escape(end) + r"\n?"
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) > 1 or text.count(start) != len(matches) or text.count(end) != len(matches):
+        _fail("{} optional FPGA BRAM publication block mismatch".format(relative))
+    if not matches:
+        return text
+    if not authorized:
+        _fail("{} contains an FPGA BRAM block without its claim".format(relative))
+    match = matches[0]
+    return text[:match.start()] + text[match.end():]
+
+
+def _verify_docs(root, bram_claim_registered):
     files = {
         Path("README.md"): ("单次 FPGA 板级观测", "155.872 MB/s"),
         Path("README.en.md"): ("Single FPGA board observation", "155.872 MB/s"),
@@ -413,6 +454,9 @@ def _verify_docs(root):
     marker = "<!-- claim:{} maturity:partial -->".format(CLAIM_ID)
     for relative, tokens in files.items():
         text = _read_text(root / relative)
+        text = _strip_optional_bram_doc_block(
+            text, relative, bram_claim_registered
+        )
         for token in tokens:
             if token not in text:
                 _fail("{} is missing {}".format(relative, token))
@@ -445,13 +489,16 @@ def _verify_docs(root):
         if prefix != expected_prefix or suffix != expected_suffix:
             _fail("{} FPGA publication position mismatch".format(relative))
     for relative, expected in EXPECTED_FPGA_IMPLEMENTATION_SHA256.items():
-        if _sha256(root / relative) != expected:
+        text = _strip_optional_bram_doc_block(
+            _read_text(root / relative), relative, bram_claim_registered
+        )
+        if hashlib.sha256(text.encode("utf-8")).hexdigest() != expected:
             _fail("{} fixed FPGA implementation document mismatch".format(
                 relative
             ))
 
 
-def _verify_unpublished_docs(root):
+def _verify_unpublished_docs(root, bram_claim_registered):
     for relative, start, end in (
             (Path("README.md"), README_START, README_END),
             (Path("README.en.md"), README_START, README_END),
@@ -463,7 +510,10 @@ def _verify_unpublished_docs(root):
                 relative
             ))
     for relative, expected in UNPUBLISHED_FPGA_IMPLEMENTATION_SHA256.items():
-        if _sha256(root / relative) != expected:
+        text = _strip_optional_bram_doc_block(
+            _read_text(root / relative), relative, bram_claim_registered
+        )
+        if hashlib.sha256(text.encode("utf-8")).hexdigest() != expected:
             _fail("{} modifies protected unpublished FPGA documentation".format(
                 relative
             ))
@@ -475,6 +525,7 @@ def validate(root, check_git_identity=True):
     evidence_text = _read_text(root / EVIDENCE_REL)
     nonclaims_text = _read_text(root / NONCLAIMS_REL)
     claim_present = "  - id: {}\n".format(CLAIM_ID) in claims_text
+    bram_claim_registered = "  - id: {}\n".format(BRAM_CLAIM_ID) in claims_text
     payload_present = any((root / path).exists() for path in (
         PACKAGE_REL, SUMMARY_REL, BENCHMARK_REL,
     ))
@@ -485,7 +536,7 @@ def validate(root, check_git_identity=True):
     if not claim_present:
         if payload_present or related_present:
             _fail("FPGA evidence payload exists without its registered claim")
-        _verify_unpublished_docs(root)
+        _verify_unpublished_docs(root, bram_claim_registered)
         return "FPGA_EMULATION_EVIDENCE_NOT_PUBLISHED"
 
     _require_record(
@@ -591,7 +642,7 @@ def validate(root, check_git_identity=True):
         if path.suffix.lower() in (".md", ".txt", ".json", ".csv", ".diff", ".c", ".h"):
             _verify_sensitive_text(path.relative_to(root), _read_text(path))
 
-    _verify_docs(root)
+    _verify_docs(root, bram_claim_registered)
     if check_git_identity:
         _verify_git_source_tree(root)
     return "FPGA_EMULATION_EVIDENCE_PASS"

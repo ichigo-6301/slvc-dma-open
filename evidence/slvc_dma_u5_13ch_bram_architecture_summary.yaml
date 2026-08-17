@@ -1,0 +1,20 @@
+kind: evidence_summary
+schema_version: 1.0.0
+id: slvc_dma_u5_13ch_bram_architecture_summary
+claim_id: slvc_dma_u5_13ch_bram_architecture_comparison
+profile: slvc_dma_u5_13rx13tx_sync_fpga_bram
+classification: FPGA_VIVADO_2018_3_RESOURCE_COMPARISON
+status: partial
+source_ref: 144231a9694b1a6f4698082a333ceb39d7029d08
+tool: Vivado 2018.3 build 2405991
+device: xc7z100ffg900-2
+numeric_authority: false
+authority: evidence/fpga_resources/u5_13ch_bram_architecture/resources.csv
+headline:
+  slvc_bram_tiles: 45.5
+  independent_payload_fifo_tiles: 97.5
+  reduction_percent: 53.333
+  ideal_packed_bank_tiles: 28.5
+scope: resource-budget comparison
+resume_eligible: false
+public: true

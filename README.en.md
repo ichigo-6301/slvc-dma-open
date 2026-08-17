@@ -93,6 +93,10 @@ Verified quantitative results are separated into three non-transferable scopes: 
 | Fixed profile | Verified fixed point | Evidence | Boundary |
 | --- | --- | --- | --- |
 | Frozen Core FPGA OOC | `frame_dma_wrapper` completed Vivado 2018.3 routed OOC at 200 MHz on XC7Z100 | [FPGA summary](evidence/slvc_dma_v1_ooc_200m_summary.yaml) | Excludes the UDP adapter; not a bitstream, board timing, or throughput result |
+<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:readme:start -->
+<!-- claim:slvc_dma_u5_13ch_bram_architecture_comparison maturity:partial -->
+| U5 13-channel BRAM architecture | The current complete SLVC wrapper uses `45.5` BRAM tiles versus `97.5` tiles for thirteen independent shallow-wide FIFO instances, a `53.333%` reduction | [BRAM Evidence](evidence/slvc_dma_u5_13ch_bram_architecture_summary.yaml) | Bounded resource comparison; retains 16 physical Fixed slots and shared capacity, remains `partial`, and is not resume-ready |
+<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:readme:end -->
 | RX Memory development OOC | Same-clock512, Async64, and Async512 completed Vivado 2018.3 routed OOC at 200 MHz; Async64 also has a separate Vivado 2022.2 point | [Profile summary](evidence/slvc_dma_rx_payload_cdc_fpga_ooc_summary.yaml) · [Async64 summary](evidence/slvc_dma_async64_vivado_2022_2_ooc_summary.yaml) | Development OOC; not complete DMA or a board implementation |
 | C2B4 register-expanded ASIC | 550 MHz DC handoff and 450 MHz OpenROAD/OpenRCX/PT internal closure | [C2B4 summary](evidence/slvc_dma_c2b4_n45_register_postroute_summary.yaml) | Two-channel RX512 subsystem; not Fmax, MMMC/OCV, or signoff |
 | SRAM A5 research | One-macro clock-delivery canary verified; full C4B4 remains blocked by proxy minimum-pulse checks | [A5 summary](evidence/slvc_dma_sram_a5_development_summary.yaml) | `partial/blocked`; no C4B4 SRAM DC/P&R/PT result |

@@ -349,3 +349,19 @@ claims:
     caveat: "Verified RTL simulation only; not FPGA/HP0 board throughput, DDR peak, Fmax, Same-clock512/Async512 64 B/cycle, or ASIC evidence."
     resume_eligible: false
     public: true
+  - id: slvc_dma_u5_13ch_bram_architecture_comparison
+    profile: slvc_dma_u5_13rx13tx_sync_fpga_bram
+    statement: "In Vivado 2018.3 synthesis on xc7z100ffg900-2, the current U5 SLVC wrapper used 45.5 BRAM tiles versus 97.5 tiles for thirteen independent 512-bit by 128-beat payload FIFOs, a 53.333 percent reduction against that shallow-wide FIFO baseline."
+    metric: fpga_bram_tiles_vs_independent_payload_fifos
+    value: 53.333
+    unit: percent BRAM tile reduction
+    benchmark: SLVC U5 wrapper versus 13 independent 512-bit by 128-beat payload FIFOs
+    configuration: "Vivado 2018.3; xc7z100ffg900-2; DMA_MAX_CH=16; 13 RX/13 TX active; 512-bit stream; 64-bit HP0; synchronous 100 MHz board profile"
+    source_ref: 144231a9694b1a6f4698082a333ceb39d7029d08
+    tool: Vivado 2018.3
+    evidence:
+      - slvc_dma_u5_13ch_bram_architecture_summary
+    status: partial
+    caveat: "Resource-budget comparison only. The current implementation retains the complete Fixed bank and adds Shared Pool; it does not beat the ideal packed-bank storage lower bound and is not functionally equivalent to MCDMA plus FIFOs."
+    resume_eligible: false
+    public: true

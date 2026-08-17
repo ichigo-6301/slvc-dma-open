@@ -76,6 +76,28 @@ Async64 发出 8,192 个 16-beat burst，并观察到 8,192 个 planner bubble c
 
 三组 routed OOC 的 TNS/THS 均为 0。Optional UDP adapter 不在 `frame_dma_wrapper` 内，因此这些 core 资源不包含 adapter logic。
 
+## U5 13通道 BRAM 架构对比
+
+<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:start -->
+<!-- claim:slvc_dma_u5_13ch_bram_architecture_comparison maturity:partial -->
+
+Vivado 2018.3 在同一 `xc7z100ffg900-2` 上得到以下综合阶段 BRAM 计数。主比较固定为当前 U5 wrapper 与 13 路、每路 8 KiB 的 512-bit payload FIFO；`BRAM tiles = RAMB36 + RAMB18 / 2`。
+
+| 配置 | RAMB36 | RAMB18 | BRAM tiles | 解释 |
+| --- | ---: | ---: | ---: | --- |
+| 当前完整 SLVC wrapper | 44 | 3 | 45.5 | 16 个物理 Fixed slot、共享容量及完整 wrapper |
+| 13 路独立 payload FIFO | 91 | 13 | 97.5 | 每路 `512 x 128`，只含 payload |
+| 13 路独立 AXIS FIFO | 104 | 13 | 110.5 | 每路 `577 x 128`，含 data/keep/last |
+| 13 路集中打包 payload bank | 28 | 1 | 28.5 | 理想存储下界，不含逐通道 FIFO 控制 |
+| MCDMA 13+13，512/512 | 25 | 6 | 28.0 | 对 MCDMA 有利的 OOC 下界 |
+
+SLVC 对独立 payload FIFO 的 BRAM tile 减少为 `53.333%`，证明的是避免逐通道浅宽存储映射碎片的收益。集中打包下界低于当前 wrapper，因此不能据此把下降单独归因于共享容量。MCDMA 与 FIFO 的组合仅作资源预算对比：Vivado 2018.3 不支持本板 `64-bit AXI memory / 512-bit AXIS` 的同配置 MCDMA，成功的 512/512 点也不包含 SHDR64、准入、Fixed/Shared ownership 和 CQ 合同。
+
+证据：[summary](../../evidence/slvc_dma_u5_13ch_bram_architecture_summary.yaml) · [原始资源计数](../../evidence/fpga_resources/u5_13ch_bram_architecture/resources.csv) · [派生比较](../../evidence/fpga_resources/u5_13ch_bram_architecture/comparisons.csv)
+
+该结果状态为 `partial`、`resume_eligible: false`；不包含吞吐、Fmax、完整 FPGA 面积优势、任意无限反压无损或 ASIC PPA 结论。
+<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:end -->
+
 ## ASIC C2B4 Register-Expanded
 
 <!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->

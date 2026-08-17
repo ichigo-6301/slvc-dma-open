@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "evidence_id": "slvc_dma_u5_13ch_bram_architecture_summary",
+  "claim_id": "slvc_dma_u5_13ch_bram_architecture_comparison",
+  "classification": "FPGA_VIVADO_2018_3_RESOURCE_COMPARISON",
+  "status": "partial",
+  "source_ref": "144231a9694b1a6f4698082a333ceb39d7029d08",
+  "tool": "Vivado 2018.3 build 2405991",
+  "device": "xc7z100ffg900-2",
+  "numeric_authority": "resources.csv",
+  "derived_results": "comparisons.csv",
+  "resume_eligible": false,
+  "public": true,
+  "files": [
+    "README.md",
+    "artifacts.csv",
+    "comparisons.csv",
+    "manifest.json",
+    "mcdma_owners.csv",
+    "resources.csv"
+  ]
+}

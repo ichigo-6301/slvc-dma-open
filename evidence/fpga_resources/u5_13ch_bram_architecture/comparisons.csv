@@ -1,0 +1,7 @@
+comparison_id,slvc_tiles,baseline_tiles,reduction_percent,classification
+buffer_vs_13x_payload_fifo,45.5,97.5,53.333,independent-wide-fifo-fragmentation-advantage
+buffer_vs_13x_axis_fifo,45.5,110.5,58.824,independent-wide-fifo-fragmentation-advantage
+buffer_vs_ideal_packed_bank,45.5,28.5,-59.649,no-buffer-only-advantage
+dma_budget_vs_payload_fifo_plus_mcdma512,45.5,125.5,63.745,resource-budget-only
+dma_budget_vs_axis_fifo_plus_mcdma512,45.5,138.5,67.148,resource-budget-only
+dma_budget_vs_packed_bank_plus_mcdma512,45.5,56.5,19.469,resource-budget-only-conservative-lower-bound

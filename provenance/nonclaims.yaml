@@ -115,3 +115,9 @@ nonclaims:
     reason: "The published point is a dual-platform RTL simulation using the bounded HP0_SHARED service model; FPGA emulation remains pending and not measured."
     status: not_claimed
     public: true
+  - id: slvc_dma_u5_bram_architecture_not_equivalent
+    profile: slvc_dma_u5_13rx13tx_sync_fpga_bram
+    statement: "Shared Pool alone, complete functional equivalence to MCDMA, exact MCDMA internal FIFO depth, total FPGA area superiority, and lossless operation under arbitrary unbounded backpressure are not claimed."
+    reason: "The measured U5 build retains sixteen 8 KiB Fixed payload banks and adds a 4 KiB Shared Pool. The independent FIFO and MCDMA runs are bounded synthesis baselines, while the ideal packed bank is a storage-only lower bound."
+    status: not_claimed
+    public: true

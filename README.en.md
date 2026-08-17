@@ -98,7 +98,7 @@ Verified quantitative results are separated into three non-transferable scopes: 
 | SRAM A5 research | One-macro clock-delivery canary verified; full C4B4 remains blocked by proxy minimum-pulse checks | [A5 summary](evidence/slvc_dma_sram_a5_development_summary.yaml) | `partial/blocked`; no C4B4 SRAM DC/P&R/PT result |
 <!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:start -->
 <!-- claim:slvc_dma_u5_sync_hp0_loopback_board_throughput maturity:partial -->
-**Single FPGA board observation:** On XC7Z100 with 13 RX/13 TX contexts, a 100 MHz synchronous PL-local TX0-to-RX0 loopback moved 1024 x 4 KiB through the existing 64-bit HP0 port. SDK debugger counters give `1.559 MB/s/MHz`, `155.872 MB/s`, and `1.247 Gb/s`. This is `FPGA_DEBUGGER_CAPTURED_SINGLE_RUN`, without repeatability statistics or resume eligibility; see the [evidence and boundaries](evidence/fpga_emulation/u5_sync_hp0_loopback/README.md).
+**Single FPGA board observation:** On XC7Z100 with 13 RX/13 TX contexts, a 100 MHz synchronous PL-local TX0-to-RX0 loopback moved 1024 x 4 KiB through the existing 64-bit HP0 port. Operator-transcribed SDK debugger counters give a post-start completion-window rate of `1.559 MB/s/MHz`, `155.872 MB/s`, and `1.247 Gb/s`. This is `FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN`, without launch latency, repeatability statistics, or resume eligibility; see the [evidence and boundaries](evidence/fpga_emulation/u5_sync_hp0_loopback/README.md).
 <!-- fpga-emulation-publication:slvc_dma_u5_sync_hp0_loopback_board_throughput:readme:end -->
 
 <a id="research-branches"></a>

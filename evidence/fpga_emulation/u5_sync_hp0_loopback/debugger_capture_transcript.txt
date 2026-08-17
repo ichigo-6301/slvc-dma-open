@@ -1,0 +1,17 @@
+SLVC DMA U5 SDK DEBUGGER VARIABLE TRANSCRIPT
+classification=OPERATOR_TRANSCRIBED_DEBUGGER_FIELDS
+run_id=u5_sync_hp0_loopback_1024x4k_20260817_062748_cst
+capture_context=SDK Variables view at report_throughput_window breakpoint
+capture_stage=after timing and correctness checks
+retained_screenshot_or_memory_export=false
+
+field=payload_bytes type=u32 address=0x00110750 hex=0x00400000 decimal=4194304
+field=ticks type=XTime address=0x00110748 hex=0x000000000088dd3f decimal=8969535
+field=pl_cycles type=u64 address=0x00110770 hex=0x0000000000290f2c decimal=2690860
+field=score_milli type=u64 address=0x00110768 hex=0x0000000000000616 decimal=1558
+field=mbps_milli type=u64 address=0x00110760 hex=0x00000000000260e0 decimal=155872
+field=gbps_milli type=u64 address=0x00110758 hex=0x00000000000004de decimal=1246
+
+This is the operator-supplied text transcription retained from the SDK
+debugger. No independent screenshot, session export, or memory dump was
+retained, so the publication is not classified as an automated capture.

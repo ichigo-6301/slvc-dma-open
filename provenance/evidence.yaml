@@ -138,10 +138,10 @@ evidence:
     public: true
   - id: slvc_dma_u5_sync_hp0_loopback_summary
     path: evidence/slvc_dma_u5_sync_hp0_loopback_summary.yaml
-    type: fpga_debugger_captured_single_run
+    type: fpga_debugger_transcribed_single_run
     source_ref: 144231a9694b1a6f4698082a333ceb39d7029d08
     tool: Vivado/SDK 2018.3
     claims:
       - slvc_dma_u5_sync_hp0_loopback_board_throughput
-    sha256: cf4cec3cef74a4be2bc77c6df9a1570d68641e0cc31e6c3b868c9833dd80e131
+    sha256: c02bef90c8e92e3c6e065b01ed70bf27ab2eedcea6a9e5c9433dfb2c89d4d004
     public: true

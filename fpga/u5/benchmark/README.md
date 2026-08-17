@@ -1,7 +1,8 @@
 # U5 Synchronous HP0 Loopback Benchmark
 
-This directory contains the small standalone SDK workload used for the bounded
-U5 FPGA observation. It is not a Vivado project and does not include a
+This directory contains an operator-supplied source-only reproduction reference
+for the bounded U5 FPGA observation. It is not a published SDK application or
+Vivado project and does not include a
 bitstream, ELF, HDF, BSP, or generated SDK workspace.
 
 ## As-Run Configuration
@@ -15,14 +16,14 @@ bitstream, ELF, HDF, BSP, or generated SDK workspace.
 - `DMA_THROUGHPUT_FRAME_COUNT=1024U`
 - 4096 bytes per frame
 
-The as-run [`helloworld.c`](helloworld.c) is byte-identical to the source
-provided after the board run. Relative to the connectivity source, only the
-test mode and frame-count controls changed. The MMIO diagnostic and register
-header files are unchanged support sources from the same SDK application.
+The [`helloworld.c`](helloworld.c) identity matches the source supplied after
+the board run. Relative to the supplied connectivity source, only the test mode
+and frame-count controls changed. No retained build manifest cryptographically
+links this reference source to the private ELF or bitstream.
 
-## Measurement Window
+## Measurement Window In The Reference Source
 
-The hardware end-to-end timer starts after the descriptor-start AXI4-Lite
+The timer starts after the descriptor-start AXI4-Lite
 write returns and stops when software observes the final RX CQE owner. Memory
 preparation and final payload comparison are outside the timer. Before calling
 the reporting function, the program checks all TX/RX CQEs, descriptor
@@ -32,7 +33,7 @@ counters.
 The board's UART intermittently omitted the final report. The published raw
 counters were therefore read in the SDK debugger at the reporting function,
 after the timer and correctness gates had completed. This capture method is
-classified as `FPGA_DEBUGGER_CAPTURED_SINGLE_RUN`; it is not an automated UART
+classified as `FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN`; it is not an automated UART
 transcript or a repeatability study.
 
 See the [evidence package](../../../evidence/fpga_emulation/u5_sync_hp0_loopback/README.md)

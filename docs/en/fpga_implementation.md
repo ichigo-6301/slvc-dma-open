@@ -16,6 +16,7 @@ Xilinx IP, mutate a BD, or include device libraries or board projects.
 | --- | --- | --- |
 | Source / RTL simulation / synthesis / implementation / bitstream | verified | Vivado 2018.3, XC7Z100, 13 RX/13 TX, synchronous PL-local loopback |
 | Timing | partial | Fixed 100 MHz operating point; no Fmax claim |
-| Board smoke / workload validation | partial | `FPGA_DEBUGGER_CAPTURED_SINGLE_RUN`; 1024 x 4 KiB; no repeatability statistics |
+| Board smoke / workload validation | partial | `FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN`; post-start completion window; 1024 x 4 KiB; no repeatability statistics |
+| Source-to-binary traceability | not retained | Public reproduction source is not cryptographically linked to the private ELF or bitstream |
 
-The public repository retains byte-identical SDK source, a sanitized startup excerpt, raw debugger counters, derivation formulas, and external bitstream/ELF hashes. It does not publish the bitstream, ELF, complete SDK log, or JTAG identity. [Read the evidence package](../../evidence/fpga_emulation/u5_sync_hp0_loopback/README.md).
+The public repository retains a source-only reproduction reference, an operator-transcribed debugger field record, a sanitized startup excerpt, derivation formulas, and external bitstream/ELF hashes. It does not claim a retained source-to-binary build chain and does not publish the bitstream, ELF, complete SDK log, or JTAG identity. [Read the evidence package](../../evidence/fpga_emulation/u5_sync_hp0_loopback/README.md).

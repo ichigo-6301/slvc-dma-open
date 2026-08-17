@@ -1,7 +1,7 @@
 {
   "schema": "slvc_dma_u5_fpga_observation_v1",
   "run_id": "u5_sync_hp0_loopback_1024x4k_20260817_062748_cst",
-  "classification": "FPGA_DEBUGGER_CAPTURED_SINGLE_RUN",
+  "classification": "FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN",
   "claim_status": "partial",
   "numeric_authority": "evidence/fpga_emulation/u5_sync_hp0_loopback/raw_counters.csv",
   "derived_metrics": "evidence/fpga_emulation/u5_sync_hp0_loopback/derived_metrics.csv",
@@ -25,7 +25,9 @@
     "timer_stop": "final RX CQE owner observed by software"
   },
   "capture": {
-    "method": "SDK debugger variable read after report breakpoint",
+    "method": "operator-transcribed SDK debugger variables after report breakpoint",
+    "record": "evidence/fpga_emulation/u5_sync_hp0_loopback/debugger_capture_transcript.txt",
+    "retained_screenshot_or_memory_export": false,
     "correctness_gate": "passed_before_report_call",
     "debugger_intervention_in_measurement_window": false,
     "uart_tail_complete": false,
@@ -55,6 +57,8 @@
     "fmax": false,
     "sameclock512_async512_64_bytes_per_cycle": false,
     "asic_result": false,
-    "statistical_repeatability": false
+    "statistical_repeatability": false,
+    "launch_write_latency_included": false,
+    "source_to_binary_build_traceability": false
   }
 }

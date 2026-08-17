@@ -17,7 +17,11 @@ or ASIC physical signoff.
 
 It excludes Unified Lite/P0 pilot RTL, board designs, generated Xilinx IP,
 SDK applications, historical experiment reports, technology libraries, PDK
-payloads, credentials, and private development history. The optional MCF
+payloads, credentials, and private development history. The only SDK-related
+exception is the fixed source-only reproduction reference under
+`fpga/u5/benchmark`; it contains no BSP, generated workspace, ELF, or bitstream
+and is not claimed to be cryptographically linked to the retained private
+binaries. The optional MCF
 endpoint is supplied as an upstream shared-link companion; it is not part of
 the `frame_dma_wrapper` 200 MHz OOC timing claim. The UDP adapter is likewise
 outside that FPGA claim, and no standard-cell library or generated ASIC output

@@ -41,7 +41,7 @@ BENCHMARK_REL = Path("fpga/u5/benchmark")
 CLAIMS_REL = Path("provenance/claims.yaml")
 EVIDENCE_REL = Path("provenance/evidence.yaml")
 NONCLAIMS_REL = Path("provenance/nonclaims.yaml")
-SUMMARY_SHA256 = "cf4cec3cef74a4be2bc77c6df9a1570d68641e0cc31e6c3b868c9833dd80e131"
+SUMMARY_SHA256 = "c02bef90c8e92e3c6e065b01ed70bf27ab2eedcea6a9e5c9433dfb2c89d4d004"
 PROTECTED_SOURCE_TREE_SHA256 = (
     "acc99475ff2463dcd5302528282dcff906b3f68c8fc57e598a122115c8ab7901"
 )
@@ -50,10 +50,11 @@ CLAIM_FIXED = {
     "profile": "slvc_dma_u5_sync_hp0_loopback_fpga",
     "statement": (
         "In one 1024 x 4 KiB U5 synchronous TX0-to-RX0 loopback run at "
-        "100 MHz, debugger-captured hardware end-to-end payload throughput "
-        "was 1.558722 MB/s/MHz (155.872225 MB/s, 1.246978 Gb/s)."
+        "100 MHz, operator-transcribed debugger counters imply a post-start-"
+        "write-return completion-window payload rate of 1.558722 MB/s/MHz "
+        "(155.872225 MB/s, 1.246978 Gb/s)."
     ),
-    "metric": "debugger_captured_end_to_end_payload_throughput",
+    "metric": "debugger_transcribed_post_start_completion_payload_rate",
     "value": "1.558722",
     "unit": "MB/s/MHz",
     "benchmark": "single 1024 x 4096-byte U5 TX0-to-RX0 loopback observation",
@@ -66,16 +67,18 @@ CLAIM_FIXED = {
     "evidence": [EVIDENCE_ID],
     "status": "partial",
     "caveat": (
-        "FPGA_DEBUGGER_CAPTURED_SINGLE_RUN; no automated UART transcript, "
-        "steady-state capture, repeatability statistics, Async64 CDC board "
-        "result, DDR peak, Fmax, 64 B/cycle Writer result, or ASIC result."
+        "FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN; launch latency, independent "
+        "screenshot/memory export, source-to-binary build traceability, "
+        "automated UART transcript, steady-state capture, repeatability "
+        "statistics, Async64 CDC board result, DDR peak, Fmax, 64 B/cycle "
+        "Writer result, and ASIC result are not included."
     ),
     "resume_eligible": False,
     "public": True,
 }
 EVIDENCE_FIXED = {
     "path": str(SUMMARY_REL).replace("\\", "/"),
-    "type": "fpga_debugger_captured_single_run",
+    "type": "fpga_debugger_transcribed_single_run",
     "source_ref": SOURCE_REF,
     "tool": "Vivado/SDK 2018.3",
     "claims": [CLAIM_ID],
@@ -85,21 +88,25 @@ EVIDENCE_FIXED = {
 NONCLAIM_FIXED = {
     "profile": "slvc_dma_u5_sync_hp0_loopback_fpga",
     "statement": (
-        "This single U5 observation is not Async64 CDC board testing, Aurora "
-        "performance, DDR peak, FPGA Fmax, the 64 B/cycle Writer result, ASIC "
-        "evidence, or a statistical repeatability result."
+        "This single U5 observation is not launch-to-completion hardware end-"
+        "to-end throughput, an independently retained debugger capture, "
+        "source-to-binary build traceability, Async64 CDC board testing, "
+        "Aurora performance, DDR peak, FPGA Fmax, the 64 B/cycle Writer "
+        "result, ASIC evidence, or a statistical repeatability result."
     ),
     "reason": (
         "The measured profile is a 13 RX/13 TX, 100 MHz synchronous PL-local "
-        "loopback over the existing 64-bit HP0 port, captured once in the SDK "
-        "debugger after the timing window and correctness gates."
+        "loopback over the existing 64-bit HP0 port. The timer starts after "
+        "the descriptor-start write returns, and the values were transcribed "
+        "once from the SDK debugger after the timing window and correctness "
+        "gates."
     ),
     "status": "not_claimed",
     "public": True,
 }
 
 EXPECTED_PACKAGE_FILES = frozenset({
-    "README.md",
+    "README.md", "debugger_capture_transcript.txt",
     "artifacts.csv",
     "derived_metrics.csv",
     "manifest.json",
@@ -113,15 +120,16 @@ EXPECTED_BENCHMARK_FILES = frozenset({
     "dma_mmio_diag.h", "helloworld.c",
 })
 FIXED_FILE_SHA256 = {
-    PACKAGE_REL / "README.md": "96e096ecec4571398b62c0d3698b00e468bc897d3d645c610b39891734646199",
-    PACKAGE_REL / "artifacts.csv": "f8683d60c9405b7862a2014462f5a9f188b84640d1f9b48ff1caa5eafcf7d0f2",
-    PACKAGE_REL / "derived_metrics.csv": "ceca6e73f44be035c1f7a22bf17ca7a0ba3e13655840767d852fb3a6609f47f1",
-    PACKAGE_REL / "manifest.json": "721a1138d1150537be48fa3eb6fcd20291e73893801f219051306ff1b97d8d5d",
-    PACKAGE_REL / "raw_counters.csv": "b971a7f7a2fcda8978d736ecbb136f1c77743ec775ad51502a397abdb813d13a",
+    PACKAGE_REL / "README.md": "1a9d9e279e0ebdec2b0977d667be6ea14dff421451dea5fa0a8045041094fdb8",
+    PACKAGE_REL / "artifacts.csv": "1efa89689bfcd11dfcc888f41b4202ed175ffa9a328d640f55b5ab89fb91da64",
+    PACKAGE_REL / "debugger_capture_transcript.txt": "379c2d58970bba2df1e80be6793c8cbe29c516f7be842aa297ffe1caa16c2d03",
+    PACKAGE_REL / "derived_metrics.csv": "8c64642d7b53f7e790828d84891ae5d269b55ca4d0028a2a1372b3607b8550e2",
+    PACKAGE_REL / "manifest.json": "11edf278fd477a02951c576e80b013692901097b160369a3e19099ed51462ca7",
+    PACKAGE_REL / "raw_counters.csv": "ffb63449019d1bb3ff04a145ce553e842a67335d3e5753c849adadc430be8a6a",
     PACKAGE_REL / "sanitized_sdk_log.txt": "329c4d2e251e40a9671ec2473ff467fa8641f596af6981eb728c2a008720f3b0",
     PACKAGE_REL / "source_delta.diff": "c48c5b8e27b2caf22851c1a2630f1434b878d922ed44c06592b4cdb982fece59",
-    PACKAGE_REL / "source_identity.json": "daeb0b95a364e397b20ee48c27dd615cda3c3b0492fb533ac9595b2387732a8e",
-    BENCHMARK_REL / "README.md": "96a8104e0c085d2651a8998446a28c1c3b571caf6e1496a94bbdd4c995b15a2e",
+    PACKAGE_REL / "source_identity.json": "2341a65aa61a994263951fba9e1cb1890558dc982fa41c6e0a2e8cd3dd214d94",
+    BENCHMARK_REL / "README.md": "c6fc52d4cd249afb8f70e27ae5891fc3a9557f3bf993063cd8bacd18dcff80e3",
     BENCHMARK_REL / "helloworld.c": "48f94f9dd87223bbfd1cd58558f7380bdc5f521d36373b5f24cc48b4d351f902",
     BENCHMARK_REL / "dma_loopback_regs.h": "2e78bcae0b4da9065379a3c0612b333abd875c016f2b2d76b0e02ab6d3102467",
     BENCHMARK_REL / "dma_mmio_diag.c": "35954f27b38b8dfce9a8a85e94ab3addcf35960a49d5a97f683bd8288ab5bc8e",
@@ -129,10 +137,10 @@ FIXED_FILE_SHA256 = {
     SUMMARY_REL: SUMMARY_SHA256,
 }
 EXPECTED_DOC_BLOCK_SHA256 = {
-    Path("README.md"): "4d4cdcdc0d7e804efef3ab4d7c104717da667338e888c68d957f6d7458bb9294",
-    Path("README.en.md"): "416f15ff8e4308940127451ebb1a5900fee290310b6b22ca4e960847d3c06c7e",
-    Path("docs/zh-CN/results.md"): "12afebcc376a2883470c3be127be42b1a44632d0ea5b6365579e3b35cae2928c",
-    Path("docs/en/results.md"): "cb301b87ed029684f2ef11370e3328d9bc74d6be10be2d86aeebaa104c10f378",
+    Path("README.md"): "5ebed4e9d69e409e3f76c52f476c994e78e1145f7018c0f3a88193e196b918b7",
+    Path("README.en.md"): "ba1ab43421fc8415cac07c8e2dca87e214dc57cc7b2d078516510083e1296777",
+    Path("docs/zh-CN/results.md"): "eb4b0c5eb402b371f825a9d5caa7d596830dfc39d4daff14ed3cf3c716a69c81",
+    Path("docs/en/results.md"): "bcb6f4e007a47670e0d018da1524cc6df7584221ebe6106f76498c0edeca6183",
 }
 EXPECTED_DOC_LAYOUT_SHA256 = {
     Path("README.md"): (
@@ -154,10 +162,10 @@ EXPECTED_DOC_LAYOUT_SHA256 = {
 }
 EXPECTED_FPGA_IMPLEMENTATION_SHA256 = {
     Path("docs/zh-CN/fpga_implementation.md"): (
-        "01cae1ad6adb75ecbdbf941315514ac87bd8fd014eda1653129a9306e9162cb7"
+        "d90d439277bc920ce2750a6a86376ce57f44634adadc08c7f2e6fe75951a42cf"
     ),
     Path("docs/en/fpga_implementation.md"): (
-        "bea9ffbe8821112df75441639f605d5b6e1edf49ed4a4c6eeaddbb66115b7c82"
+        "a687c179c11819c03a11035f4bdc35fc52ddfa6fb10ac9703af4bf58ee0584ef"
     ),
 }
 UNPUBLISHED_FPGA_IMPLEMENTATION_SHA256 = {
@@ -171,14 +179,14 @@ UNPUBLISHED_FPGA_IMPLEMENTATION_SHA256 = {
 
 RAW_ROW = {
     "run_id": "u5_sync_hp0_loopback_1024x4k_20260817_062748_cst",
-    "classification": "FPGA_DEBUGGER_CAPTURED_SINGLE_RUN",
+    "classification": "FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN",
     "frame_count": "1024",
     "frame_bytes": "4096",
     "payload_bytes": "4194304",
     "xtime_ticks": "8969535",
     "counts_per_second": "333333343",
     "configured_pl_clock_hz": "100000000",
-    "equivalent_pl_cycles": "2690860",
+    "rounded_equivalent_pl_cycles": "2690860",
     "score_milli": "1558",
     "mbps_milli": "155872",
     "gbps_milli": "1246",
@@ -186,6 +194,7 @@ RAW_ROW = {
     "correctness_gate": "passed_before_report_call",
     "debugger_breakpoint_after_timing": "true",
     "uart_capture_status": "tail_incomplete",
+    "capture_record": "debugger_capture_transcript.txt",
 }
 DERIVED_VALUES = {
     "elapsed_seconds": ("0.026908604", "seconds"),
@@ -193,13 +202,14 @@ DERIVED_VALUES = {
     "mb_per_s_per_mhz": ("1.558722", "MB/s/MHz"),
     "mb_per_s_at_100mhz": ("155.872225", "MB/s"),
     "gbits_per_s_at_100mhz": ("1.246978", "Gb/s"),
-    "hp0_shared_model_efficiency": ("38.968062", "percent"),
+    "hp0_shared_model_efficiency": ("38.968056", "percent"),
 }
 EXTERNAL_ARTIFACTS = {
     "u5_bitstream": ("7167253", "0aff10f9479ae96b99bb525b42f486d8dd4904b2b88e8057080abf375b7645fa"),
     "u5_throughput_elf": ("276188", "4c1cfd143641d88e405c7d6384a9f17f629f0416fda98c3aa37e76730b174438"),
     "u5_original_sdk_log": ("112593", "7059bf95c533e4ee0cc47c1c018bde70246621a1c79071d8f9ecb03e83777ec4"),
-    "u5_as_run_helloworld": ("34607", "48f94f9dd87223bbfd1cd58558f7380bdc5f521d36373b5f24cc48b4d351f902"),
+    "u5_reference_helloworld": ("34607", "48f94f9dd87223bbfd1cd58558f7380bdc5f521d36373b5f24cc48b4d351f902"),
+    "u5_debugger_transcript": ("1026", "379c2d58970bba2df1e80be6793c8cbe29c516f7be842aa297ffe1caa16c2d03"),
 }
 SENSITIVE_PATTERNS = (
     re.compile(r"[A-Za-z]:[\\/]"),
@@ -319,13 +329,13 @@ def derive_metrics(raw):
     pl_hz = _decimal(raw["configured_pl_clock_hz"], "configured_pl_clock_hz")
     if min(payload, ticks, counts, pl_hz) <= 0:
         _fail("throughput counters must be positive")
-    equivalent_cycles = int(
+    rounded_equivalent_cycles = int(
         (int(ticks) * int(pl_hz) + int(counts) // 2) // int(counts)
     )
-    if equivalent_cycles != int(raw["equivalent_pl_cycles"]):
+    if rounded_equivalent_cycles != int(raw["rounded_equivalent_pl_cycles"]):
         _fail("equivalent PL cycle count mismatch")
     elapsed = ticks / counts
-    rate = payload / Decimal(equivalent_cycles)
+    rate = payload * counts / ticks / pl_hz
     mbps = payload * counts / ticks / Decimal(1000000)
     gbps = mbps * Decimal("0.008")
     efficiency = rate / Decimal(4) * Decimal(100)
@@ -342,14 +352,16 @@ def derive_metrics(raw):
 
 def _verify_source_control_flow(text):
     if text.count("#define DMA_TEST_MODE DMA_TEST_THROUGHPUT") != 1:
-        _fail("as-run test mode mismatch")
+        _fail("reference source test mode mismatch")
     if text.count("#define DMA_THROUGHPUT_FRAME_COUNT 1024U") != 1:
-        _fail("as-run frame-count mismatch")
+        _fail("reference source frame-count mismatch")
     function_start = text.find("static int dma_throughput_phase(")
     if function_start < 0:
-        _fail("as-run source is missing dma_throughput_phase")
+        _fail("reference source is missing dma_throughput_phase")
     text = text[function_start:]
     required = (
+        "dma_write_sync(desc + DMA_TX_DESC_CTRL,",
+        "XTime_GetTime(&start_time);",
         "poll_throughput_cq(frame_count, start_time",
         "wait_descriptor_complete(frame_count)",
         "wait_rx_used(payload_bytes)",
@@ -363,10 +375,10 @@ def _verify_source_control_flow(text):
     for token in required:
         position = text.find(token)
         if position < 0:
-            _fail("as-run source is missing control-flow token: {}".format(token))
+            _fail("reference source is missing control-flow token: {}".format(token))
         positions.append(position)
     if positions != sorted(positions):
-        _fail("as-run correctness/report control-flow order mismatch")
+        _fail("reference source control-flow order mismatch")
 
 
 def _verify_sensitive_text(path, text):
@@ -395,8 +407,8 @@ def _verify_docs(root):
         Path("README.en.md"): ("Single FPGA board observation", "155.872 MB/s"),
         Path("docs/zh-CN/results.md"): ("FPGA 板级单次观测", "1.247 Gb/s"),
         Path("docs/en/results.md"): ("Single FPGA Board Observation", "1.247 Gb/s"),
-        Path("docs/zh-CN/fpga_implementation.md"): ("FPGA_DEBUGGER_CAPTURED_SINGLE_RUN", "partial"),
-        Path("docs/en/fpga_implementation.md"): ("FPGA_DEBUGGER_CAPTURED_SINGLE_RUN", "partial"),
+        Path("docs/zh-CN/fpga_implementation.md"): ("FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN", "not retained"),
+        Path("docs/en/fpga_implementation.md"): ("FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN", "not retained"),
     }
     marker = "<!-- claim:{} maturity:partial -->".format(CLAIM_ID)
     for relative, tokens in files.items():
@@ -506,7 +518,7 @@ def validate(root, check_git_identity=True):
             _fail("fixed FPGA evidence hash mismatch for {}".format(relative))
 
     manifest = json.loads(_read_text(root / PACKAGE_REL / "manifest.json"))
-    if manifest.get("classification") != "FPGA_DEBUGGER_CAPTURED_SINGLE_RUN":
+    if manifest.get("classification") != "FPGA_DEBUGGER_TRANSCRIBED_SINGLE_RUN":
         _fail("FPGA evidence classification mismatch")
     if manifest.get("claim_status") != "partial":
         _fail("single-run claim must remain partial")
@@ -515,7 +527,9 @@ def validate(root, check_git_identity=True):
         _fail("FPGA numeric authority mismatch")
     capture = manifest.get("capture", {})
     if capture != {
-        "method": "SDK debugger variable read after report breakpoint",
+        "method": "operator-transcribed SDK debugger variables after report breakpoint",
+        "record": "evidence/fpga_emulation/u5_sync_hp0_loopback/debugger_capture_transcript.txt",
+        "retained_screenshot_or_memory_export": False,
         "correctness_gate": "passed_before_report_call",
         "debugger_intervention_in_measurement_window": False,
         "uart_tail_complete": False,
@@ -533,7 +547,7 @@ def validate(root, check_git_identity=True):
         _fail("FPGA maturity dimensions are incomplete")
     if maturity.get("fpga_board_smoke") != "partial" or maturity.get(
             "fpga_workload_validation") != "partial":
-        _fail("debugger-captured board maturity must remain partial")
+        _fail("debugger-transcribed board maturity must remain partial")
     boundaries = manifest.get("boundaries", {})
     if not boundaries or any(boundaries.values()):
         _fail("FPGA nonclaim boundaries must all remain false")
@@ -564,8 +578,10 @@ def validate(root, check_git_identity=True):
     if artifacts["u5_bitstream"]["published_payload"] != "false" or artifacts[
             "u5_throughput_elf"]["published_payload"] != "false":
         _fail("bitstream and ELF must remain external")
-    if artifacts["u5_as_run_helloworld"]["published_payload"] != "true":
-        _fail("as-run SDK source must remain public")
+    if artifacts["u5_reference_helloworld"]["published_payload"] != "true":
+        _fail("reference SDK source must remain public")
+    if artifacts["u5_debugger_transcript"]["published_payload"] != "true":
+        _fail("debugger field transcript must remain public")
 
     source_text = _read_text(root / BENCHMARK_REL / "helloworld.c")
     _verify_source_control_flow(source_text)

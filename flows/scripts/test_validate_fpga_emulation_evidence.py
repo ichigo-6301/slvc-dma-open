@@ -19,7 +19,7 @@ class FpgaEvidenceGateTest(unittest.TestCase):
         self.assertEqual("1.558722", actual["mb_per_s_per_mhz"])
         self.assertEqual("155.872225", actual["mb_per_s_at_100mhz"])
         self.assertEqual("1.246978", actual["gbits_per_s_at_100mhz"])
-        self.assertEqual("38.968062", actual["hp0_shared_model_efficiency"])
+        self.assertEqual("38.968056", actual["hp0_shared_model_efficiency"])
 
     def test_zero_ticks_fail_closed(self):
         row = dict(gate.RAW_ROW)
@@ -29,7 +29,7 @@ class FpgaEvidenceGateTest(unittest.TestCase):
 
     def test_equivalent_cycles_are_recomputed(self):
         row = dict(gate.RAW_ROW)
-        row["equivalent_pl_cycles"] = "2690861"
+        row["rounded_equivalent_pl_cycles"] = "2690861"
         with self.assertRaises(gate.EvidenceError):
             gate.derive_metrics(row)
 
@@ -60,6 +60,22 @@ class FpgaEvidenceGateTest(unittest.TestCase):
         broken = text.replace(
             'report_throughput_window("hardware_end_to_end"',
             'report_throughput_window_removed("hardware_end_to_end"',
+        )
+        with self.assertRaises(gate.EvidenceError):
+            gate._verify_source_control_flow(broken)
+
+    def test_source_control_flow_rejects_timer_before_start_write(self):
+        source = (ROOT / gate.BENCHMARK_REL / "helloworld.c")
+        if not source.is_file():
+            self.skipTest("publication benchmark is not present on policy-only ref")
+        text = source.read_text(encoding="utf-8")
+        write_token = "dma_write_sync(desc + DMA_TX_DESC_CTRL,"
+        timer_token = "XTime_GetTime(&start_time);"
+        write_pos = text.index(write_token)
+        timer_pos = text.index(timer_token, write_pos)
+        broken = (
+            text[:write_pos] + timer_token + "\n    " +
+            text[write_pos:timer_pos] + text[timer_pos + len(timer_token):]
         )
         with self.assertRaises(gate.EvidenceError):
             gate._verify_source_control_flow(broken)

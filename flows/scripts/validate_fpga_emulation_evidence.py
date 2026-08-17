@@ -34,6 +34,7 @@ RESULTS_END = (
     "slvc_dma_u5_sync_hp0_loopback_board_throughput:end -->"
 )
 SOURCE_REF = "144231a9694b1a6f4698082a333ceb39d7029d08"
+PUBLIC_SOURCE_REF = "efb16bb4456a76f87a1dfcf0dc1c6ab6d40240c7"
 PACKAGE_REL = Path("evidence/fpga_emulation/u5_sync_hp0_loopback")
 SUMMARY_REL = Path("evidence/slvc_dma_u5_sync_hp0_loopback_summary.yaml")
 BENCHMARK_REL = Path("fpga/u5/benchmark")
@@ -377,7 +378,8 @@ def _verify_sensitive_text(path, text):
 def _verify_git_source_tree(root):
     try:
         data = subprocess.check_output([
-            "git", "ls-tree", "-r", "HEAD", "--", "rtl", "configs",
+            "git", "ls-tree", "-r", PUBLIC_SOURCE_REF, "--",
+            "rtl", "configs",
             "flows/manifests", "flows/constraints", "constraints", "filelists",
         ], cwd=str(root))
     except (OSError, subprocess.CalledProcessError) as error:

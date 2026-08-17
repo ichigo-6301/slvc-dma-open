@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from flows.scripts import validate_fpga_emulation_evidence as gate
 
@@ -41,6 +42,15 @@ class FpgaEvidenceGateTest(unittest.TestCase):
             gate._verify_sensitive_text(
                 Path("log.txt"), "Platform Cable USB II 136202079204c3"
             )
+
+    def test_source_tree_uses_fixed_public_ref(self):
+        with mock.patch.object(
+                gate.subprocess, "check_output", return_value=b"") as command:
+            with self.assertRaises(gate.EvidenceError):
+                gate._verify_git_source_tree(ROOT)
+        args = command.call_args[0][0]
+        self.assertEqual(gate.PUBLIC_SOURCE_REF, args[3])
+        self.assertNotIn("HEAD", args)
 
     def test_source_control_flow_rejects_report_before_checks(self):
         source = (ROOT / gate.BENCHMARK_REL / "helloworld.c")

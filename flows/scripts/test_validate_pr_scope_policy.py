@@ -161,6 +161,15 @@ class TrustedScopePolicyTest(unittest.TestCase):
         with self.assertRaisesRegex(policy.PolicyError, "separate pull requests"):
             policy.validate_event(event(12, "3" * 40), changed, BOOTSTRAP_HEAD)
 
+    def test_published_fpga_evidence_cannot_be_modified_or_removed(self):
+        with self.assertRaisesRegex(policy.PolicyError, "already-published"):
+            policy.validate_event(
+                event(12, "3" * 40),
+                policy.FPGA_EMULATION_REQUIRED_PATHS,
+                BOOTSTRAP_HEAD,
+                base_fpga_claim_registered=True,
+            )
+
     def test_metadata_and_policy_combination_fails(self):
         changed = {
             "provenance/evidence.yaml",

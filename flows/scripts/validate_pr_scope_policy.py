@@ -12,6 +12,7 @@ from pathlib import Path
 
 REPOSITORY = "ichigo-6301/slvc-dma-open"
 SHA_RE = re.compile(r"[0-9a-f]{40}")
+FPGA_EMULATION_CLAIM_ID = "slvc_dma_u5_sync_hp0_loopback_board_throughput"
 
 BOOTSTRAP_PR = 2
 BOOTSTRAP_PATHS = frozenset({
@@ -250,7 +251,8 @@ def _normalize_paths(paths):
     return frozenset(normalized)
 
 
-def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY):
+def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY,
+                   base_fpga_claim_registered=False):
     if event.get("repository", {}).get("full_name") != repository:
         _fail("repository identity mismatch")
     pull = event.get("pull_request")
@@ -282,6 +284,8 @@ def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY):
     fpga_emulation_publication_touched = bool(
         changed & FPGA_EMULATION_TRIGGER_PATHS
     ) or any(path.startswith(FPGA_EMULATION_TRIGGER_PREFIX) for path in changed)
+    if base_fpga_claim_registered and fpga_emulation_publication_touched:
+        _fail("already-published FPGA evidence cannot be modified or removed")
     asic_specific_touched = (
         "provenance/asic_paired_dc_publication.yaml" in changed or any(
             path.startswith("evidence/asic_paired_dc/") for path in changed
@@ -352,7 +356,11 @@ def main(argv=None):
         raw_paths = Path(args.changed_files_z).read_bytes().split(b"\0")
         changed = [path.decode("utf-8") for path in raw_paths if path]
         result = validate_event(
-            event, changed, args.bootstrap_head, args.repository
+            event, changed, args.bootstrap_head, args.repository,
+            "  - id: {}\n".format(FPGA_EMULATION_CLAIM_ID) in
+            (Path(__file__).resolve().parents[2] / "provenance/claims.yaml").read_text(
+                encoding="utf-8"
+            ),
         )
     except (OSError, ValueError, PolicyError) as error:
         print("trusted-scope: error: {}".format(error), file=sys.stderr)

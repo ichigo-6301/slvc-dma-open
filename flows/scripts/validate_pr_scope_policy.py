@@ -13,6 +13,7 @@ from pathlib import Path
 REPOSITORY = "ichigo-6301/slvc-dma-open"
 SHA_RE = re.compile(r"[0-9a-f]{40}")
 FPGA_EMULATION_CLAIM_ID = "slvc_dma_u5_sync_hp0_loopback_board_throughput"
+FPGA_BRAM_CLAIM_ID = "slvc_dma_u5_13ch_bram_architecture_comparison"
 
 BOOTSTRAP_PR = 2
 BOOTSTRAP_PATHS = frozenset({
@@ -51,10 +52,12 @@ POLICY_PATHS = frozenset({
     "Makefile",
     "flows/scripts/test_validate_asic_evidence.py",
     "flows/scripts/test_validate_fpga_emulation_evidence.py",
+    "flows/scripts/test_validate_fpga_bram_architecture_evidence.py",
     "flows/scripts/test_validate_pr_scope_policy.py",
     "flows/scripts/test_validate_throughput_publication_gate.py",
     "flows/scripts/validate_asic_evidence.py",
     "flows/scripts/validate_fpga_emulation_evidence.py",
+    "flows/scripts/validate_fpga_bram_architecture_evidence.py",
     "flows/scripts/validate_pr_scope_policy.py",
     "flows/scripts/validate_throughput_publication_gate.py",
 })
@@ -223,6 +226,7 @@ FPGA_EMULATION_REQUIRED_PATHS = frozenset({
     "provenance/claims.yaml",
     "provenance/evidence.yaml",
     "provenance/nonclaims.yaml",
+    "provenance/showcase_assets.json",
 })
 
 FPGA_EMULATION_TRIGGER_PATHS = frozenset({
@@ -230,6 +234,34 @@ FPGA_EMULATION_TRIGGER_PATHS = frozenset({
     "evidence/fpga_emulation/u5_sync_hp0_loopback/manifest.json",
 })
 FPGA_EMULATION_TRIGGER_PREFIX = "evidence/fpga_emulation/"
+
+FPGA_BRAM_PUBLICATION_PATHS = frozenset({
+    "README.en.md",
+    "README.md",
+    "docs/en/fpga_implementation.md",
+    "docs/en/results.md",
+    "docs/zh-CN/fpga_implementation.md",
+    "docs/zh-CN/results.md",
+    "evidence/slvc_dma_u5_13ch_bram_architecture_summary.yaml",
+    "evidence/fpga_resources/u5_13ch_bram_architecture/README.md",
+    "evidence/fpga_resources/u5_13ch_bram_architecture/artifacts.csv",
+    "evidence/fpga_resources/u5_13ch_bram_architecture/comparisons.csv",
+    "evidence/fpga_resources/u5_13ch_bram_architecture/manifest.json",
+    "evidence/fpga_resources/u5_13ch_bram_architecture/mcdma_owners.csv",
+    "evidence/fpga_resources/u5_13ch_bram_architecture/resources.csv",
+    "provenance/checksums.sha256",
+    "provenance/claims.yaml",
+    "provenance/evidence.yaml",
+    "provenance/nonclaims.yaml",
+    "provenance/showcase_assets.json",
+})
+
+FPGA_BRAM_REQUIRED_PATHS = FPGA_BRAM_PUBLICATION_PATHS
+FPGA_BRAM_TRIGGER_PATHS = frozenset({
+    "evidence/slvc_dma_u5_13ch_bram_architecture_summary.yaml",
+    "evidence/fpga_resources/u5_13ch_bram_architecture/manifest.json",
+})
+FPGA_BRAM_TRIGGER_PREFIX = "evidence/fpga_resources/u5_13ch_bram_architecture/"
 
 
 class PolicyError(RuntimeError):
@@ -254,7 +286,8 @@ def _normalize_paths(paths):
 
 
 def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY,
-                   base_fpga_claim_registered=False):
+                   base_fpga_claim_registered=False,
+                   base_fpga_bram_claim_registered=False):
     if event.get("repository", {}).get("full_name") != repository:
         _fail("repository identity mismatch")
     pull = event.get("pull_request")
@@ -288,6 +321,11 @@ def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY,
     ) or any(path.startswith(FPGA_EMULATION_TRIGGER_PREFIX) for path in changed)
     if base_fpga_claim_registered and fpga_emulation_publication_touched:
         _fail("already-published FPGA evidence cannot be modified or removed")
+    fpga_bram_publication_touched = bool(
+        changed & FPGA_BRAM_TRIGGER_PATHS
+    ) or any(path.startswith(FPGA_BRAM_TRIGGER_PREFIX) for path in changed)
+    if base_fpga_bram_claim_registered and fpga_bram_publication_touched:
+        _fail("already-published FPGA BRAM evidence cannot be modified or removed")
     asic_specific_touched = (
         "provenance/asic_paired_dc_publication.yaml" in changed or any(
             path.startswith("evidence/asic_paired_dc/") for path in changed
@@ -299,18 +337,20 @@ def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY,
     asic_publication_touched = asic_specific_touched or (
         bool(changed & EVIDENCE_TRIGGER_PATHS) and
         not throughput_publication_touched and
-        not fpga_emulation_publication_touched
+        not fpga_emulation_publication_touched and
+        not fpga_bram_publication_touched
     )
     publication_kinds = sum(bool(item) for item in (
         asic_publication_touched,
         throughput_publication_touched,
         fpga_emulation_publication_touched,
+        fpga_bram_publication_touched,
     ))
     if publication_kinds > 1:
-        _fail("ASIC, RTL throughput, and FPGA publications must use separate pull requests")
+        _fail("ASIC, RTL throughput, FPGA emulation, and FPGA BRAM publications must use separate pull requests")
     publication_touched = (
         asic_publication_touched or throughput_publication_touched or
-        fpga_emulation_publication_touched
+        fpga_emulation_publication_touched or fpga_bram_publication_touched
     )
     if publication_touched and changed & POLICY_PATHS:
         _fail("evidence PR must not modify trusted policy")
@@ -340,6 +380,18 @@ def validate_event(event, changed_paths, bootstrap_head, repository=REPOSITORY,
                 sorted(missing)[0]
             ))
         return "FPGA_EMULATION_EVIDENCE_SCOPE_PASS"
+    if fpga_bram_publication_touched:
+        unexpected = changed - FPGA_BRAM_PUBLICATION_PATHS
+        if unexpected:
+            _fail("FPGA BRAM evidence PR contains forbidden path: {}".format(
+                sorted(unexpected)[0]
+            ))
+        missing = FPGA_BRAM_REQUIRED_PATHS - changed
+        if missing:
+            _fail("FPGA BRAM evidence PR is missing required path: {}".format(
+                sorted(missing)[0]
+            ))
+        return "FPGA_BRAM_EVIDENCE_SCOPE_PASS"
     unexpected = changed - FUTURE_PUBLICATION_PATHS
     if unexpected:
         _fail("evidence PR contains forbidden path: {}".format(sorted(unexpected)[0]))
@@ -360,6 +412,10 @@ def main(argv=None):
         result = validate_event(
             event, changed, args.bootstrap_head, args.repository,
             "  - id: {}\n".format(FPGA_EMULATION_CLAIM_ID) in
+            (Path(__file__).resolve().parents[2] / "provenance/claims.yaml").read_text(
+                encoding="utf-8"
+            ),
+            "  - id: {}\n".format(FPGA_BRAM_CLAIM_ID) in
             (Path(__file__).resolve().parents[2] / "provenance/claims.yaml").read_text(
                 encoding="utf-8"
             ),

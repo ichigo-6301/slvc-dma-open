@@ -29,6 +29,9 @@ jobs:
         name: Verify sanitized paired-DC evidence
         run: python3 flows/scripts/validate_asic_evidence.py --root .
       -
+        name: Verify bounded U5 BRAM architecture publication
+        run: python3 flows/scripts/validate_fpga_bram_architecture_evidence.py --root .
+      -
         name: Exercise public Make profile
         run: make slvc_dma_512_defconfig PYTHON=python3
       -
@@ -81,6 +84,9 @@ jobs:
       -
         name: Verify bounded Async64 throughput publication
         run: python flows/scripts/validate_throughput_publication_gate.py --root .
+      -
+        name: Verify bounded U5 BRAM architecture publication
+        run: python flows/scripts/validate_fpga_bram_architecture_evidence.py --root .
       -
         name: Verify backend, compatibility aliases, and showcase contracts
         run: python -m unittest discover -s flows/scripts -p "test_*.py"

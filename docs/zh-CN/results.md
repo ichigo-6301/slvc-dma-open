@@ -76,9 +76,9 @@ Async64 发出 8,192 个 16-beat burst，并观察到 8,192 个 planner bubble c
 
 三组 routed OOC 的 TNS/THS 均为 0。Optional UDP adapter 不在 `frame_dma_wrapper` 内，因此这些 core 资源不包含 adapter logic。
 
+<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:start -->
 ## U5 13通道 BRAM 架构对比
 
-<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:start -->
 <!-- claim:slvc_dma_u5_13ch_bram_architecture_comparison maturity:partial -->
 
 Vivado 2018.3 在同一 `xc7z100ffg900-2` 上得到以下综合阶段 BRAM 计数。主比较固定为当前 U5 wrapper 与 13 路、每路 8 KiB 的 512-bit payload FIFO；`BRAM tiles = RAMB36 + RAMB18 / 2`。
@@ -97,7 +97,6 @@ SLVC 对独立 payload FIFO 的 BRAM tile 减少为 `53.333%`，证明的是避�
 
 该结果状态为 `partial`、`resume_eligible: false`；不包含吞吐、Fmax、完整 FPGA 面积优势、任意无限反压无损或 ASIC PPA 结论。
 <!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:end -->
-
 ## ASIC C2B4 Register-Expanded
 
 <!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->

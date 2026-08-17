@@ -76,9 +76,9 @@ The same-clock netlist contains zero RX-payload CDC cells. Both async profiles h
 
 All three routed OOC runs have zero TNS and THS. The optional UDP adapter is outside `frame_dma_wrapper`, so these frozen-core resource values exclude adapter logic.
 
+<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:start -->
 ## U5 13-Channel BRAM Architecture Comparison
 
-<!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:start -->
 <!-- claim:slvc_dma_u5_13ch_bram_architecture_comparison maturity:partial -->
 
 Vivado 2018.3 produced the following synthesis-stage BRAM counts on the same `xc7z100ffg900-2`. The primary comparison fixes the current U5 wrapper against thirteen 8 KiB-per-channel, 512-bit payload FIFOs; `BRAM tiles = RAMB36 + RAMB18 / 2`.
@@ -97,7 +97,6 @@ Evidence: [summary](../../evidence/slvc_dma_u5_13ch_bram_architecture_summary.ya
 
 This result remains `partial` with `resume_eligible: false`; it does not establish throughput, Fmax, complete-FPGA area superiority, losslessness under unbounded backpressure, or ASIC PPA.
 <!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:end -->
-
 ## ASIC C2B4 Register-Expanded
 
 <!-- claim:slvc_dma_c2b4_n45_register_postroute_450 maturity:verified -->

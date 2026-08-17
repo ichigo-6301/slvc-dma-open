@@ -7,10 +7,8 @@ Performance_Explore 和 ExtraNetDelay_high。
 选择 defconfig 后运行 `make fpga-ooc` 会调用公开的 native Tcl，结果仅写入
 ignored `build/` 与 `reports/`。该流程不生成 Xilinx IP，不修改 BD，也不携带任何
 器件库或 board project。
-
-## U5 13通道 BRAM 资源边界
-
 <!-- fpga-bram-publication:slvc_dma_u5_13ch_bram_architecture_comparison:start -->
+## U5 13通道 BRAM 资源边界
 
 补充比较绑定现有 U5 同步 Profile：`DMA_MAX_CH=16`、13 RX/13 TX active、512-bit 流接口、64-bit HP0、100 MHz。当前 wrapper 的物理 payload 容量为 `135168` bytes，由 16 个 8 KiB Fixed bank 与一个 4 KiB Shared Pool 组成；比较中的 13 路 FIFO 只覆盖 active channel，总 payload 容量为 106496 bytes，因此没有做容量归一化。
 
